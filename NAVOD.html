@@ -219,16 +219,17 @@
               <li><b>Pravý klik</b> na zip → <code>Extrahovať všetko…</code> → <code>Extrahovať</code>. Súbory nespúšťaj priamo zo zipu – nefungovalo by to.</li>
               <li>Priečinok <b>JD-IphoneWall</b> presuň na <b>Plochu</b>. Vnútri sú <code>NAVOD.html</code>, <code>install-windows.bat</code>, <code>START_STRANKY.bat</code> a súbory stránky.</li>
             </ul></li>
-          <li><b>Nainštaluj Apple Devices</b> (ovládače pre iPhone)
+          <li><b>Nainštaluj Apple Devices a iTunes</b> (ovládače pre iPhone – treba <b>oboje</b>)
             <ul class="gsub">
-              <li>Otvor <b>Microsoft Store</b> → vyhľadaj <b>Apple Devices</b> (od Apple Inc.) → <code>Získať</code>. Ak ho Store neponúka, nainštaluj <b>iTunes</b> z Microsoft Store.</li>
-              <li>Raz ho otvor a prijmi podmienky.</li>
+              <li>Otvor <b>Microsoft Store</b> → vyhľadaj <b>Apple Devices</b> (od Apple Inc.) → <code>Získať</code>.</li>
+              <li>Nainštaluj aj <b>iTunes</b>. Samotné Apple Devices často iPhone neuvidí. Najlepšie je iTunes z <b>apple.com/itunes</b> (verzia pre Windows 64-bit) – s ňou spoľahlivejšie funguje aj Sideloadly. Ak to nejde, stačí iTunes z Microsoft Store.</li>
+              <li>Oba programy raz otvor a prijmi podmienky. Potom reštartuj PC.</li>
             </ul></li>
           <li><b>Pripoj iPhone k PC</b>
             <ul class="gsub">
               <li>Pripoj iPhone káblom a <b>odomkni ho</b>.</li>
               <li>Na iPhone ťukni <b>„Dôverovať tomuto počítaču?“</b> → <code>Dôverovať</code> → zadaj kód.</li>
-              <li>V aplikácii <b>Apple Devices</b> by sa mal iPhone objaviť vľavo. Ak nie, skús iný kábel alebo USB port.</li>
+              <li>V <b>iTunes</b> (ikona telefónu vľavo hore) alebo v <b>Apple Devices</b> sa musí iPhone objaviť. Ak nie, skontroluj, či máš nainštalované <b>oboje</b> (krok A3), reštartuj PC a skús iný kábel alebo USB port.</li>
             </ul></li>
           <li><b>Spusti install-windows.bat</b>
             <ul class="gsub">
@@ -290,7 +291,8 @@
       <div class="panel gfix">
         <h3><svg class="i" viewBox="0 0 24 24"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.5v.01"/></svg>Keď niečo nejde (Windows)</h3>
         <dl>
-          <dt>Stránka hlási „Žiadny telefón“</dt><dd>Skontroluj, či je nainštalované Apple Devices a či v ňom vidno iPhone. Odomkni iPhone, ťukni Dôverovať, skús iný kábel.</dd>
+          <dt>Stránka hlási „Žiadny telefón“</dt><dd>Musia byť nainštalované <b>Apple Devices aj iTunes</b> a v iTunes musí byť vidno iPhone. Odomkni iPhone, ťukni Dôverovať, reštartuj PC, skús iný kábel.</dd>
+          <dt>Sideloadly nevidí iPhone alebo hlási chybu iTunes / iCloud</dt><dd>Odinštaluj iTunes z Microsoft Store a nainštaluj verziu z apple.com/itunes. Ak Sideloadly pýta iCloud, nainštaluj aj iCloud pre Windows z apple.com.</dd>
           <dt>„WebDriverAgent nie je v telefóne nainštalovaný“</dt><dd>Nahraj ho cez Sideloadly (krok A7) a na iPhone urob B1 – B3.</dd>
           <dt>Po ~7 dňoch prestal obraz</dt><dd>Podpis z bezplatného Apple ID vypršal. V Sideloadly znova pretiahni WebDriverAgent.ipa → Start, potom reštartuj START_STRANKY.bat.</dd>
           <dt>Nevidím obraz (iOS 17 a novší)</dt><dd>Musí bežať malé okno „go-ios tunel“. Zavri všetky okná stránky a spusti START_STRANKY.bat znova.</dd>
