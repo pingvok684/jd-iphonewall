@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="sk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JD - IphoneWall Návod</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: jedna úzka čitateľská kolóna, kroky ako odškrtávací zoznam, časti A/B/C ako "štítky" ako na krabici iPhonu */
+  :root {
+    --bg: #f6f4f7; --surface: #ffffff; --surface-2: #f0edf2; --line: #e2dde6;
+    --fg: #1d1a22; --muted: #625c6b; --faint: #948d9c;
+    --accent: #d61f52; --accent-ink: #ffffff; --ok: #12895a;
+    --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+    --body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0d0c11; --surface: #15141b; --surface-2: #1d1b24; --line: #2a2732;
+    --fg: #eeebf2; --muted: #a29cab; --faint: #6e6878; --accent: #ff4f7b; --accent-ink: #1a0710; --ok: #3ddc97; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #0d0c11; --surface: #15141b; --surface-2: #1d1b24; --line: #2a2732;
+    --fg: #eeebf2; --muted: #a29cab; --faint: #6e6878; --accent: #ff4f7b; --accent-ink: #1a0710; --ok: #3ddc97; color-scheme: dark; }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--body); margin: 0; }
+  .page { max-width: 820px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 64px; display: grid; gap: 18px; }
+  header { display: grid; gap: 10px; padding-bottom: 6px; }
+  .eyebrow { font: 600 12px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  h1 { font: 800 clamp(30px, 6vw, 44px)/1.05 var(--display); margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+  .lead { color: var(--muted); max-width: 62ch; margin: 0; }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 6px; }
+  .prog { flex: 1 1 220px; height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; border: 1px solid var(--line); }
+  .prog i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  .prog.full i { background: var(--ok); }
+  #gProg { font: 500 13px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  button { font: 500 13px var(--body); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+  button:hover { background: var(--surface-2); } button:focus-visible, .gsteps > li:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .gwrap { display: grid; gap: 18px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; min-width: 0; }
+  .panel h3 { margin: 0 0 12px; font: 700 19px/1.2 var(--display); display: flex; align-items: center; gap: 10px; text-wrap: balance; }
+  .i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; color: var(--accent); flex: none; }
+  .gnum { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font: 800 14px var(--display); background: var(--accent); color: var(--accent-ink); flex: none; }
+  .gintro ul { margin: 0; padding-left: 18px; color: var(--muted); display: grid; gap: 4px; } .gintro b, .gfix b { color: var(--fg); }
+  .gnote { color: var(--faint); font-size: 13px; margin: 12px 0 0; }
+  .gsteps { list-style: none; margin: 0; padding: 0; counter-reset: g; }
+  .gsteps > li { counter-increment: g; position: relative; padding: 12px 10px 12px 66px; border-top: 1px solid var(--line); color: var(--muted); cursor: pointer; border-radius: 8px; }
+  .gsteps > li:first-child { border-top: 0; } .gsteps > li:hover { background: var(--surface-2); }
+  .gsteps > li b { color: var(--fg); font-weight: 600; }
+  .gsteps > li::before { content: counter(g); position: absolute; left: 36px; top: 12px; color: var(--faint); font: 500 13px var(--mono); }
+  .gsteps > li::after { content: ""; position: absolute; left: 8px; top: 13px; width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--faint); }
+  .gsteps > li.done { color: var(--faint); } .gsteps > li.done b { color: var(--muted); text-decoration: line-through; }
+  .gsteps > li.done::after { background: var(--ok); border-color: var(--ok); box-shadow: inset 0 0 0 3px var(--surface); }
+  .gsteps > li.done .gsub { display: none; }
+  .gsub { margin: 6px 0 2px; padding-left: 18px; display: grid; gap: 4px; } .gsub li::marker { color: var(--faint); }
+  code { font: 13px var(--mono); background: var(--surface-2); border: 1px solid var(--line); padding: 1px 5px; border-radius: 5px; color: var(--fg); -webkit-box-decoration-break: clone; box-decoration-break: clone; overflow-wrap: anywhere; }
+  .gfix dl { margin: 0; display: grid; gap: 12px; } .gfix dt { font-weight: 600; } .gfix dd { margin: 2px 0 0; color: var(--muted); }
+  footer { color: var(--faint); font-size: 13px; text-align: left; }
+  @media (max-width: 520px) { .panel { padding: 16px 14px; } .gsteps > li { padding-left: 58px; } .gsteps > li::before { left: 32px; } }
+  @media (prefers-reduced-motion: reduce) { .prog i { transition: none; } }
+</style>
+</head><body>
+<div class="page">
+  <header>
+    <div class="eyebrow">JD - IphoneWall</div>
+    <h1>Návod na spustenie</h1>
+    <p class="lead">Postup od nuly: Mac, iPhony a prvé spustenie stránky. Nič nemusí byť nastavené vopred. Kroky si odškrtávaj kliknutím – stránka si ich pamätá v tomto prehliadači.</p>
+    <div class="bar"><div class="prog" id="gBar"><i></i></div><span id="gProg">0 / 0 hotovo</span><button id="gReset" type="button">Odškrtnúť všetko</button></div>
+  </header>
+<div class="gwrap">
+      <div class="panel gintro">
+        <h3><svg class="i" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>Čo budeš potrebovať</h3>
+        <ul>
+          <li><b>Mac</b> (MacBook alebo iMac) s macOS a aspoň ~40 GB voľného miesta (Xcode je veľký)</li>
+          <li><b>Apple ID</b> – stačí bežné, zadarmo</li>
+          <li><b>iPhone</b> + <b>USB kábel</b> (pri viacerých iPhonoch USB hub s napájaním)</li>
+          <li>Balík <b>JD-IphoneWall-Mac.zip</b></li>
+          <li><b>Claude API kľúč</b> z console.anthropic.com (na AI ovládanie)</li>
+        </ul>
+      </div>
+
+      <div class="panel gpart">
+        <h3><span class="gnum">A</span>Mac – jednorazovo</h3>
+        <ol class="gsteps" data-part="mac">
+          <li><b>Skontroluj Mac</b>
+            <ul class="gsub">
+              <li>Vľavo hore  → <code>O tomto Macu</code> – Xcode potrebuje aktuálny macOS. Ak je starší, aktualizuj ho: <code>Nastavenia systému → Všeobecné → Aktualizácia softvéru</code>.</li>
+              <li>Voľné miesto: <code>Nastavenia systému → Všeobecné → Úložisko</code> – treba aspoň <b>40 GB</b>.</li>
+              <li>Mac pripoj na nabíjačku a Wi-Fi (sťahuje sa veľa dát).</li>
+            </ul></li>
+          <li><b>Stiahni a rozbaľ balík</b>
+            <ul class="gsub">
+              <li>Ulož <b>JD-IphoneWall-Mac.zip</b> (z chatu, AirDropu alebo Disku) – zvyčajne skončí v priečinku <code>Stiahnuté</code>.</li>
+              <li>Dvojklik na zip → vznikne priečinok <b>JD-IphoneWall</b> (bez „-Mac“). Zip potom môžeš zmazať.</li>
+              <li>Presuň ho na <b>Plochu</b>. Súbory vnútri nepremenúvaj ani nepresúvaj.</li>
+              <li>Vnútri uvidíš <code>NAVOD.html</code>, <code>install.command</code>, <code>START_STRANKY.command</code> a súbory stránky.</li>
+            </ul></li>
+          <li><b>Nainštaluj Xcode</b>
+            <ul class="gsub">
+              <li>Otvor <b>App Store</b> → vyhľadaj <b>Xcode</b> (od Apple, zadarmo) → <code>Získať</code> / <code>Inštalovať</code>.</li>
+              <li>Má ~15 GB – inštalácia trvá 20–60 minút. Počkaj, kým sa tlačidlo zmení na <code>Otvoriť</code>.</li>
+            </ul></li>
+          <li><b>Prvé otvorenie Xcode</b>
+            <ul class="gsub">
+              <li>Otvor Xcode (Launchpad alebo priečinok Aplikácie). Ťukni <code>Agree</code> a zadaj heslo k Macu.</li>
+              <li>V okne <b>Select platforms / Vyber platformy</b> zaškrtni <b>iOS</b> → <code>Download &amp; Install</code>. Počkaj, kým sa stiahne (pár GB).</li>
+              <li>Ak si to okno preskočil: <code>Xcode → Settings… → Components</code> → pri <b>iOS</b> klikni <code>Get</code>.</li>
+            </ul></li>
+          <li><b>Pridaj Apple ID do Xcode</b>
+            <ul class="gsub">
+              <li>Menu hore <code>Xcode → Settings…</code> (alebo <code>⌘ ,</code>) → záložka <code>Accounts</code>.</li>
+              <li>Vľavo dole <code>+</code> → <code>Apple ID</code> → <code>Continue</code> → zadaj e-mail, heslo a overovací kód.</li>
+              <li>Pod účtom sa musí objaviť tím, napr. <b>„Meno Priezvisko (Personal Team)“</b>. Okno zavri.</li>
+            </ul></li>
+          <li><b>Pripoj iPhone ku Macu</b>
+            <ul class="gsub">
+              <li>Pripoj iPhone káblom (najlepšie originálnym) a <b>odomkni ho</b>.</li>
+              <li>Na iPhone vyskočí <b>„Dôverovať tomuto počítaču?“</b> → <code>Dôverovať</code> → zadaj kód iPhonu.</li>
+              <li>Ak sa Mac pýta <b>„Povoliť pripojenie príslušenstva?“</b> → <code>Povoliť</code>.</li>
+              <li>Nič nevyskočilo? Odpoj a znova pripoj kábel, skús iný port alebo kábel.</li>
+            </ul></li>
+          <li><b>Zapni na iPhone režim pre vývojárov</b>
+            <ul class="gsub">
+              <li>Urob teraz krok <b>B1</b> (nižšie). Bez neho sa inštalácia nepodarí.</li>
+              <li>Ak položka „Režim pre vývojárov“ v nastaveniach chýba, najprv urob krok A8 a potom sa vráť.</li>
+            </ul></li>
+          <li><b>Nechaj Xcode pripraviť iPhone</b>
+            <ul class="gsub">
+              <li>V Xcode stlač <code>⇧ ⌘ 2</code> (menu <code>Window → Devices and Simulators</code>) a vľavo klikni na svoj iPhone.</li>
+              <li>Ak tam táto ponuka nie je: otvor priečinok <code>JD-IphoneWall → WebDriverAgent</code> → dvojklik na <code>WebDriverAgent.xcodeproj</code> (objaví sa po prvom spustení install.command) → hore v strede klikni na výber zariadenia a vyber <b>svoj iPhone</b> – nie „Any iOS Device“.</li>
+              <li>Xcode ukáže <b>„Preparing iPhone / Copying shared cache“</b>. iPhone nechaj odomknutý a počkaj, kým to zmizne (5–15 minút).</li>
+            </ul></li>
+          <li><b>Spusti install.command</b>
+            <ul class="gsub">
+              <li>V priečinku <b>JD-IphoneWall</b> na Ploche <b>pravý klik</b> na <code>install.command</code> → <code>Otvoriť</code> → v okne znova <code>Otvoriť</code>.</li>
+              <li>Ak Mac napíše, že súbor nemôže otvoriť: <code>Nastavenia systému → Súkromie a bezpečnosť</code> → dole <code>Aj tak otvoriť</code>.</li>
+              <li>Otvorí sa Terminál. Keď chce <b>heslo</b>, napíš heslo k Macu a Enter (pri písaní sa nič nezobrazuje – to je v poriadku). Ak píše „Press RETURN“, stlač Enter.</li>
+              <li>Ak vyskočí okno <b>„codesign chce použiť kľúč…“</b> → zadaj heslo k Macu → <code>Vždy povoliť</code>.</li>
+              <li>Prvýkrát to trvá 5–15 minút (inštaluje Node.js, go-ios, cloudflared a podpisuje WebDriverAgent). iPhone nechaj pripojený a odomknutý.</li>
+              <li>Na konci musí byť <b>✅ HOTOVO</b>. Ak je tam <b>❌</b>, pozri „Keď niečo nejde“ – podrobnosti sú v súbore <code>install-build.log</code>.</li>
+            </ul></li>
+        </ol>
+      </div>
+
+      <div class="panel gpart">
+        <h3><span class="gnum">B</span>Každý iPhone – jednorazovo</h3>
+        <ol class="gsteps" data-part="iphone">
+          <li><b>Režim pre vývojárov</b>: <code>Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov → Zapnúť</code> → iPhone sa reštartuje → po zapnutí potvrď <b>Zapnúť</b>. (Ak tam položka nie je, iPhone musí byť aspoň raz pripravený v Xcode – krok A8.)</li>
+          <li>Spusti <b>START_STRANKY.command</b> a počkaj, kým server nahrá aplikáciu do iPhonu (pár minút pri prvom raze).</li>
+          <li><b>Dôveruj aplikácii</b>: <code>Nastavenia → Všeobecné → VPN a správa zariadení → Apple Development: tvoj e-mail → Dôverovať</code> → a ťukni <b>Verify App / Overiť aplikáciu</b> (iPhone musí mať internet).</li>
+          <li><b>UI Automation</b>: <code>Nastavenia → Vývojár → Enable UI Automation → Zapnúť</code>.</li>
+          <li><b>Nezamykanie</b>: <code>Nastavenia → Displej a jas → Automatické zamknutie → Nikdy</code>. iPhone nechaj na nabíjačke.</li>
+          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): aplikácia <b>Skratky</b> → <code>+</code> → názov <b>JD Save</b> (presne takto) → pridaj akciu <code>Získať obsah URL</code> (URL = <i>Vstup skratky</i>) → pridaj akciu <code>Uložiť do fotoalbumu</code> (album Nedávne). Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>.</li>
+          <li>Prihlás sa do <b>Instagramu</b> a do aplikácie <b>Meta Business Suite</b> (na plánovanie príspevkov).</li>
+        </ol>
+      </div>
+
+      <div class="panel gpart">
+        <h3><span class="gnum">C</span>Stránka – prvé spustenie</h3>
+        <ol class="gsteps" data-part="web">
+          <li>V priečinku <b>JD-IphoneWall</b> na Ploche dvojklik na <b>START_STRANKY.command</b> (prvýkrát pravý klik → Otvoriť). Stránka sa otvorí sama na <code>localhost:3000</code>.</li>
+          <li>Okno Terminálu <b>nechaj otvorené</b> – zatvorením sa stránka vypne. Tip: START_STRANKY pretiahni do Docku.</li>
+          <li>V <b>Nastaveniach</b> (v bočnom menu stránky) vlož <b>Claude API kľúč</b> (a ak chceš generovať videá, aj Magnific kľúč).</li>
+          <li>V sekcii <b>Telefóny</b> by sa do minúty mal objaviť obraz iPhonu. Skús ťuknúť a poslať jednu fotku.</li>
+          <li><b>Aktualizácie</b>: keď vyjde nová verzia, v menu pri <b>Nastaveniach</b> sa objaví „nové“. Otvor <code>Nastavenia → Aktualizácie</code> → <code>Aktualizovať teraz</code>. Stránka sa sama reštartuje, tvoje kľúče, šablóny a nastavenia ostanú.</li>
+        </ol>
+      </div>
+
+      <div class="panel gpart">
+        <h3><span class="gnum">+</span>Ďalší iPhone</h3>
+        <ol class="gsteps" data-part="more">
+          <li>Pripoj ho káblom, odomkni, ťukni <b>Dôverovať</b>.</li>
+          <li>Nechaj ho pripraviť v Xcode – rovnako ako v kroku A8.</li>
+          <li>Urob na ňom kroky <b>B1 – B7</b>.</li>
+          <li>Reštartuj stránku: zavri Terminál a znova spusti <b>START_STRANKY</b>.</li>
+        </ol>
+      </div>
+
+      <div class="panel gfix">
+        <h3><svg class="i" viewBox="0 0 24 24"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.5v.01"/></svg>Keď niečo nejde</h3>
+        <dl>
+          <dt>Nevidím obraz iPhonu</dt><dd>Odomkni iPhone, skontroluj UI Automation (B4) a Dôverovať (B3), potom znova spusti START_STRANKY.</dd>
+          <dt>install.command: „CodeSign failed / resource fork“</dt><dd>Spusti install.command znova (opravené). Ak to pretrváva, presuň priečinok mimo Plochy, napr. do domovského priečinka.</dd>
+          <dt>Xcode: „Any iOS Device“ / iPhone nie je v zozname</dt><dd>Vyber konkrétny iPhone hore v Xcode, odomkni ho a počkaj, kým ho Xcode pripraví.</dd>
+          <dt>Po ~7 dňoch prestal obraz (bezplatné Apple ID)</dt><dd>Podpis aplikácie vyprší. Spusti install.command znova a potom START_STRANKY.</dd>
+          <dt>Fotka/video sa neobjaví v galérii</dt><dd>Skontroluj, či sa skratka volá presne <b>JD Save</b> a má akciu <i>Uložiť do fotoalbumu</i>, a či si povolil prístup.</dd>
+          <dt>AI hlási chybu modelu / kľúča</dt><dd>Skontroluj Claude API kľúč v Nastaveniach a kredit na console.anthropic.com.</dd>
+        </dl>
+        <p class="gnote">Pri AI obsahu zapínaj na Instagrame označenie <b>AI info</b>. API kľúče nikomu neposielaj – každý kamarát si dá vlastný.</p>
+      </div>
+    </div>  <footer>Balík JD-IphoneWall-Mac.zip ti pošle Juraj. API kľúče si každý vytvára sám – nikomu ich neposielaj.</footer>
+</div>
+<script>
+(function () {
+  const KEY = 'jd-guide-done';
+  let done = {}; try { done = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (_) {}
+  const items = [];
+  document.querySelectorAll('.gsteps').forEach((ol) => ol.querySelectorAll(':scope > li').forEach((li, i) => {
+    const id = ol.dataset.part + i; items.push([li, id]);
+    li.tabIndex = 0; li.classList.toggle('done', !!done[id]);
+    const flip = () => { done[id] = !done[id]; li.classList.toggle('done', done[id]); sync(); };
+    li.addEventListener('click', (e) => { if (e.target.closest('a')) return; flip(); });
+    li.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); } });
+  }));
+  function sync() {
+    try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (_) {}
+    const n = items.filter(([, id]) => done[id]).length;
+    document.getElementById('gProg').textContent = `${n} / ${items.length} hotovo`;
+    const bar = document.getElementById('gBar'); bar.firstElementChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
+    bar.classList.toggle('full', n === items.length);
+  }
+  document.getElementById('gReset').addEventListener('click', () => { done = {}; items.forEach(([li]) => li.classList.remove('done')); sync(); });
+  sync();
+})();
+</script>
+
+</body></html>
