@@ -130,7 +130,7 @@ async function runQueue(dev, ctx) {
     while ((item = (dev.media || []).find((m) => m.status === 'čaká'))) {
       if (dev.gone) break;
       const base = baseUrl(ctx.port);
-      if (!base) { item.status = 'chyba: tunel nebeží a Mac nie je na sieti'; done(ctx, dev, item, false); continue; }
+      if (!base) { item.status = 'chyba: tunel nebeží a počítač nie je na sieti'; done(ctx, dev, item, false); continue; }
       if (!dev.wdaOk) { item.status = 'čaká'; await sleep(3000); continue; }
 
       tokens.set(item.token, item);

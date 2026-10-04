@@ -378,6 +378,92 @@ function watchAgent(dev, task) {
   }, 2000);
 }
 
+// spustí AI úlohu na telefóne
+async function runAgentTask(dev, task, maxSteps) {
+  await wake(dev);
+  await pause(800); // nech je na obrazovke už odomknutý telefón
+  startAgent(dev, task, apiKey(), {
+    tap: async (x, y) => { await wake(dev); return tap(dev, x, y); },
+    longPress: async (x, y) => { await wake(dev); return longPress(dev, x, y); },
+    swipe: async (sw) => { await wake(dev); return swipe(dev, sw); },
+    type: async (t) => { await wake(dev); return typeText(dev, t); },
+    home: async () => { await wake(dev); return wda(dev, 'POST', '/wda/homescreen'); },
+  }, { maxSteps });
+  watchAgent(dev, task);
+}
+
+// ---------- plán: pred každým príspevkom najprv pošle jeho video/fotky do galérie ----------
+// Takto je médium pri plánovaní vždy najnovšie (na 1. mieste) a AI vyberie to správne.
+const PLAN_DIR = path.join(store.DATA, 'plan-files');
+fs.mkdirSync(PLAN_DIR, { recursive: true });
+// staré nepoužité súbory (> 2 dni) uprac
+for (const f of fs.readdirSync(PLAN_DIR)) { const fp = path.join(PLAN_DIR, f); try { if (Date.now() - fs.statSync(fp).mtimeMs > 2 * 86400000) fs.unlinkSync(fp); } catch (_) {} }
+function planFile(id) {
+  if (!/^[a-f0-9]{16}\.[a-z0-9]{2,5}$/.test(id)) return null;
+  const fp = path.join(PLAN_DIR, id);
+  return fs.existsSync(fp) ? fp : null;
+}
+function savePlanFile(req, name) {
+  return new Promise((resolve, reject) => {
+    const ext = path.extname(name).toLowerCase();
+    if (!media.TYPES[ext]) return reject(new Error(`Nepodporovaný typ súboru (${ext || '?'}). Fotky: jpg, png, heic. Videá: mp4, mov.`));
+    const id = require('crypto').randomBytes(8).toString('hex') + ext;
+    const out = fs.createWriteStream(path.join(PLAN_DIR, id));
+    req.pipe(out);
+    out.on('error', reject);
+    out.on('finish', () => resolve({ id, name }));
+  });
+}
+
+async function runPlan(dev, steps) {
+  const plan = dev.plan = { running: true, stop: false, fileIds: steps.flatMap((x) => x.files.map((f) => f.id)) };
+  const say = (t) => { if (dev.agent) { dev.agent.log.push(t); if (dev.agent.log.length > 60) dev.agent.log.shift(); } };
+  // „agent“ zobrazuje stav na karte telefónu a dá sa ním plán zastaviť
+  dev.agent = { running: true, stop: false, log: [`📦 Plán: ${steps.length} ${steps.length === 1 ? 'príspevok' : 'príspevky'} – pred každým pošlem jeho médiá do galérie`] };
+  store.addActivity('ai', `Plán: ${steps.map((x) => x.title).join(', ')}`, { phone: dev.label });
+  const stopped = () => plan.stop || (dev.agent && dev.agent.stop) || dev.gone;
+  let okCount = 0;
+  try {
+    for (const [i, st] of steps.entries()) {
+      if (stopped()) { say('■ Plán zastavený'); break; }
+      const head = `${st.title || 'Príspevok'} (${i + 1}/${steps.length})`;
+      if (!dev.agent || !dev.agent.running) dev.agent = { running: true, stop: false, log: [] };
+      // 1) médiá do galérie – v opačnom poradí, aby prvý súbor bol najnovší (na 1. mieste)
+      if (st.files.length) {
+        say(`📤 ${head}: posielam ${st.files.length === 1 ? st.files[0].name : st.files.length + ' súbory'} do galérie…`);
+        const items = st.files.slice().reverse().map((f) => media.enqueueCopy(dev, planFile(f.id), f.name, mediaCtx));
+        while (!stopped() && items.some((it) => !/^(✓|chyba)/.test(it.status))) await pause(1000);
+        if (stopped()) { say('■ Plán zastavený'); break; }
+        const bad = items.find((it) => it.status.startsWith('chyba'));
+        if (bad) { say(`⚠ ${head}: ${bad.name} sa nepodarilo poslať (${bad.status.replace(/^chyba:\s*/, '')}). Plán zastavujem, nič som nezverejnil.`); break; }
+        say(`✓ ${head}: médiá sú v galérii na 1. mieste`);
+        await pause(2000);
+      }
+      // 2) AI naplánuje príspevok v Meta Business Suite
+      const prev = dev.agent.log.slice(-6);
+      dev.agent.running = false;
+      await runAgentTask(dev, st.task, st.maxSteps);
+      dev.agent.log.unshift(...prev, `🗓️ ${head}: plánujem v Meta Business Suite…`);
+      while (dev.agent && dev.agent.running) { if (plan.stop) dev.agent.stop = true; await pause(1500); }
+      await pause(2600); // nech si watchAgent stihne zapísať výsledok do Aktivity
+      const last = (dev.agent && dev.agent.log[dev.agent.log.length - 1]) || '';
+      if (!last.startsWith('✓')) { say(`⚠ ${head} sa nepodaril – plán zastavujem, aby sa ďalšie médiá nepomiešali.`); break; }
+      okCount++;
+      if (i < steps.length - 1) { dev.agent.running = true; say(`→ pokračujem ďalším príspevkom`); }
+    }
+  } catch (e) {
+    say(`⚠ ${e.message}`);
+  } finally {
+    plan.running = false;
+    // súbor zmaž, až keď ho nepotrebuje ani plán na inom telefóne (rovnaké video môže ísť na viac telefónov)
+    const inUse = new Set([...devices.values()].filter((d) => d.plan && d.plan.running).flatMap((d) => d.plan.fileIds || []));
+    for (const st of steps) for (const f of st.files) { const fp = planFile(f.id); if (fp && !inUse.has(f.id)) fs.unlink(fp, () => {}); }
+    say(okCount === steps.length ? `✓ Plán hotový: naplánované ${okCount}/${steps.length}` : `■ Plán skončil: naplánované ${okCount}/${steps.length}`);
+    if (dev.agent) dev.agent.running = false;
+    plan.running = false;
+  }
+}
+
 // ---------- súhrn pre Prehľad ----------
 function overview() {
   const list = [...devices.values()];
@@ -500,6 +586,10 @@ const server = http.createServer(async (req, res) => {
     try { const it = await magnific.generate(req, url.searchParams); return json(res, 200, { ok: true, id: it.id }); }
     catch (e) { return json(res, 400, { error: e.message }); }
   }
+  if (url.pathname === '/api/plan-file' && req.method === 'POST') {
+    try { return json(res, 200, await savePlanFile(req, String(url.searchParams.get('name') || 'subor').slice(0, 120))); }
+    catch (e) { return json(res, 400, { error: e.message }); }
+  }
   if (url.pathname === '/api/magnific/upload' && req.method === 'POST') {
     try { const it = await magnific.addUpload(req, url.searchParams.get('name') || 'video.mp4'); return json(res, 200, { ok: true, id: it.id }); }
     catch (e) { return json(res, 400, { error: e.message }); }
@@ -591,19 +681,22 @@ const server = http.createServer(async (req, res) => {
           if (!dev.wdaOk) return json(res, 400, { error: 'Telefón ešte nie je pripravený (WDA)' });
           const task = String(b.task || '').trim();
           if (!task) return json(res, 400, { error: 'Prázdna úloha' });
-          await wake(dev);
-          await pause(800); // nech je na obrazovke už odomknutý telefón
-          startAgent(dev, task, apiKey(), {
-            tap: async (x, y) => { await wake(dev); return tap(dev, x, y); },
-            longPress: async (x, y) => { await wake(dev); return longPress(dev, x, y); },
-            swipe: async (sw) => { await wake(dev); return swipe(dev, sw); },
-            type: async (t) => { await wake(dev); return typeText(dev, t); },
-            home: async () => { await wake(dev); return wda(dev, 'POST', '/wda/homescreen'); },
-          }, { maxSteps: b.maxSteps });
-          watchAgent(dev, task);
+          await runAgentTask(dev, task, b.maxSteps);
           break;
         }
-        case 'agent-stop': if (dev.agent) dev.agent.stop = true; break;
+        case 'agent-stop': if (dev.agent) dev.agent.stop = true; if (dev.plan) dev.plan.stop = true; break;
+        case 'plan': {
+          if (!apiKey()) return json(res, 400, { error: 'Chýba Claude API kľúč (Nastavenia)' });
+          if (!dev.wdaOk) return json(res, 400, { error: 'Telefón ešte nie je pripravený (WDA)' });
+          if ((dev.agent && dev.agent.running) || (dev.plan && dev.plan.running)) return json(res, 400, { error: 'Na telefóne už beží úloha' });
+          const steps = (Array.isArray(b.steps) ? b.steps : []).slice(0, 10).map((x) => ({
+            title: String(x.title || '').slice(0, 60), task: String(x.task || '').trim(), maxSteps: x.maxSteps,
+            files: (Array.isArray(x.files) ? x.files : []).slice(0, 10).map((f) => ({ id: String(f.id || ''), name: String(f.name || '') })) }));
+          if (!steps.length || steps.some((x) => !x.task)) return json(res, 400, { error: 'Prázdny plán' });
+          for (const st of steps) for (const f of st.files) if (!planFile(f.id)) return json(res, 400, { error: `Súbor ${f.name} sa nenašiel – nahraj ho znova` });
+          runPlan(dev, steps);
+          break;
+        }
         case 'reset':
           dev.sessionId = null; dev.size = null; break;
         default: return json(res, 404, { error: 'Neznáma akcia' });

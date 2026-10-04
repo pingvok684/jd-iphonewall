@@ -36,6 +36,7 @@
   button:hover { background: var(--surface-2); } button:focus-visible, .gsteps > li:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .gwrap { display: grid; gap: 18px; }
+  .os-win .osonly, .os-win .ostabs, .os-win .gwrap[data-os="mac"] { display: none !important; }
   .ostabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 11px; background: var(--surface-2); border: 1px solid var(--line); justify-self: start; }
   .ostabs button { border: 0; background: transparent; padding: 8px 18px; font-weight: 600; color: var(--muted); }
   .ostabs button.on { background: var(--surface); color: var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
@@ -66,7 +67,7 @@
   <header>
     <div class="eyebrow">JD - IphoneWall</div>
     <h1>Návod na spustenie</h1>
-    <p class="lead">Postup od nuly: počítač (Mac alebo Windows), iPhony a prvé spustenie stránky. Najprv hore vyber svoj počítač. Nič nemusí byť nastavené vopred. Kroky si odškrtávaj kliknutím – stránka si ich pamätá v tomto prehliadači.</p>
+    <p class="lead">Postup od nuly: počítač, iPhony a prvé spustenie stránky.<span class="osonly"> Najprv hore vyber svoj počítač.</span> Nič nemusí byť nastavené vopred. Kroky si odškrtávaj kliknutím – stránka si ich pamätá v tomto prehliadači.</p>
     <div class="ostabs" role="tablist" aria-label="Počítač"><button type="button" data-os="mac">Mac</button><button type="button" data-os="win">Windows</button></div>
     <div class="bar"><div class="prog" id="gBar"><i></i></div><span id="gProg">0 / 0 hotovo</span><button id="gReset" type="button">Odškrtnúť všetko</button></div>
   </header>
@@ -201,7 +202,7 @@
           <li>Balík <b>JD-IphoneWall-Windows.zip</b></li>
           <li><b>Claude API kľúč</b> z console.anthropic.com (na AI ovládanie)</li>
         </ul>
-        <p class="gnote">Na Windowse nie je Xcode, preto sa pomocná aplikácia WebDriverAgent do iPhonu nahrá cez bezplatný program <b>Sideloadly</b>. S bezplatným Apple ID platí jej podpis 7 dní – potom ju v Sideloadly nahráš znova (1 klik). Windows verzia je menej odskúšaná ako Mac.</p>
+        <p class="gnote">Pomocná aplikácia WebDriverAgent sa do iPhonu nahrá cez bezplatný program <b>Sideloadly</b>. S bezplatným Apple ID platí jej podpis 7 dní – potom ju v Sideloadly nahráš znova (1 klik).</p>
       </div>
 
       <div class="panel gpart">
@@ -303,7 +304,7 @@
         <p class="gnote">Pri AI obsahu zapínaj na Instagrame označenie <b>AI info</b>. API kľúče nikomu neposielaj – každý kamarát si dá vlastný.</p>
       </div>
     </div>
-  <footer>Balík JD-IphoneWall-Mac.zip alebo JD-IphoneWall-Windows.zip ti pošle Juraj. API kľúče si každý vytvára sám – nikomu ich neposielaj.</footer>
+  <footer>Balík so stránkou ti pošle Juraj. API kľúče si každý vytvára sám – nikomu ich neposielaj.</footer>
 </div>
 <script>
 (function () {
@@ -327,8 +328,10 @@
   }
   // Mac / Windows
   const OSKEY = 'jd-guide-os';
-  let os = /Windows/i.test(navigator.userAgent) ? 'win' : 'mac';
-  try { os = localStorage.getItem(OSKEY) || os; } catch (_) {}
+  const isWin = /Windows/i.test(navigator.userAgent);
+  if (isWin) document.documentElement.classList.add('os-win');
+  let os = isWin ? 'win' : 'mac';
+  if (!isWin) try { os = localStorage.getItem(OSKEY) || os; } catch (_) {}
   function setOs(v) {
     os = v; try { localStorage.setItem(OSKEY, v); } catch (_) {}
     document.querySelectorAll('.gwrap[data-os]').forEach((w) => { w.hidden = w.dataset.os !== v; });

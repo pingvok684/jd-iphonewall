@@ -259,6 +259,30 @@
   .mitem2 { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px;
     background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); }
   .mtit { font-weight: 600; font-size: 13px; color: var(--accent-2); }
+  .modal .fld { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); }
+  .pdrop .drop { margin: 0; display: grid; place-items: center; min-height: 92px; padding: 12px; border-radius: 14px; border: 1.5px dashed rgba(255,255,255,.22); background: rgba(0,0,0,.18); }
+  .pdrop .drop > div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .pdrop .drop svg { width: 22px; height: 22px; color: var(--accent-2); }
+  .pdrop .drop small { color: var(--faint); font-size: 11.5px; }
+  .pdrop.has .drop { min-height: 0; padding: 8px; }
+  .pdrop.has .drop svg, .pdrop.has .drop small { display: none; }
+  .pfiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; margin-top: 8px; }
+  .pfiles.one { grid-template-columns: 120px; }
+  .pfiles:empty { display: none; }
+  .pf { position: relative; aspect-ratio: 1; border-radius: 11px; overflow: hidden; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); }
+  .pfiles.one .pf { aspect-ratio: 9 / 16; }
+  .pf img, .pf video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pf.noprev img, .pf.noprev video { display: none; }
+  .pf .pnm { display: none; position: absolute; inset: 0; padding: 30px 8px 8px; font-size: 11px; color: var(--muted); word-break: break-all; }
+  .pf.noprev .pnm { display: block; }
+  .pf .pnum { position: absolute; left: 5px; top: 5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: rgba(0,0,0,.6); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+  .pf .pvid { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,.5); display: grid; place-items: center; }
+  .pf .pvid svg { width: 13px; height: 13px; color: #fff; fill: #fff; }
+  .pf .pst { position: absolute; left: 5px; bottom: 5px; padding: 1px 6px; border-radius: 8px; font-size: 11px; font-weight: 700; background: rgba(0,0,0,.6); color: #fff; }
+  .pf.ok .pst { background: var(--ok); color: #06210f; } .pf.err .pst { background: var(--bad); }
+  .pf.err { border-color: var(--bad); }
+  .pf.up img, .pf.up video { opacity: .55; }
+  .pf .prm { position: absolute; right: 4px; top: 4px; width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; font-size: 15px; line-height: 22px; box-shadow: none; }
   .mhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .clocks { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: 12px; flex: none;
     background: linear-gradient(160deg, rgba(255,255,255,.09), rgba(255,255,255,.03)); border: 1px solid rgba(255,255,255,.12); box-shadow: inset 0 1px 0 rgba(255,255,255,.14); }
@@ -268,6 +292,10 @@
   .modal .clk select { width: auto; padding: 3px 24px 3px 7px; font-size: 12px; border-radius: 8px; background-position: right 7px center; background-color: rgba(0,0,0,.25); border-color: rgba(255,255,255,.14); }
   .modal .us-conv { color: var(--accent-2); }
   .modal button:not(.go):not(.ghost) { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.16); }
+  .phchips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .modal .phchips .phc, .phchips .phc { padding: 6px 12px; border-radius: 99px; font-size: 12.5px; font-weight: 600; color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); box-shadow: none; }
+  .modal .phchips .phc.on, .phchips .phc.on { color: #fff; border-color: #ff5b80; background: linear-gradient(180deg, #ff4f76, #e8285a); box-shadow: 0 4px 14px rgba(255,61,104,.3); }
+  .phchips .phc.off:not(.on) { opacity: .55; }
   .modal.picker { width: min(860px, 100%); }
   .phead { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
   .tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
@@ -291,6 +319,7 @@
   .card .tplrow .tplbtn { flex: 1; justify-content: flex-start; }
 
   /* ---------- návod ---------- */
+  .os-win .ostabs, .os-win .gwrap[data-os="mac"] { display: none !important; }
   .ostabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); }
   .ostabs button { border: 0; background: transparent; box-shadow: none; padding: 6px 14px; color: var(--muted); }
   .ostabs button.on { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
@@ -468,7 +497,7 @@
   <!-- NÁVOD -->
   <section class="view" id="v-navod">
     <div class="vhead">
-      <div><h2>Návod na spustenie</h2><div class="sub">Všetko, čo treba urobiť na počítači (Mac alebo Windows) a na iPhonoch – aj keď to dávaš kamarátovi</div></div>
+      <div><h2>Návod na spustenie</h2><div class="sub">Všetko, čo treba urobiť na počítači a na iPhonoch – aj keď to dávaš kamarátovi</div></div>
       <div class="sp"></div>
       <div class="ostabs"><button data-os="mac">Mac</button><button data-os="win">Windows</button></div>
       <span class="chip" id="gProg">0 / 0 hotovo</span>
@@ -608,7 +637,7 @@
           <li>Balík <b>JD-IphoneWall-Windows.zip</b></li>
           <li><b>Claude API kľúč</b> z console.anthropic.com (na AI ovládanie)</li>
         </ul>
-        <p class="gnote">Na Windowse nie je Xcode, preto sa pomocná aplikácia WebDriverAgent do iPhonu nahrá cez bezplatný program <b>Sideloadly</b>. S bezplatným Apple ID platí jej podpis 7 dní – potom ju v Sideloadly nahráš znova (1 klik). Windows verzia je menej odskúšaná ako Mac.</p>
+        <p class="gnote">Pomocná aplikácia WebDriverAgent sa do iPhonu nahrá cez bezplatný program <b>Sideloadly</b>. S bezplatným Apple ID platí jej podpis 7 dní – potom ju v Sideloadly nahráš znova (1 klik).</p>
       </div>
 
       <div class="panel gpart gwide">
@@ -723,7 +752,7 @@
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button id="updCheck">Skontrolovať</button><button class="go" id="updApply" hidden>Aktualizovať teraz</button></div>
         <p class="sub" id="updMsg" style="margin-top:8px"></p></div>
       <div class="panel"><h3><span data-icon="key"></span>Claude API kľúč</h3>
-        <p>Potrebný pre AI ovládanie telefónov. Ukladá sa iba na tomto Macu.</p>
+        <p>Potrebný pre AI ovládanie telefónov. Ukladá sa iba na tomto počítači.</p>
         <div class="kv"><span>Stav</span><b id="keyState">—</b></div>
         <div style="margin-top:10px"><button class="go" id="keybtn">Nastaviť kľúč</button></div></div>
       <div class="panel"><h3><span data-icon="list"></span>Písanie na klávesnici</h3>
@@ -740,7 +769,7 @@
         <p>Súbory idú do iPhonu cez skratku <b id="scName">JD Save</b> v aplikácii Skratky.</p>
         <div class="kv"><span>Cesta</span><b id="setNet">—</b></div>
         <div class="kv"><span>Adresa tunela</span><b id="setTunnel">—</b></div>
-        <div class="kv"><span>IP Macu v sieti</span><b id="setIp">—</b></div></div>
+        <div class="kv"><span>IP počítača v sieti</span><b id="setIp">—</b></div></div>
       <div class="panel"><h3><span data-icon="list"></span>Šablóny AI príkazov<span class="sp"></span><span class="lnk" id="tplReset">Obnoviť pôvodné</span></h3>
         <div class="list" id="tplList"></div></div>
     </div>
@@ -817,8 +846,10 @@ const actRow = (a) => {
   }
   // Mac / Windows
   const OSKEY = 'jd-guide-os';
-  let os = /Windows/i.test(navigator.userAgent) ? 'win' : 'mac';
-  try { os = localStorage.getItem(OSKEY) || os; } catch (_) {}
+  const isWin = /Windows/i.test(navigator.userAgent);
+  if (isWin) document.documentElement.classList.add('os-win');
+  let os = isWin ? 'win' : 'mac';
+  if (!isWin) try { os = localStorage.getItem(OSKEY) || os; } catch (_) {}
   function setOs(v) {
     os = v; try { localStorage.setItem(OSKEY, v); } catch (_) {}
     document.querySelectorAll('.gwrap[data-os]').forEach((w) => { w.hidden = w.dataset.os !== v; });
@@ -844,7 +875,7 @@ async function checkUpdate(force) {
 document.getElementById('updCheck').addEventListener('click', () => { document.getElementById('updMsg').textContent = 'Kontrolujem…'; checkUpdate(true); });
 document.getElementById('updApply').addEventListener('click', async (e) => {
   const b = e.currentTarget, m = document.getElementById('updMsg');
-  b.disabled = true; m.textContent = 'Sťahujem a inštalujem… nezatváraj okno Terminálu.';
+  b.disabled = true; m.textContent = 'Sťahujem a inštalujem… nezatváraj okno START_STRANKY.';
   try {
     const r = await (await fetch('/api/update', { method: 'POST' })).json();
     if (r.error) throw new Error(r.error);
@@ -853,7 +884,7 @@ document.getElementById('updApply').addEventListener('click', async (e) => {
     const wait = async () => {
       await new Promise((ok) => setTimeout(ok, 2500));
       try { const v = await (await fetch('/api/update')).json(); if (v.current === r.version) return location.reload(); } catch (_) {}
-      if (Date.now() - t0 > 30000) { m.textContent = 'Ak sa stránka neobnoví sama, zavri Terminál a spusti START_STRANKY znova.'; return; }
+      if (Date.now() - t0 > 30000) { m.textContent = 'Ak sa stránka neobnoví sama, zavri okno START_STRANKY a spusti ho znova.'; return; }
       wait();
     };
     wait();
@@ -891,7 +922,7 @@ async function loadOverview() {
   const total = o.phones.length;
   const bIc = document.getElementById('bIc');
   let title, sub, cls;
-  if (!total) { title = 'Žiadny telefón'; sub = 'Pripoj iPhone USB káblom k Macu a odomkni ho.'; cls = ''; }
+  if (!total) { title = 'Žiadny telefón'; sub = 'Pripoj iPhone USB káblom k počítaču a odomkni ho.'; cls = ''; }
   else if (o.aiRunning) { title = `AI pracuje na ${plural(o.aiRunning, 'telefóne', 'telefónoch', 'telefónoch')}`; sub = 'Priebeh uvidíš v sekcii Telefóny.'; cls = 'run'; }
   else if (o.online === total) { title = 'Všetko pripravené'; sub = `${plural(total, 'telefón je', 'telefóny sú', 'telefónov je')} online a čaká na úlohu.`; cls = 'ok'; }
   else { title = `Online ${o.online} z ${total}`; sub = 'Niektoré telefóny čakajú na WebDriverAgent alebo sú odpojené.'; cls = ''; }
@@ -1124,7 +1155,7 @@ document.getElementById('mgGrid').addEventListener('click', async (e) => {
   }
 });
 document.getElementById('mgKeyBtn').onclick = async () => {
-  const k = prompt('Vlož Magnific API kľúč (Magnific → Nastavenia → API Keys). Uloží sa len na tvojom Macu.');
+  const k = prompt('Vlož Magnific API kľúč (Magnific → Nastavenia → API Keys). Uloží sa len na tvojom počítači.');
   if (k == null) return;
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ magnificKey: k }) });
   loadSettings(); loadMagnific();
@@ -1154,7 +1185,7 @@ document.getElementById('typeSpeed').onchange = async (e) => {
 };
 document.getElementById('tplReset').onclick = () => { if (confirm('Obnoviť pôvodné šablóny? Tvoje vlastné sa zmažú.')) tplApi({ action: 'reset' }).then(loadSettings); };
 document.getElementById('keybtn').onclick = async () => {
-  const k = prompt('Vlož Claude API kľúč (console.anthropic.com → API Keys). Uloží sa len na tvojom Macu.');
+  const k = prompt('Vlož Claude API kľúč (console.anthropic.com → API Keys). Uloží sa len na tvojom počítači.');
   if (k == null) return;
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey: k }) });
   loadSettings(); poll();
