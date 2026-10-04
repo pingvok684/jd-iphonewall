@@ -24,9 +24,11 @@ const templates = require('./templates');
 const store = require('./store');
 const magnific = require('./magnific');
 const updater = require('./updater');
+const auth = require('./auth');
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 let config = {};
 try { config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch (_) {}
+auth.init(config, () => fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2)));
 const apiKey = () => process.env.ANTHROPIC_API_KEY || config.apiKey || '';
 
 // Ako sa spúšťa WebDriverAgent:
@@ -491,7 +493,28 @@ const server = http.createServer(async (req, res) => {
 
   // Zo siete (iPhony cez Wi-Fi) je dostupné IBA sťahovanie súborov s tajným kľúčom, nič iné
   if (parts[0] === 'media' && req.method === 'GET') return media.serveMedia(req, res, parts);
-  if (!LOOPBACK.has(req.socket.remoteAddress)) { res.writeHead(403); return res.end('Forbidden'); }
+  // zvonku (mobil cez Cloudflare) len po prihlásení – inak prihlasovacia stránka / zákaz
+  if (!(await auth.gate(req, res, url))) return;
+  const remote = auth.isRemote(req);
+
+  // ikona a manifest (stránka ako aplikácia na ploche mobilu)
+  if (url.pathname === '/ikona.png' || url.pathname === '/manifest.json') {
+    const f = path.join(PUBLIC_DIR, url.pathname.slice(1));
+    if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); }
+    res.writeHead(200, { 'Content-Type': url.pathname.endsWith('.png') ? 'image/png' : 'application/manifest+json', 'Cache-Control': 'max-age=86400' });
+    return fs.createReadStream(f).pipe(res);
+  }
+  // PIN pre mobil – meniť sa dá len priamo na počítači
+  if (url.pathname === '/api/pin') {
+    if (req.method === 'GET') return json(res, 200, { hasPin: auth.hasPin(), remote, remoteUrl: config.remoteUrl || '' });
+    if (remote) return json(res, 403, { error: 'PIN sa dá meniť len priamo na počítači' });
+    const b = await readBody(req);
+    try {
+      if (b.remove) auth.removePin(); else if (b.pin !== undefined) auth.setPin(b.pin);
+      if (b.remoteUrl !== undefined) { config.remoteUrl = String(b.remoteUrl || '').trim().slice(0, 200); fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2)); }
+      return json(res, 200, { ok: true, hasPin: auth.hasPin() });
+    } catch (e) { return json(res, 400, { error: e.message }); }
+  }
 
   if (parts[0] === 'api' && parts[2] === 'upload' && req.method === 'POST') {
     const dev = devices.get(parts[1]);

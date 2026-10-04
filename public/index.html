@@ -2,7 +2,15 @@
 <html lang="sk">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="apple-touch-icon" href="/ikona.png">
+<link rel="icon" href="/ikona.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0c0d11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="IphoneWall">
 <title>JD - IphoneWall</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -319,7 +327,7 @@
   .card .tplrow .tplbtn { flex: 1; justify-content: flex-start; }
 
   /* ---------- návod ---------- */
-  .os-win .ostabs, .os-win .gwrap[data-os="mac"] { display: none !important; }
+  .os-win #remPanel, .os-win .gcf, .os-win .only-mac, .os-win .ostabs, .os-win .gwrap[data-os="mac"] { display: none !important; }
   .ostabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); }
   .ostabs button { border: 0; background: transparent; box-shadow: none; padding: 6px 14px; color: var(--muted); }
   .ostabs button.on { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
@@ -352,6 +360,20 @@
     .side .brand { padding: 0 8px 0 0; } .side .grow, .side .sbox { display: none; }
     .nav { display: flex; flex-wrap: wrap; gap: 2px; } .nav a { margin: 0; padding: 7px 9px; } .nav a span.t { display: none; }
     main { height: auto; overflow: visible; } .view { padding: 16px; }
+    /* mobil */
+    .side { position: sticky; top: 0; z-index: 20; padding-top: calc(10px + env(safe-area-inset-top, 0px)); background: rgba(16,17,22,.92); backdrop-filter: blur(16px); }
+    .side .brand small { display: none; }
+    #grid { grid-template-columns: 1fr !important; gap: 12px; }
+    label.ctl:has(#size) { display: none !important; }
+    input, textarea, select { font-size: 16px !important; } /* iPhone nepribližuje pri písaní */
+    .modal-bg { padding: 10px; align-items: flex-start; }
+    .modal { max-height: calc(100vh - 20px); padding: 16px; border-radius: 18px; }
+    .mrow2 { grid-template-columns: 1fr; }
+    .card .bar button, .card .top button { min-width: 38px; min-height: 38px; }
+    .vhead { flex-wrap: wrap; gap: 10px; }
+    .sgrid { grid-template-columns: 1fr; }
+    .view { overflow-x: hidden; } #grid > * { min-width: 0; }
+    body { padding-bottom: env(safe-area-inset-bottom, 0px); }
   }
 </style>
 </head>
@@ -739,6 +761,49 @@
         <p class="gnote">Pri AI obsahu zapínaj na Instagrame označenie <b>AI info</b>. API kľúče nikomu neposielaj – každý kamarát si dá vlastný.</p>
       </div>
     </div>
+      <div class="gwrap gcf">
+      <div class="panel gpart gwide">
+        <h3><span class="gnum">M</span>Prístup z mobilu (Cloudflare) – voliteľné</h3>
+        <p class="gnote" style="margin:0 0 10px">Stránku potom otvoríš z mobilu odkiaľkoľvek, kým je počítač doma zapnutý a beží START_STRANKY. Potrebuješ vlastnú doménu (napr. .com ~10 $ ročne).</p>
+        <ol class="gsteps" data-part="cf">
+          <li><b>Účet a doména</b>
+            <ul class="gsub">
+              <li>Založ si účet na <b>cloudflare.com</b> a zapni si dvojstupňové overenie (Profile → Authentication).</li>
+              <li>Kúp doménu: <code>Domain Registration → Register Domains</code>.</li>
+              <li>Otvor <b>Zero Trust</b> (Cloudflare One) a vyber bezplatný plán <b>Free</b>.</li>
+            </ul></li>
+          <li><b>PIN na stránke</b> (na počítači)
+            <ul class="gsub">
+              <li>Na stránke otvor <code>Nastavenia → Prístup z mobilu → Nastaviť PIN</code> (6 – 12 číslic). Bez PIN-u stránka nikoho zvonku nepustí.</li>
+            </ul></li>
+          <li><b>Prihlasovanie e-mailom</b> (sprav pred tunelom)
+            <ul class="gsub">
+              <li>Zero Trust → <code>Access → Applications → Add an application → Self-hosted</code>.</li>
+              <li>Domain: <code>wall</code> + tvoja doména (napr. <code>wall.tvojadomena.com</code>).</li>
+              <li>Policy: <code>Allow</code> → Include → <code>Emails</code> → tvoj e-mail. Login method: <code>One-time PIN</code>. Session: napr. 1 mesiac.</li>
+            </ul></li>
+          <li><b>Tunel z počítača</b>
+            <ul class="gsub">
+              <li>Zero Trust → <code>Networks → Tunnels → Create a tunnel → Cloudflared</code> → názov <code>iphone-wall</code>.</li>
+              <li>Vyber svoj systém a skopíruj príkaz <code>cloudflared service install …</code>.</li>
+              <li class="only-mac"><b>Mac:</b> vlož ho do aplikácie Terminál a stlač Enter (zadaj heslo k počítaču).</li>
+              <li class="only-win"><b>Windows:</b> spusti <code>Príkazový riadok</code> ako správca (pravý klik → Spustiť ako správca), vlož príkaz a Enter.</li>
+              <li>Keď Cloudflare ukáže stav <b>Healthy / Connected</b>, klikni Next.</li>
+            </ul></li>
+          <li><b>Adresa stránky</b>
+            <ul class="gsub">
+              <li>Klikni na tunel → <code>Routes → Add route → Published application</code>: Subdomain <code>wall</code>, Domain tvoja doména, Service URL <code>http://localhost:3000</code> → Add route.</li>
+              <li>Na stránke v <code>Nastavenia → Prístup z mobilu → Zadať adresu</code> si ju ulož, nech ju máš po ruke.</li>
+            </ul></li>
+          <li><b>Mobil</b>
+            <ul class="gsub">
+              <li>V Safari otvor <code>https://wall.tvojadomena.com</code> → zadaj e-mail → príde ti kód → zadaj PIN stránky.</li>
+              <li>Ikonu na plochu: tlačidlo <b>Zdieľať</b> → <code>Pridať na plochu</code>. Stránka sa potom otvára ako aplikácia.</li>
+              <li>Počítač nechaj zapnutý so spustenou stránkou (START_STRANKY). Tunel sa spúšťa sám aj po reštarte.</li>
+            </ul></li>
+        </ol>
+      </div>
+    </div>
   </section>
 
   <!-- NASTAVENIA -->
@@ -751,6 +816,13 @@
         <p class="sub" id="updNotes" style="margin:10px 0 0;white-space:pre-line"></p>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button id="updCheck">Skontrolovať</button><button class="go" id="updApply" hidden>Aktualizovať teraz</button></div>
         <p class="sub" id="updMsg" style="margin-top:8px"></p></div>
+      <div class="panel" id="remPanel"><h3><span data-icon="phone"></span>Prístup z mobilu<span class="sp"></span><a class="lnk" href="/logout" id="remLogout" hidden>Odhlásiť</a></h3>
+        <p>Stránku otvoríš aj z mobilu mimo domu – cez Cloudflare (návod je v sekcii Návod). Prístup chráni prihlásenie e-mailom v Cloudflare a tento PIN.</p>
+        <div class="kv"><span>PIN</span><b id="pinState">—</b></div>
+        <div class="kv"><span>Adresa z mobilu</span><b id="remUrlState">—</b></div>
+        <div id="pinLocal" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="go" id="pinSet">Nastaviť PIN</button><button id="remUrlBtn">Zadať adresu</button><button id="pinDel" hidden>Vypnúť PIN</button></div>
+        <p class="sub" id="pinMsg" style="margin-top:8px"></p></div>
       <div class="panel"><h3><span data-icon="key"></span>Claude API kľúč</h3>
         <p>Potrebný pre AI ovládanie telefónov. Ukladá sa iba na tomto počítači.</p>
         <div class="kv"><span>Stav</span><b id="keyState">—</b></div>
@@ -777,6 +849,8 @@
 </main>
 
 <script>
+// z mobilu: keď vyprší prihlásenie, ukáž znova prihlasovaciu stránku
+(() => { const f = window.fetch; window.fetch = async (...a) => { const r = await f(...a); if (r.status === 401) location.reload(); return r; }; })();
 // ---------- ikony ----------
 const ICONS = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
@@ -893,6 +967,29 @@ document.getElementById('updApply').addEventListener('click', async (e) => {
 checkUpdate(false);
 setInterval(() => checkUpdate(false), 6 * 60 * 60 * 1000);
 
+// ---------- prístup z mobilu (PIN) ----------
+async function loadPin() {
+  let r; try { r = await (await fetch('/api/pin')).json(); } catch (_) { return; }
+  const $ = (id) => document.getElementById(id);
+  $('pinState').innerHTML = r.hasPin ? '<span style="color:var(--ok)">nastavený ✓</span>' : '<span style="color:var(--bad)">nenastavený – z mobilu sa neprihlásiš</span>';
+  $('remUrlState').textContent = r.remoteUrl || '—';
+  $('pinLocal').hidden = r.remote; $('remLogout').hidden = !r.remote; $('pinDel').hidden = !r.hasPin;
+  if (r.remote) $('pinMsg').textContent = 'PIN a adresu meníš priamo na počítači.';
+}
+async function pinApi(body) {
+  const r = await fetch('/api/pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await r.json(); document.getElementById('pinMsg').textContent = j.error || 'Uložené.'; loadPin();
+}
+document.getElementById('pinSet').onclick = () => {
+  const p = prompt('Nový PIN pre prístup z mobilu (6 až 12 číslic). Po zmene sa bude treba na mobile prihlásiť znova.');
+  if (p != null) pinApi({ pin: p });
+};
+document.getElementById('pinDel').onclick = () => { if (confirm('Vypnúť PIN? Z mobilu sa potom nedá prihlásiť.')) pinApi({ remove: true }); };
+document.getElementById('remUrlBtn').onclick = () => {
+  const u = prompt('Adresa stránky z mobilu (napr. https://wall.tvojadomena.com):');
+  if (u != null) pinApi({ remoteUrl: u });
+};
+
 // ---------- navigácia ----------
 let view = '';
 function route() {
@@ -905,7 +1002,7 @@ function route() {
   if (view === 'inspiracia') loadInspiration();
   if (view === 'magnific') loadMagnific();
   if (view === 'realism') { const fr = document.getElementById('realismFrame'); if (!fr.src) fr.src = '/tools/realism.html'; }
-  if (view === 'nastavenia') loadSettings();
+  if (view === 'nastavenia') { loadSettings(); loadPin(); }
 }
 window.addEventListener('hashchange', route);
 

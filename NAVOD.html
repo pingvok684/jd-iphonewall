@@ -36,7 +36,7 @@
   button:hover { background: var(--surface-2); } button:focus-visible, .gsteps > li:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .gwrap { display: grid; gap: 18px; }
-  .os-win .osonly, .os-win .ostabs, .os-win .gwrap[data-os="mac"] { display: none !important; }
+  .os-win .gcf, .os-win .osonly, .os-win .only-mac, .os-win .ostabs, .os-win .gwrap[data-os="mac"] { display: none !important; }
   .ostabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 11px; background: var(--surface-2); border: 1px solid var(--line); justify-self: start; }
   .ostabs button { border: 0; background: transparent; padding: 8px 18px; font-weight: 600; color: var(--muted); }
   .ostabs button.on { background: var(--surface); color: var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
@@ -302,6 +302,49 @@
           <dt>AI hlási chybu modelu / kľúča</dt><dd>Skontroluj Claude API kľúč v Nastaveniach a kredit na console.anthropic.com.</dd>
         </dl>
         <p class="gnote">Pri AI obsahu zapínaj na Instagrame označenie <b>AI info</b>. API kľúče nikomu neposielaj – každý kamarát si dá vlastný.</p>
+      </div>
+    </div>
+    <div class="gwrap gcf">
+      <div class="panel gpart">
+        <h3><span class="gnum">M</span>Prístup z mobilu (Cloudflare) – voliteľné</h3>
+        <p class="gnote" style="margin:0 0 10px">Stránku potom otvoríš z mobilu odkiaľkoľvek, kým je počítač doma zapnutý a beží START_STRANKY. Potrebuješ vlastnú doménu (napr. .com ~10 $ ročne).</p>
+        <ol class="gsteps" data-part="cf">
+          <li><b>Účet a doména</b>
+            <ul class="gsub">
+              <li>Založ si účet na <b>cloudflare.com</b> a zapni si dvojstupňové overenie (Profile → Authentication).</li>
+              <li>Kúp doménu: <code>Domain Registration → Register Domains</code>.</li>
+              <li>Otvor <b>Zero Trust</b> (Cloudflare One) a vyber bezplatný plán <b>Free</b>.</li>
+            </ul></li>
+          <li><b>PIN na stránke</b> (na počítači)
+            <ul class="gsub">
+              <li>Na stránke otvor <code>Nastavenia → Prístup z mobilu → Nastaviť PIN</code> (6 – 12 číslic). Bez PIN-u stránka nikoho zvonku nepustí.</li>
+            </ul></li>
+          <li><b>Prihlasovanie e-mailom</b> (sprav pred tunelom)
+            <ul class="gsub">
+              <li>Zero Trust → <code>Access → Applications → Add an application → Self-hosted</code>.</li>
+              <li>Domain: <code>wall</code> + tvoja doména (napr. <code>wall.tvojadomena.com</code>).</li>
+              <li>Policy: <code>Allow</code> → Include → <code>Emails</code> → tvoj e-mail. Login method: <code>One-time PIN</code>. Session: napr. 1 mesiac.</li>
+            </ul></li>
+          <li><b>Tunel z počítača</b>
+            <ul class="gsub">
+              <li>Zero Trust → <code>Networks → Tunnels → Create a tunnel → Cloudflared</code> → názov <code>iphone-wall</code>.</li>
+              <li>Vyber svoj systém a skopíruj príkaz <code>cloudflared service install …</code>.</li>
+              <li class="only-mac"><b>Mac:</b> vlož ho do aplikácie Terminál a stlač Enter (zadaj heslo k počítaču).</li>
+              <li class="only-win"><b>Windows:</b> spusti <code>Príkazový riadok</code> ako správca (pravý klik → Spustiť ako správca), vlož príkaz a Enter.</li>
+              <li>Keď Cloudflare ukáže stav <b>Healthy / Connected</b>, klikni Next.</li>
+            </ul></li>
+          <li><b>Adresa stránky</b>
+            <ul class="gsub">
+              <li>Klikni na tunel → <code>Routes → Add route → Published application</code>: Subdomain <code>wall</code>, Domain tvoja doména, Service URL <code>http://localhost:3000</code> → Add route.</li>
+              <li>Na stránke v <code>Nastavenia → Prístup z mobilu → Zadať adresu</code> si ju ulož, nech ju máš po ruke.</li>
+            </ul></li>
+          <li><b>Mobil</b>
+            <ul class="gsub">
+              <li>V Safari otvor <code>https://wall.tvojadomena.com</code> → zadaj e-mail → príde ti kód → zadaj PIN stránky.</li>
+              <li>Ikonu na plochu: tlačidlo <b>Zdieľať</b> → <code>Pridať na plochu</code>. Stránka sa potom otvára ako aplikácia.</li>
+              <li>Počítač nechaj zapnutý so spustenou stránkou (START_STRANKY). Tunel sa spúšťa sám aj po reštarte.</li>
+            </ul></li>
+        </ol>
       </div>
     </div>
   <footer>Balík so stránkou ti pošle Juraj. API kľúče si každý vytvára sám – nikomu ich neposielaj.</footer>

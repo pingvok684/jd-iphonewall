@@ -1,0 +1,9 @@
+{
+  "name": "JD - IphoneWall",
+  "short_name": "IphoneWall",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0d11",
+  "theme_color": "#0c0d11",
+  "icons": [{ "src": "/ikona.png", "sizes": "1024x1024", "type": "image/png" }]
+}
