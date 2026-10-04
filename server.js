@@ -18,7 +18,8 @@ const BASE_PORT = parseInt(process.env.BASE_PORT || '20000', 10);
 const LABELS_FILE = path.join(__dirname, 'labels.json');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-const { startAgent } = require('./agent');
+const { startAgent, askText } = require('./agent');
+const content = require('./content');
 const media = require('./media');
 const templates = require('./templates');
 const store = require('./store');
@@ -30,6 +31,16 @@ let config = {};
 try { config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); } catch (_) {}
 auth.init(config, () => fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2)));
 const apiKey = () => process.env.ANTHROPIC_API_KEY || config.apiKey || '';
+// cez koho ide AI (klikanie, šablóny, popisy): 'anthropic' | 'kie' | 'auto' (Claude kľúč má prednosť, inak KIE)
+const aiProvider = () => {
+  const p = config.aiProvider || 'auto';
+  if (p === 'kie') return config.kieKey ? 'kie' : null;
+  if (p === 'anthropic') return apiKey() ? 'anthropic' : null;
+  return apiKey() ? 'anthropic' : (config.kieKey ? 'kie' : null);
+};
+// AI klikanie potrebuje vidieť obrazovku → ide vždy cez Claude priamo, ak je kľúč (KIE obrázky Claudovi neposiela)
+const agentAuth = () => apiKey() || aiAuth();
+const aiAuth = () => { const p = aiProvider(); return p === 'kie' ? { provider: 'kie', key: config.kieKey, model: config.kieModel || 'claude-sonnet-5' } : p === 'anthropic' ? apiKey() : null; };
 
 // Ako sa spúšťa WebDriverAgent:
 //   xcode  – automaticky cez xcodebuild (nastaví install.command)  ← odporúčané
@@ -323,10 +334,10 @@ function json(res, code, obj) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(obj));
 }
-function readBody(req) {
+function readBody(req, max = 1e6) {
   return new Promise((resolve) => {
     let b = '';
-    req.on('data', (c) => { b += c; if (b.length > 1e6) req.destroy(); });
+    req.on('data', (c) => { b += c; if (b.length > max) req.destroy(); });
     req.on('end', () => { try { resolve(JSON.parse(b || '{}')); } catch (_) { resolve({}); } });
   });
 }
@@ -377,6 +388,17 @@ function watchAgent(dev, task) {
     const ads = (dev.agent && dev.agent.ads) || 0;
     if (reels) { extra.reels = reels; store.addActivity('reels', `Prezreté reels: ${reels}${ads ? ` · preskočené reklamy: ${ads}` : ''}`, extra); }
     store.addActivity(ok ? 'ai_done' : 'error', ok ? last.replace(/^✓\s*/, '') : `AI: ${last.replace(/^[⚠■]\s*/, '')}`, { phone: dev.label });
+    if (ok) {
+      // výsledok AI: záverečné zhrnutie + posledné poznámky (prehľad býva v nich)
+      const log = dev.agent.log, done = last.replace(/^✓\s*(Hotovo:\s*)?/, '');
+      const notes = log.filter((l) => l.startsWith('💬')).slice(-3).map((l) => l.replace(/^💬\s*/, ''));
+      const full = done.length > 200 ? done : [...notes, done].join('\n');
+      if (/ZHLIADNUTIA\s*:/i.test(task)) { const st = content.addStatFromText(dev.udid, dev.label, full); if (st) store.addActivity('ai_done', `Štatistika ${dev.label}: ${st.views.toLocaleString('sk-SK')} zhliadnutí`, { phone: dev.label }); }
+      if (isResearch(task)) {
+        const prof = (task.match(/Profil na prieskum:\s*„([^“”"]*)[“”"]/) || [])[1] || '';
+        content.addResearch({ udid: dev.udid, phone: dev.label, profile: prof.trim() || 'Reels feed', reels: reels || 0, ads, text: full });
+      }
+    }
   }, 2000);
 }
 
@@ -384,7 +406,7 @@ function watchAgent(dev, task) {
 async function runAgentTask(dev, task, maxSteps) {
   await wake(dev);
   await pause(800); // nech je na obrazovke už odomknutý telefón
-  startAgent(dev, task, apiKey(), {
+  startAgent(dev, task, agentAuth(), {
     tap: async (x, y) => { await wake(dev); return tap(dev, x, y); },
     longPress: async (x, y) => { await wake(dev); return longPress(dev, x, y); },
     swipe: async (sw) => { await wake(dev); return swipe(dev, sw); },
@@ -401,6 +423,7 @@ fs.mkdirSync(PLAN_DIR, { recursive: true });
 // staré nepoužité súbory (> 2 dni) uprac
 for (const f of fs.readdirSync(PLAN_DIR)) { const fp = path.join(PLAN_DIR, f); try { if (Date.now() - fs.statSync(fp).mtimeMs > 2 * 86400000) fs.unlinkSync(fp); } catch (_) {} }
 function planFile(id) {
+  const lf = content.libFile(id); if (lf) return lf; // súbory z knižnice médií
   if (!/^[a-f0-9]{16}\.[a-z0-9]{2,5}$/.test(id)) return null;
   const fp = path.join(PLAN_DIR, id);
   return fs.existsSync(fp) ? fp : null;
@@ -425,6 +448,12 @@ async function runPlan(dev, steps) {
   store.addActivity('ai', `Plán: ${steps.map((x) => x.title).join(', ')}`, { phone: dev.label });
   const stopped = () => plan.stop || (dev.agent && dev.agent.stop) || dev.gone;
   let okCount = 0;
+  // kalendár: každý príspevok s dátumom sa zapíše hneď (stav „čaká“) a po naplánovaní sa aktualizuje
+  for (const st of steps) if (st.meta && st.meta.when) st.calId = content.addCalendar({
+    udid: dev.udid, phone: dev.label, kind: st.meta.kind || '', when: st.meta.when, whenText: st.meta.whenText || '',
+    caption: st.meta.caption || '', music: st.meta.music || '', place: st.meta.place || '', title: st.title || '',
+    files: st.files.map((f) => ({ id: f.id, name: f.name })) }).id;
+  const calSet = (st, status) => { if (st.calId) content.setCalendar(st.calId, { status }); };
   try {
     for (const [i, st] of steps.entries()) {
       if (stopped()) { say('■ Plán zastavený'); break; }
@@ -437,7 +466,7 @@ async function runPlan(dev, steps) {
         while (!stopped() && items.some((it) => !/^(✓|chyba)/.test(it.status))) await pause(1000);
         if (stopped()) { say('■ Plán zastavený'); break; }
         const bad = items.find((it) => it.status.startsWith('chyba'));
-        if (bad) { say(`⚠ ${head}: ${bad.name} sa nepodarilo poslať (${bad.status.replace(/^chyba:\s*/, '')}). Plán zastavujem, nič som nezverejnil.`); break; }
+        if (bad) { calSet(st, 'chyba'); say(`⚠ ${head}: ${bad.name} sa nepodarilo poslať (${bad.status.replace(/^chyba:\s*/, '')}). Plán zastavujem, nič som nezverejnil.`); break; }
         say(`✓ ${head}: médiá sú v galérii na 1. mieste`);
         await pause(2000);
       }
@@ -449,7 +478,9 @@ async function runPlan(dev, steps) {
       while (dev.agent && dev.agent.running) { if (plan.stop) dev.agent.stop = true; await pause(1500); }
       await pause(2600); // nech si watchAgent stihne zapísať výsledok do Aktivity
       const last = (dev.agent && dev.agent.log[dev.agent.log.length - 1]) || '';
-      if (!last.startsWith('✓')) { say(`⚠ ${head} sa nepodaril – plán zastavujem, aby sa ďalšie médiá nepomiešali.`); break; }
+      if (!last.startsWith('✓')) { calSet(st, 'chyba'); say(`⚠ ${head} sa nepodaril – plán zastavujem, aby sa ďalšie médiá nepomiešali.`); break; }
+      calSet(st, 'naplánované');
+      content.markUsed(st.files.map((f) => f.id), dev.udid, st.calId);
       okCount++;
       if (i < steps.length - 1) { dev.agent.running = true; say(`→ pokračujem ďalším príspevkom`); }
     }
@@ -459,11 +490,81 @@ async function runPlan(dev, steps) {
     plan.running = false;
     // súbor zmaž, až keď ho nepotrebuje ani plán na inom telefóne (rovnaké video môže ísť na viac telefónov)
     const inUse = new Set([...devices.values()].filter((d) => d.plan && d.plan.running).flatMap((d) => d.plan.fileIds || []));
-    for (const st of steps) for (const f of st.files) { const fp = planFile(f.id); if (fp && !inUse.has(f.id)) fs.unlink(fp, () => {}); }
+    for (const st of steps) for (const f of st.files) { if (content.libFile(f.id)) continue; const fp = planFile(f.id); if (fp && !inUse.has(f.id)) fs.unlink(fp, () => {}); }
+    for (const st of steps) if (st.calId && st.status !== 'done') { const c = content.listCalendar().find((x) => x.id === st.calId); if (c && c.status === 'čaká') content.setCalendar(st.calId, { status: 'nespustené' }); }
     say(okCount === steps.length ? `✓ Plán hotový: naplánované ${okCount}/${steps.length}` : `■ Plán skončil: naplánované ${okCount}/${steps.length}`);
     if (dev.agent) dev.agent.running = false;
     plan.running = false;
   }
+}
+
+// ---------- návrhy popisov (Claude) ----------
+async function suggestCaptions(b) {
+  if (!aiAuth()) throw new Error('Chýba kľúč pre AI – nastav Claude alebo KIE kľúč (Nastavenia)');
+  const dev = devices.get(String(b.udid || '')), prof = content.getProfile(String(b.udid || ''));
+  const recent = content.listCalendar().filter((x) => x.udid === b.udid && x.caption).slice(-6).map((x) => x.caption);
+  const kind = b.kind === 'carousel' ? 'carousel (viac fotiek)' : 'reel (video)';
+  const parts = [];
+  // náhľady fotiek / záberov z videa pripraví prehliadač (JPEG); AI si ich prezrie a popis napíše podľa nich
+  const imgs = (Array.isArray(b.images) ? b.images : []).slice(0, 6)
+    .map((x) => String(x || '').replace(/^data:image\/\w+;base64,/, '')).filter((x) => x.length > 100 && x.length < 3e6);
+  for (const data of imgs) parts.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } });
+  const fp = !imgs.length && b.fileId ? content.libFile(String(b.fileId)) : null;
+  if (fp && /\.(jpe?g|png|webp|gif)$/i.test(fp) && fs.statSync(fp).size < 4.5e6) {
+    const ext = path.extname(fp).toLowerCase();
+    parts.push({ type: 'image', source: { type: 'base64', media_type: ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : ext === '.gif' ? 'image/gif' : 'image/jpeg', data: fs.readFileSync(fp).toString('base64') } });
+  }
+  parts.push({ type: 'text', text: [
+    `Navrhni 3 rôzne popisy pre Instagram ${kind}.`,
+    parts.length ? (b.kind === 'reel' ? `Priložené sú zábery z videa (${parts.length}). Pozri si ich a popis napíš podľa toho, čo sa vo videu deje – prostredie, outfit, nálada, aktivita.` : `Priložené sú fotky z carouselu (${parts.length}) v poradí. Pozri si ich a popis napíš podľa toho, čo na nich je.`) : '',
+    prof.handle ? `Účet: @${prof.handle}.` : (dev ? `Účet: ${dev.label}.` : ''),
+    prof.note ? `Štýl a poznámky k účtu: ${prof.note}` : '',
+    recent.length ? `Doterajšie popisy tohto účtu (drž sa ich štýlu, ale píš po anglicky):\n- ${recent.join('\n- ')}` : '',
+    b.hint ? `O čom je príspevok / čo chcem: ${String(b.hint).slice(0, 500)}` : '',
+    b.fileName ? `Názov súboru: ${String(b.fileName).slice(0, 100)}` : '',
+    'Each caption MUST be written in English (even if the notes or hints above are in Slovak): a short hook at the start, 1–3 sentences, then 5–10 relevant English hashtags. No misleading claims.',
+    'Odpovedz IBA ako JSON: {"captions":["…","…","…"]}',
+  ].filter(Boolean).join('\n') });
+  const SYS = 'You are an experienced Instagram copywriter. Always write captions in natural, native-sounding English, in the style of the given account.';
+  const auth = aiAuth();
+  // KIE: Claude cez KIE obrázky neprijíma → fotky si prezrie Gemini (cez KIE) z dočasných verejných odkazov
+  const out = auth && auth.provider === 'kie' ? await kieVision(auth.key, SYS, parts) : await askText(auth, SYS, parts);
+  const m = out.match(/\{[\s\S]*\}/);
+  try { const j = JSON.parse(m ? m[0] : out); if (Array.isArray(j.captions)) return j.captions.slice(0, 3).map(String); } catch (_) {}
+  return out.split(/\n\s*\n/).slice(0, 3);
+}
+
+// Gemini cez KIE (OpenAI formát) – obrázky musia byť na verejnej adrese, preto ich dočasne zverejníme cez tunel
+const CAP_TMP = path.join(store.DATA, 'tmp-captions');
+fs.mkdirSync(CAP_TMP, { recursive: true });
+async function kieVision(key, system, parts) {
+  const content = [];
+  for (const p of parts) {
+    if (p.type === 'text') { content.push({ type: 'text', text: p.text }); continue; }
+    const f = path.join(CAP_TMP, require('crypto').randomBytes(8).toString('hex') + '.jpg');
+    fs.writeFileSync(f, Buffer.from(p.source.data, 'base64'));
+    setTimeout(() => fs.unlink(f, () => {}), 20 * 60000);
+    const url = media.publishTemp(f, path.basename(f), 20);
+    if (!url) throw new Error('Na prezretie fotiek cez KIE treba bežiaci tunel (v Prehľade „Médiá cez internet“). Reštartuj START_STRANKY, alebo napíš popis bez fotiek.');
+    content.push({ type: 'image_url', image_url: { url } });
+  }
+  // text daj na začiatok (pokyn), obrázky za ním
+  content.sort((a, b) => (a.type === 'text' ? 0 : 1) - (b.type === 'text' ? 0 : 1));
+  const r = await fetch(process.env.KIE_VISION_URL || 'https://api.kie.ai/gemini-3-8-flash-openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ model: 'gemini-3-8-flash', stream: false, messages: [{ role: 'system', content: system }, { role: 'user', content }] }),
+  });
+  const txt = await r.text();
+  let j; try { j = JSON.parse(txt); } catch (_) { throw new Error(`KIE ${r.status}: ${txt.slice(0, 160)}`); }
+  const d = j.choices ? j : (j.data || {});
+  const msg = d.choices && d.choices[0] && d.choices[0].message;
+  if (!msg) {
+    const err = (j.error && (j.error.message || j.error)) || j.msg || `KIE ${r.status}`;
+    if (/credit|balance|insufficient/i.test(String(err))) throw new Error('KIE: nemáš dosť kreditu – dobi si ho na kie.ai');
+    throw new Error(`KIE: ${err}`);
+  }
+  return Array.isArray(msg.content) ? msg.content.map((c) => c.text || '').join('\n') : String(msg.content || '');
 }
 
 // ---------- súhrn pre Prehľad ----------
@@ -483,7 +584,7 @@ function overview() {
     inspirationCount: store.listInspiration().length,
     activity: store.listActivity(8),
     mediaNet: media.mediaInfo(),
-    hasKey: !!apiKey(),
+    hasKey: !!aiAuth(),
   };
 }
 
@@ -516,7 +617,7 @@ const server = http.createServer(async (req, res) => {
     } catch (e) { return json(res, 400, { error: e.message }); }
   }
 
-  if (parts[0] === 'api' && parts[2] === 'upload' && req.method === 'POST') {
+  if (parts[0] === 'api' && parts[2] === 'upload' && parts[1] !== 'library' && parts[1] !== 'magnific' && req.method === 'POST') {
     const dev = devices.get(parts[1]);
     if (!dev) { req.resume(); return json(res, 404, { error: 'Telefón nenájdený' }); }
     return media.handleUpload(dev, req, res, url, mediaCtx);
@@ -527,6 +628,10 @@ const server = http.createServer(async (req, res) => {
     if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
     return fs.createReadStream(f).pipe(res);
+  }
+  if (url.pathname === '/obsah.js') {
+    res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
+    return fs.createReadStream(path.join(PUBLIC_DIR, 'obsah.js')).pipe(res);
   }
   if (url.pathname === '/wall.js') {
     res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -540,8 +645,12 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/devices') {
     return json(res, 200, {
       error: lastListError,
-      hasKey: !!apiKey(),
+      hasKey: !!aiAuth(),
+      hasClaudeKey: !!apiKey(),
+      aiProvider: config.aiProvider || 'auto', aiUsing: aiProvider(), kieModel: config.kieModel || 'claude-sonnet-5',
       hasMagnificKey: !!(process.env.MAGNIFIC_API_KEY || config.magnificKey),
+      hasKieKey: !!config.kieKey,
+      keyLooksWrong: !!(config.apiKey && !/^sk-ant-/.test(config.apiKey)),
       typingSpeed: typingSpeed(),
       lanIp: media.lanIp(),
       mediaNet: media.mediaInfo(),
@@ -552,8 +661,53 @@ const server = http.createServer(async (req, res) => {
         agent: d.agent ? { running: d.agent.running, log: d.agent.log.slice(-15) } : null,
         media: media.mediaState(d),
         locked: !!d.locked,
+        profile: content.getProfile(d.udid),
       })),
     });
+  }
+
+  // ---------- knižnica médií ----------
+  if (url.pathname === '/api/library' && req.method === 'GET') return json(res, 200, content.listLibrary());
+  if ((url.pathname === '/api/library/upload' || url.pathname === '/api/plan-file') && req.method === 'POST') {
+    try { return json(res, 200, await content.addToLibrary(req, String(url.searchParams.get('name') || 'subor'))); }
+    catch (e) { return json(res, 400, { error: e.message }); }
+  }
+  if (parts[0] === 'lib' && parts[1]) {
+    const f = content.libFile(parts[1]);
+    if (!f) { res.writeHead(404); return res.end(); }
+    const size = fs.statSync(f).size, range = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
+    const type = content.TYPES[path.extname(f).toLowerCase()] || 'application/octet-stream';
+    if (range) {
+      const start = range[1] ? parseInt(range[1], 10) : 0, end = range[2] ? Math.min(size - 1, parseInt(range[2], 10)) : size - 1;
+      res.writeHead(206, { 'Content-Type': type, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Accept-Ranges': 'bytes', 'Content-Length': end - start + 1, 'Cache-Control': 'max-age=86400' });
+      return fs.createReadStream(f, { start, end }).pipe(res);
+    }
+    res.writeHead(200, { 'Content-Type': type, 'Content-Length': size, 'Accept-Ranges': 'bytes', 'Cache-Control': 'max-age=86400' });
+    return fs.createReadStream(f).pipe(res);
+  }
+  // ---------- kalendár, štatistiky, prieskumy, profily, popisy ----------
+  if (url.pathname === '/api/calendar' && req.method === 'GET') return json(res, 200, content.listCalendar(url.searchParams.get('from'), url.searchParams.get('to')));
+  if (url.pathname === '/api/stats' && req.method === 'GET') return json(res, 200, content.listStats());
+  if (url.pathname === '/api/research' && req.method === 'GET') return json(res, 200, content.listResearch());
+  if (['/api/library/delete', '/api/library/note', '/api/calendar/delete', '/api/calendar/status', '/api/stats/delete', '/api/research/delete', '/api/profile', '/api/captions'].includes(url.pathname) && req.method === 'POST') {
+    const b = await readBody(req, url.pathname === '/api/captions' ? 12e6 : 1e6);
+    try {
+      switch (url.pathname) {
+        case '/api/library/delete': content.removeFromLibrary(String(b.id)); break;
+        case '/api/library/note': content.setLibNote(String(b.id), b.note); break;
+        case '/api/calendar/delete': content.removeCalendar(String(b.id)); break;
+        case '/api/calendar/status': content.setCalendar(String(b.id), { status: String(b.status || '').slice(0, 20) }); break;
+        case '/api/stats/delete': content.removeStat(String(b.id)); break;
+        case '/api/research/delete': content.removeResearch(String(b.id)); break;
+        case '/api/profile': {
+          const dev = devices.get(String(b.udid));
+          if (b.label !== undefined && dev) { dev.label = String(b.label || '').slice(0, 40) || dev.name; labels[dev.udid] = dev.label; saveLabels(); }
+          return json(res, 200, content.setProfile(String(b.udid), b));
+        }
+        case '/api/captions': return json(res, 200, { captions: await suggestCaptions(b) });
+      }
+      return json(res, 200, { ok: true });
+    } catch (e) { return json(res, 400, { error: e.message }); }
   }
 
   if (url.pathname === '/api/overview') return json(res, 200, overview());
@@ -607,10 +761,6 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === '/api/magnific/generate' && req.method === 'POST') {
     try { const it = await magnific.generate(req, url.searchParams); return json(res, 200, { ok: true, id: it.id }); }
-    catch (e) { return json(res, 400, { error: e.message }); }
-  }
-  if (url.pathname === '/api/plan-file' && req.method === 'POST') {
-    try { return json(res, 200, await savePlanFile(req, String(url.searchParams.get('name') || 'subor').slice(0, 120))); }
     catch (e) { return json(res, 400, { error: e.message }); }
   }
   if (url.pathname === '/api/magnific/upload' && req.method === 'POST') {
@@ -670,7 +820,19 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/settings' && req.method === 'POST') {
     const b = await readBody(req);
-    if (b.apiKey !== undefined) config.apiKey = String(b.apiKey || '').trim();
+    if (b.apiKey !== undefined) {
+      const k = String(b.apiKey || '').trim();
+      // Claude kľúč vždy začína sk-ant- (ochrana pred vložením kľúča z inej služby, napr. KIE)
+      if (k && !/^sk-ant-/.test(k)) return json(res, 400, { error: 'Toto nie je Claude API kľúč – ten začína „sk-ant-“ (console.anthropic.com → API Keys). Kľúč z KIE patrí do poľa „KIE API kľúč“.' });
+      config.apiKey = k;
+    }
+    if (b.aiProvider !== undefined && ['auto', 'anthropic', 'kie'].includes(b.aiProvider)) config.aiProvider = b.aiProvider;
+    if (b.kieModel !== undefined) config.kieModel = String(b.kieModel || '').trim().slice(0, 60) || 'claude-sonnet-5';
+    if (b.kieKey !== undefined) {
+      const k = String(b.kieKey || '').trim();
+      if (/^sk-ant-/.test(k)) return json(res, 400, { error: 'Toto je Claude kľúč – patrí do poľa „Claude API kľúč“.' });
+      config.kieKey = k;
+    }
     if (b.magnificKey !== undefined) config.magnificKey = String(b.magnificKey || '').trim();
     if (b.typingSpeed !== undefined) config.typingSpeed = Math.max(1, Math.min(60, parseInt(b.typingSpeed, 10) || 60));
     fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), () => {});
@@ -700,7 +862,7 @@ const server = http.createServer(async (req, res) => {
           dev.label = String(b.label || '').slice(0, 40) || dev.name;
           labels[dev.udid] = dev.label; saveLabels(); break;
         case 'agent': {
-          if (!apiKey()) return json(res, 400, { error: 'Chýba Claude API kľúč (hore vpravo)' });
+          if (!aiAuth()) return json(res, 400, { error: 'Chýba kľúč pre AI – nastav Claude alebo KIE kľúč v Nastaveniach' });
           if (!dev.wdaOk) return json(res, 400, { error: 'Telefón ešte nie je pripravený (WDA)' });
           const task = String(b.task || '').trim();
           if (!task) return json(res, 400, { error: 'Prázdna úloha' });
@@ -709,11 +871,13 @@ const server = http.createServer(async (req, res) => {
         }
         case 'agent-stop': if (dev.agent) dev.agent.stop = true; if (dev.plan) dev.plan.stop = true; break;
         case 'plan': {
-          if (!apiKey()) return json(res, 400, { error: 'Chýba Claude API kľúč (Nastavenia)' });
+          if (!aiAuth()) return json(res, 400, { error: 'Chýba kľúč pre AI – nastav Claude alebo KIE kľúč v Nastaveniach' });
           if (!dev.wdaOk) return json(res, 400, { error: 'Telefón ešte nie je pripravený (WDA)' });
           if ((dev.agent && dev.agent.running) || (dev.plan && dev.plan.running)) return json(res, 400, { error: 'Na telefóne už beží úloha' });
           const steps = (Array.isArray(b.steps) ? b.steps : []).slice(0, 10).map((x) => ({
             title: String(x.title || '').slice(0, 60), task: String(x.task || '').trim(), maxSteps: x.maxSteps,
+            meta: x.meta && typeof x.meta === 'object' ? { kind: String(x.meta.kind || '').slice(0, 20), when: String(x.meta.when || '').slice(0, 40), whenText: String(x.meta.whenText || '').slice(0, 80),
+              caption: String(x.meta.caption || '').slice(0, 2200), music: String(x.meta.music || '').slice(0, 120), place: String(x.meta.place || '').slice(0, 60) } : null,
             files: (Array.isArray(x.files) ? x.files : []).slice(0, 10).map((f) => ({ id: String(f.id || ''), name: String(f.name || '') })) }));
           if (!steps.length || steps.some((x) => !x.task)) return json(res, 400, { error: 'Prázdny plán' });
           for (const st of steps) for (const f of st.files) if (!planFile(f.id)) return json(res, 400, { error: `Súbor ${f.name} sa nenašiel – nahraj ho znova` });

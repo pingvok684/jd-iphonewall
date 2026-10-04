@@ -118,10 +118,8 @@ function makeCard(d) {
   el.querySelector('[data-a=home]').onclick = () => post(d.udid, 'home');
   el.querySelector('[data-a=reset]').onclick = async () => { await post(d.udid, 'reset'); startStream(); };
   el.querySelector('[data-a=solo]').onclick = () => { setFocus(c); document.body.classList.toggle('solo'); };
-  c.name.ondblclick = async () => {
-    const v = prompt('Názov telefónu:', c.d.label);
-    if (v != null) { await post(d.udid, 'label', { label: v }); c.name.textContent = v; }
-  };
+  c.name.ondblclick = () => openProfile(c.d);
+  c.name.title = 'Dvojklik = upraviť profil (názov, @účet, farba)';
   return c;
 }
 
@@ -254,7 +252,46 @@ function dropHtml(kind) {
   const v = kind === 'reel';
   return `<div class="pdrop" data-drop="${kind}"><label class="drop"><input type="file" ${v ? 'accept="video/*,.mov,.mp4"' : 'accept="image/*,.heic" multiple'}>
     <div>${icon(v ? 'play' : 'image')}<b>${v ? 'Pretiahni sem video' : 'Pretiahni sem fotky'}</b><small>${v ? 'alebo klikni' : 'v poradí, v akom majú byť v carouseli – alebo klikni'}</small></div></label>
+    <div class="pdact"><button type="button" class="ghost" data-lib>${icon('image')}Z knižnice</button></div>
     <div class="pfiles" data-files></div></div>`;
+}
+// knižnica (cache pre plánovač)
+let LIB = [];
+const loadLib = async () => { try { LIB = await (await fetch('/api/library')).json(); } catch (_) {} return LIB; };
+const libItem = (id) => LIB.find((x) => x.id === id);
+const usedText = (it) => (it && it.used && it.used.length) ? 'Použité: ' + it.used.map((u) => `${phoneLabel(u.udid)} (${new Date(u.at).toLocaleDateString('sk-SK')})`).join(', ') : '';
+// upozornenie: rovnaké médium na rovnakom účte druhýkrát
+function dupCheck(rows) {
+  const w = [];
+  for (const r of rows) for (const f of r.files) { const it = libItem(f.id); if (!it) continue;
+    for (const u of r.phones) { const hit = (it.used || []).find((x) => x.udid === u); if (hit) w.push(`• ${f.name} → ${phoneLabel(u)} (už použité ${new Date(hit.at).toLocaleDateString('sk-SK')})`); } }
+  return !w.length || confirm('Tieto médiá už boli na danom účte použité:\n' + w.join('\n') + '\n\nNaozaj ich chceš použiť znova?');
+}
+// výber z knižnice
+function pickFromLibrary(kind) {
+  return new Promise(async (resolve) => {
+    await loadLib();
+    const items = LIB.filter((x) => (kind === 'reel' ? x.kind === 'video' : x.kind === 'photo'));
+    const bg = document.createElement('div'); bg.className = 'modal-bg';
+    const sel = [];
+    bg.innerHTML = `<div class="modal libpick"><div class="mhead"><h3>Knižnica · ${kind === 'reel' ? 'videá' : 'fotky'}</h3></div>
+      <small class="hint">${kind === 'reel' ? 'Vyber 1 video.' : 'Vyber fotky v poradí, v akom majú byť v carouseli.'} Červený štítok = už použité.</small>
+      <div class="lgrid">${items.map((it) => `<button type="button" class="lit" data-id="${it.id}" title="${esc(it.name + (usedText(it) ? '\n' + usedText(it) : ''))}">
+        ${it.kind === 'video' ? `<video src="/lib/${it.id}#t=0.1" muted playsinline preload="metadata"></video>` : `<img src="/lib/${it.id}" loading="lazy" alt="">`}
+        ${it.used && it.used.length ? `<span class="lused">${it.used.length}×</span>` : ''}<span class="lnum"></span></button>`).join('') || '<div class="empty-s" style="grid-column:1/-1">Knižnica je prázdna – nahraj médiá v sekcii Knižnica.</div>'}</div>
+      <div class="mact"><button data-x>Zrušiť</button><button class="go" data-ok>Pridať</button></div></div>`;
+    document.body.appendChild(bg);
+    const close = (v) => { bg.remove(); resolve(v); };
+    bg.querySelector('[data-x]').onclick = () => close(null);
+    bg.onclick = (e) => { if (e.target === bg) close(null); };
+    bg.querySelector('.lgrid').addEventListener('click', (e) => {
+      const b = e.target.closest('.lit'); if (!b) return;
+      const id = b.dataset.id, k = sel.indexOf(id);
+      if (k >= 0) sel.splice(k, 1); else { if (kind === 'reel') sel.length = 0; sel.push(id); }
+      bg.querySelectorAll('.lit').forEach((x) => { const n = sel.indexOf(x.dataset.id); x.classList.toggle('on', n >= 0); x.querySelector('.lnum').textContent = n >= 0 ? n + 1 : ''; });
+    });
+    bg.querySelector('[data-ok]').onclick = () => close(sel.map(libItem).filter(Boolean));
+  });
 }
 // pripojí štvorček; vráti objekt s .files [{id,name}] a .busy
 function attachDrop(box, onChange, prev) {
@@ -267,7 +304,7 @@ function attachDrop(box, onChange, prev) {
       list.dataset.sig = sig;
       list.innerHTML = st.files.map((f, i) => `<div class="pf" data-k="${i}" title="${esc(f.name)}">
         ${f.video ? `<video src="${f.url}#t=0.1" muted playsinline preload="metadata"></video><span class="pvid">${icon('play')}</span>` : `<img src="${f.url}" alt="">`}
-        <span class="pnum">${i + 1}</span><span class="pst"></span>
+        <span class="pnum">${i + 1}</span><span class="pst"></span>${usedText(libItem(f.id)) ? `<span class="pused" title="${esc(usedText(libItem(f.id)))}">použité</span>` : ''}
         <button type="button" class="prm" data-rm="${i}" title="Odstrániť">×</button><span class="pnm">${esc(f.name)}</span></div>`).join('');
       list.querySelectorAll('img, video').forEach((m) => m.addEventListener('error', () => m.closest('.pf').classList.add('noprev')));
     }
@@ -292,7 +329,7 @@ function attachDrop(box, onChange, prev) {
       xhr.open('POST', `/api/plan-file?name=${encodeURIComponent(f.name)}`);
       xhr.upload.onprogress = (e) => { if (e.lengthComputable) { it.pct = Math.round(e.loaded / e.total * 100); st.render(); } };
       xhr.onload = () => { let j = {}; try { j = JSON.parse(xhr.responseText); } catch (_) {}
-        if (xhr.status >= 400 || !j.id) it.err = j.error || 'Chyba nahrávania'; else it.id = j.id; st.render(); };
+        if (xhr.status >= 400 || !j.id) it.err = j.error || 'Chyba nahrávania'; else { it.id = j.id; if (!libItem(j.id)) LIB.unshift(j); else Object.assign(libItem(j.id), j); list.dataset.sig = ''; } st.render(); };
       xhr.onerror = () => { it.err = 'Spojenie zlyhalo'; st.render(); };
       xhr.send(f);
     }
@@ -303,6 +340,13 @@ function attachDrop(box, onChange, prev) {
   lab.addEventListener('dragleave', () => lab.classList.remove('over'));
   lab.addEventListener('drop', (e) => { e.preventDefault(); lab.classList.remove('over'); add(e.dataTransfer.files); });
   list.addEventListener('click', (e) => { const b = e.target.closest('[data-rm]'); if (b) { st.files.splice(+b.dataset.rm, 1); render(); } });
+  box.querySelector('[data-lib]').onclick = async () => {
+    const got = await pickFromLibrary(kind); if (!got || !got.length) return;
+    if (kind === 'reel') st.files = [];
+    for (const it of got) st.files.push({ id: it.id, name: it.name, url: `/lib/${it.id}`, video: it.kind === 'video', pct: 100 });
+    list.dataset.sig = ''; render();
+  };
+  loadLib().then(() => { list.dataset.sig = ''; render(); });
   if (prev) render();
   return st;
 }
@@ -315,11 +359,12 @@ const planFiles = (st) => st.files.filter((f) => f.id).map((f) => ({ id: f.id, n
 
 // ---------- výber telefónov (na ktorý telefón ide daný príspevok) ----------
 const phoneList = () => [...cards.values()].map((c) => c.d).filter(Boolean);
-const phoneLabel = (u) => (phoneList().find((p) => p.udid === u) || {}).label || 'telefón';
+const fullLabel = (d) => d ? d.label + (d.profile && d.profile.handle ? ` (@${d.profile.handle})` : '') : 'telefón';
+const phoneLabel = (u) => fullLabel(phoneList().find((p) => p.udid === u));
 function chipsHtml(sel, attr = 'data-ph') {
   const ph = phoneList();
   if (!ph.length) return '<small class="hint">Žiadny pripojený telefón</small>';
-  return `<div class="phchips" ${attr}>${ph.map((p) => `<button type="button" class="phc${sel.includes(p.udid) ? ' on' : ''}${p.wdaOk ? '' : ' off'}" data-u="${p.udid}">${esc(p.label)}</button>`).join('')}</div>`;
+  return `<div class="phchips" ${attr}>${ph.map((p) => `<button type="button" class="phc${sel.includes(p.udid) ? ' on' : ''}${p.wdaOk ? '' : ' off'}" data-u="${p.udid}"${p.profile && p.profile.color ? ` style="--pc:${p.profile.color}"` : ''}><i class="pcd"></i>${esc(fullLabel(p))}</button>`).join('')}</div>`;
 }
 const readChips = (box) => box ? [...box.querySelectorAll('.phc.on')].map((b) => b.dataset.u) : [];
 // klik na čip = zapnúť/vypnúť
@@ -333,6 +378,57 @@ function runSteps(steps, fallbackUdid) {
 }
 const samePhones = (a, def) => a.length === 1 && a[0] === def;
 
+// náhľady pre AI: fotky zmenšené na JPEG, z videa 3 zábery (začiatok, stred, koniec)
+const toJpeg = (src, w, h) => { const k = Math.min(1, 768 / Math.max(w, h)); const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.72); };
+const withTimeout = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), ms))]);
+function photoPreview(url) {
+  return withTimeout(new Promise((res) => { const im = new Image(); im.onload = () => { try { res(toJpeg(im, im.naturalWidth, im.naturalHeight)); } catch (_) { res(null); } }; im.onerror = () => res(null); im.src = url; }), 8000);
+}
+function videoFrames(url, n = 3) {
+  return withTimeout(new Promise((res) => {
+    const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
+    const out = []; let i = 0;
+    const next = () => { if (i >= n) { v.src = ''; return res(out); } v.currentTime = Math.max(0.1, v.duration * (0.15 + 0.7 * i / Math.max(1, n - 1))); };
+    v.onloadedmetadata = () => (isFinite(v.duration) && v.duration > 0 ? next() : res(out));
+    v.onseeked = () => { try { out.push(toJpeg(v, v.videoWidth, v.videoHeight)); } catch (_) {} i++; next(); };
+    v.onerror = () => res(out);
+  }), 15000).then((r) => r || []);
+}
+async function previewsFor(files, kind) {
+  const out = [];
+  for (const f of files.slice(0, 6)) {
+    if (f.video) out.push(...await videoFrames(f.url, kind === 'reel' ? 3 : 1));
+    else { const j = await photoPreview(f.url); if (j) out.push(j); }
+    if (out.length >= 6) break;
+  }
+  return out.slice(0, 6);
+}
+
+// ✨ návrhy popisov – tlačidlo pod poľom popisu
+const capHtml = () => `<div class="capbar"><button type="button" class="ghost capbtn" data-capgen>✨ Navrhni popis</button><small class="hint">AI si prezrie nahraté ${''}fotky / video a navrhne 3 popisy v štýle účtu. Do poľa môžeš dopísať pár slov navyše.</small></div><div class="capsug" data-capsug></div>`;
+function wireCaptions(root, getCtx) {
+  root.addEventListener('click', async (e) => {
+    const pick = e.target.closest('[data-capuse]');
+    if (pick) { const ta = pick.closest('[data-capwrap]').querySelector('textarea'); ta.value = pick.dataset.text; ta.dispatchEvent(new Event('input')); pick.parentElement.innerHTML = ''; return; }
+    const b = e.target.closest('[data-capgen]'); if (!b) return;
+    const wrap = b.closest('[data-capwrap]'), ta = wrap.querySelector('textarea'), sug = wrap.querySelector('[data-capsug]');
+    const ctx = getCtx(wrap);
+    if (!ctx.udid) return alert('Najprv vyber telefón (účet).');
+    b.disabled = true;
+    try {
+      let images = [];
+      if (ctx.files && ctx.files.length) { sug.innerHTML = `<small class="hint">Pozerám ${ctx.kind === 'reel' ? 'video' : 'fotky'}…</small>`; images = await previewsFor(ctx.files, ctx.kind); }
+      sug.innerHTML = '<small class="hint">Píšem návrhy…</small>';
+      const { files, ...rest } = ctx;
+      const r = await (await fetch('/api/captions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...rest, images, hint: ta.value }) })).json();
+      if (r.error) throw new Error(r.error);
+      sug.innerHTML = r.captions.map((c) => `<button type="button" class="capopt" data-capuse data-text="${esc(c)}">${esc(c)}</button>`).join('');
+    } catch (err) { sug.innerHTML = `<small class="hint" style="color:var(--bad)">${esc(err.message)}</small>`; }
+    b.disabled = false;
+  });
+}
+
 // okno na vyplnenie [premenných]; [Názov|a|b|c] = rolovacie menu s možnosťami
 function askVars(title, vars, kind, defUdid) {
   return new Promise((resolve) => {
@@ -342,9 +438,10 @@ function askVars(title, vars, kind, defUdid) {
       const ctl = opts.length
         ? `<select data-i="${i}">${opts.map((o) => `<option>${esc(o)}</option>`).join('')}</select>`
         : /dátum a čas/i.test(label) ? dtPicker(i)
-        : /popis/i.test(label) ? `<textarea data-i="${i}" rows="3"></textarea>` : `<input data-i="${i}">`;
+        : /popis/i.test(label) ? `<textarea data-i="${i}" rows="3"></textarea>${kind ? capHtml() : ''}` : `<input data-i="${i}">`;
       const hint = /dátum a čas/i.test(label) ? '<small class="hint">Čas zadávaš slovenský. Meta dovolí naplánovať najskôr asi 20 minút dopredu.</small><small class="hint us-conv" data-conv></small>' : '';
-      return `<label><span>${esc(label.replace(/\s*\(napr\..*\)$/, ''))}</span>${ctl}${hint}</label>`;
+      const tag = kind && /popis/i.test(label) ? 'div' : 'label';
+      return `<${tag} class="${tag === 'div' ? 'fld' : ''}"${tag === 'div' ? ' data-capwrap' : ''}><span>${esc(label.replace(/\s*\(napr\..*\)$/, ''))}</span>${ctl}${hint}</${tag}>`;
     }).join('');
     const phones = kind ? `<div class="fld"><span>Na ktorý telefón (môžeš vybrať viac)</span>${chipsHtml(defUdid ? [defUdid] : [])}</div>` : '';
     const drop = kind ? phones + `<div class="fld"><span>${kind === 'reel' ? 'Video' : 'Fotky'} (voliteľné)</span>${dropHtml(kind)}<small class="hint">${kind === 'reel' ? 'Ak ho sem pretiahneš, pred plánovaním sa pošle' : 'Ak ich sem pretiahneš, pred plánovaním sa pošlú'} do galérie iPhonu ako najnovšie – AI tak vyberie presne ${kind === 'reel' ? 'toto video' : 'tieto fotky'}. Inak použije ${kind === 'reel' ? 'najnovšie video' : 'najnovšie fotky'}, ktoré už v iPhone sú.</small></div>` : '';
@@ -358,11 +455,13 @@ function askVars(title, vars, kind, defUdid) {
       const n = st.files.length, i = vars.findIndex((v) => /počet fotiek/i.test(v)), sel = i >= 0 && bg.querySelector(`[data-i="${i}"]`);
       if (sel) { if (n >= 2 && n <= 10) sel.value = String(n); sel.disabled = n > 0; }
     }) : null;
+    if (kind) wireCaptions(bg, () => { const fl = dst ? dst.files.filter((x) => x.id) : []; return { udid: readChips(bg.querySelector('[data-ph]'))[0], kind, fileId: fl[0] && fl[0].id, fileName: fl[0] && fl[0].name, files: fl }; });
     const close = (val) => { stopClock(); bg.remove(); resolve(val); };
     bg.querySelector('[data-x]').onclick = () => close(null);
     bg.onclick = (e) => { if (e.target === bg) close(null); };
     bg.querySelector('[data-ok]').onclick = () => {
       const out = [];
+      out.meta = { kind };
       for (let i = 0; i < vars.length; i++) {
         const el = bg.querySelector(`[data-i="${i}"]`);
         if (el.dataset.dt !== undefined) {
@@ -370,8 +469,14 @@ function askVars(title, vars, kind, defUdid) {
           const d = new Date(`${dv}T${el.querySelector('[data-h]').value}:${el.querySelector('[data-m]').value}`);
           if (!dv || isNaN(d)) { el.querySelector('[data-d]').focus(); return; }
           if (d < minSched()) { alert(`Tento čas je príliš skoro. Najskorší možný čas je ${fmtSk(minSched())}.`); el.querySelector('[data-h]').focus(); return; }
-          out.push(fmtSk(d));
-        } else out.push(el.value);
+          out.push(fmtSk(d)); out.meta.when = d.toISOString(); out.meta.whenText = fmtSk(d);
+        } else {
+          out.push(el.value);
+          const lab = vars[i];
+          if (/popis/i.test(lab)) out.meta.caption = el.value.trim();
+          else if (/pesnič/i.test(lab)) out.meta.music = el.value.trim();
+          else if (/kam zverejniť/i.test(lab)) out.meta.place = el.value;
+        }
       }
       if (kind) {
         out.phones = readChips(bg.querySelector('[data-ph]'));
@@ -382,6 +487,7 @@ function askVars(title, vars, kind, defUdid) {
         out.files = planFiles(dst);
         if (kind === 'carousel' && out.files.length === 1) return alert('Carousel potrebuje aspoň 2 fotky.');
         if (out.files.length > 10) return alert('Carousel môže mať najviac 10 fotiek.');
+        if (!dupCheck([{ files: out.files, phones: out.phones }])) return;
       }
       close(out);
     };
@@ -403,18 +509,18 @@ async function applyTemplateByName(name, target) {
     return true;
   }
   delete target.dataset.maxSteps; delete target.dataset.plan;
-  let text = t.text, files = [], phones = [];
+  let text = t.text, files = [], phones = [], meta = null;
   const kind = /Meta Business Suite/.test(t.text) && /naplánuj/i.test(t.name) ? (/reel/i.test(t.name) ? 'reel' : /carousel/i.test(t.name) ? 'carousel' : null) : null;
   const vars = [...new Set(text.match(/\[[^\]]+\]/g) || [])];
   if (vars.length) {
     const vals = await askVars(t.name, vars, kind, defUdid);
     if (!vals) return false;
     vars.forEach((v, i) => { text = text.split(v).join(vals[i]); });
-    files = vals.files || []; phones = vals.phones || [];
+    files = vals.files || []; phones = vals.phones || []; meta = vals.meta || null;
   }
-  if (files.length || (kind && !samePhones(phones, defUdid))) {
+  if (kind) {
     const title = splitName(t.name)[1];
-    target.dataset.plan = JSON.stringify(phones.map((u) => ({ udid: u, title, task: text, files, maxSteps: 120 })));
+    target.dataset.plan = JSON.stringify(phones.map((u) => ({ udid: u, title, task: text, files, maxSteps: 120, meta })));
     target.value = `📦 ${title} → ${phones.map(phoneLabel).join(', ')}` + (files.length ? `: najprv pošlem ${files.length === 1 ? files[0].name : files.length + ' fotiek'} do galérie (bude na 1. mieste), potom to AI naplánuje.` : '') + `\n(Tento text neupravuj – stlač Spustiť.)\n\n${text}`;
     target.focus();
     return true;
@@ -450,7 +556,7 @@ function askMulti(t, defUdid) {
         const def = new Date(base.getTime() + i * 24 * 3600000); // predvolene každý deň v rovnakom čase – uprav si podľa seba
         return `<div class="mitem2"><div class="mtit">${noun} ${i + 1}</div><div class="fld"><span>Telefón</span>${chipsHtml(defUdid ? [defUdid] : [])}</div>${dropHtml(isReel ? 'reel' : 'carousel')}
           ${isReel ? '' : `<label><span>Počet fotiek</span><select data-cnt>${[2, 3, 4, 5, 6, 7, 8, 9, 10].map((k) => `<option${k === 3 ? ' selected' : ''}>${k}</option>`).join('')}</select></label>`}
-          <label><span>Popis + #hashtagy</span><textarea data-cap rows="2"></textarea></label>
+          <div class="fld" data-capwrap><span>Popis + #hashtagy</span><textarea data-cap rows="2"></textarea>${capHtml()}</div>
           <label><span>Pesnička (prázdne = prvá v ponuke, nie = bez hudby)</span><input data-mus></label>
           <label><span>Dátum a čas</span>${dtPicker(i, def)}<small class="hint us-conv" data-conv></small></label></div>`;
       }).join('');
@@ -471,6 +577,10 @@ function askMulti(t, defUdid) {
       updateConv(bg);
     };
     const drops = [];
+    wireCaptions(items, (wrap) => {
+      const el = wrap.closest('.mitem2'), i = [...items.children].indexOf(el), fl = drops[i] ? drops[i].files.filter((x) => x.id) : [];
+      return { udid: readChips(el.querySelector('[data-ph]'))[0], kind: isReel ? 'reel' : 'carousel', fileId: fl[0] && fl[0].id, fileName: fl[0] && fl[0].name, files: fl };
+    });
     // „pre všetky“: klik na telefón ho nastaví pri všetkých príspevkoch
     bg.querySelector('[data-allph]').addEventListener('click', (e) => {
       const b = e.target.closest('.phc'); if (!b) return;
@@ -492,7 +602,8 @@ function askMulti(t, defUdid) {
           : 'v galérii prepni album na Videos / Videá a vyber NAJNOVŠIE video (prvé vľavo hore) – fotku nevyberaj; ťukni Next; ')
         : (pick && pick.from > 1 ? `ťukni na pridanie fotiek a vyber fotky č. ${pick.from} až ${pick.from + x.cnt - 1} (počítané od najnovšej fotky vľavo hore, zľava doprava, zhora nadol) v tomto poradí; potvrď výber; `
           : `ťukni na pridanie fotiek a vyber ${x.cnt} najnovších fotiek v poradí – začni prvou vľavo hore (najnovšia), pokračuj zľava doprava; potvrď výber; `);
-      return { title: `${noun} ${i + 1}`, files: x.files, maxSteps: isReel ? 110 : 130, task:
+      return { title: `${noun} ${i + 1}`, files: x.files, maxSteps: isReel ? 110 : 130,
+        meta: { kind: isReel ? 'reel' : 'carousel', when: x.whenISO, whenText: x.when, caption: x.cap, music: x.mus, place }, task:
         `Otvor aplikáciu Meta Business Suite. Naplánuj 1 ${isReel ? 'reel' : 'carousel'}: ťukni na „+“ / „Create“ a vyber ${isReel ? 'Reel' : 'Post / Príspevok'}; pri účtoch / umiestneniach nastav: ${place}; ` + which +
         `${MUSIC_RULE} Hudba: „${x.mus}“. Napíš presne tento popis: „${x.cap}“. Ak je možnosť označiť obsah ako vytvorený AI (AI info / AI label), zapni ju. ` +
         `Otvor „Scheduling options“ / „Možnosti plánovania“, vyber „Schedule for later“, nastav dátum a čas: ${x.when} a ťukni „Schedule“ – NIKDY „Publish now“. ` +
@@ -513,10 +624,11 @@ function askMulti(t, defUdid) {
         const cnt = isReel ? 1 : (fl.length || +el.querySelector('[data-cnt]').value);
         const ph = readChips(el.querySelector('[data-ph]'));
         if (!ph.length) return alert(`${noun} ${i + 1}: vyber telefón.`);
-        list.push({ ph, files: fl, cap: el.querySelector('[data-cap]').value.trim(), mus: el.querySelector('[data-mus]').value.trim(), when: fmtSk(d), cnt, from: photoStart });
+        list.push({ whenISO: d.toISOString(), ph, files: fl, cap: el.querySelector('[data-cap]').value.trim(), mus: el.querySelector('[data-mus]').value.trim(), when: fmtSk(d), cnt, from: photoStart });
         photoStart += cnt;
       }
-      if (withFiles || !list.every((x) => samePhones(x.ph, defUdid))) {
+      if (!dupCheck(list.map((x) => ({ files: x.files, phones: x.ph })))) return;
+      {
         // plán: každý príspevok zvlášť (na svojom telefóne) – najprv jeho médiá do galérie, potom ho AI naplánuje.
         // Bez médií: pre každý telefón sa počíta poradie zvlášť (1. príspevok = najnovšie video, 2. = druhé najnovšie…)
         const seen = new Map(), steps = [];
@@ -628,7 +740,9 @@ async function poll() {
     let c = cards.get(d.udid);
     if (!c) { c = makeCard(d); cards.set(d.udid, c); }
     c.d = d;
-    c.name.textContent = d.label;
+    const pf = d.profile || {}, nm = `${esc(d.label)}${pf.handle ? ` <small>@${esc(pf.handle)}</small>` : ''}`;
+    if (c.name.dataset.h !== nm) { c.name.innerHTML = nm; c.name.dataset.h = nm; }
+    c.el.style.setProperty('--pc', pf.color || 'transparent');
     c.ver.textContent = d.version ? 'iOS ' + d.version : '';
     c.dot.classList.toggle('ok', d.wdaOk);
     c.el.classList.toggle('wda', d.wdaOk);
@@ -690,4 +804,3 @@ window.addEventListener('hashchange', () => setTimeout(poll, 50));
 loadTemplates().then(() => { route(); poll(); });
 setInterval(poll, 3000);
 setInterval(() => { if (view === 'prehlad') loadOverview(); else if (view === 'aktivita') loadActivity(); }, 6000);
-setInterval(() => { if (view === 'magnific') loadMagnific(); }, 4000);

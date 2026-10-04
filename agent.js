@@ -67,7 +67,43 @@ function grabFrame(port) {
   });
 }
 
-async function callClaude(apiKey, messages, retried) {
+// ---------- poskytovateľ AI: Claude priamo (Anthropic) alebo cez KIE ----------
+// auth = 'sk-ant-…' (Anthropic) alebo { provider: 'kie', key, model }
+const KIE_URL = process.env.KIE_URL || 'https://api.kie.ai/claude/v1/messages';
+const isKie = (a) => a && typeof a === 'object' && a.provider === 'kie';
+const keyOf = (a) => (typeof a === 'string' ? a : (a && a.key) || '');
+let kieSystemInline = false; // ak KIE nepozná pole „system“, vložíme pokyny do prvej správy
+function inlineSystem(sys, messages) {
+  const [first, ...rest] = messages;
+  const c = typeof first.content === 'string' ? [{ type: 'text', text: first.content }] : first.content;
+  return [{ ...first, content: [{ type: 'text', text: `POKYNY:\n${sys}` }, ...c] }, ...rest];
+}
+async function kieSend(auth, body) {
+  const b = { ...body, model: auth.model || 'claude-sonnet-5', stream: false };
+  if (kieSystemInline && b.system) { b.messages = inlineSystem(b.system, b.messages); delete b.system; }
+  const r = await fetch(KIE_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${auth.key}`, 'x-api-key': auth.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify(b),
+  });
+  const txt = await r.text();
+  let j; try { j = JSON.parse(txt); } catch (_) { throw new Error(`KIE ${r.status}: ${txt.slice(0, 160)}`); }
+  const d = j && j.data && Array.isArray(j.data.content) ? j.data : j; // niekedy je odpoveď zabalená v „data“
+  const err = !r.ok || (j.code && j.code !== 200 && !Array.isArray(d.content)) || j.type === 'error'
+    ? ((j.error && (j.error.message || j.error)) || j.msg || j.message || `KIE ${r.status}`) : null;
+  if (err) {
+    if (!kieSystemInline && body.system && /system/i.test(String(err))) { kieSystemInline = true; return kieSend(auth, body); }
+    if (/credit|balance|insufficient/i.test(String(err))) throw new Error('KIE: nemáš dosť kreditu – dobi si ho na kie.ai');
+    if (r.status === 401 || /key|auth/i.test(String(err))) throw new Error('KIE: neplatný API kľúč (Nastavenia → KIE API kľúč)');
+    throw new Error(`KIE: ${err}`);
+  }
+  if (!Array.isArray(d.content)) throw new Error('KIE: neočakávaná odpoveď');
+  return d;
+}
+
+async function callClaude(auth, messages, retried) {
+  if (isKie(auth)) return kieSend(auth, { max_tokens: 1024, system: SYSTEM, tools: TOOLS, messages });
+  const apiKey = keyOf(auth);
   if (!MODEL) MODEL = await pickModel(apiKey);
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -81,8 +117,8 @@ async function callClaude(apiKey, messages, retried) {
   if (!r.ok) {
     const msg = (j.error && j.error.message) || `Claude API ${r.status}`;
     // neplatný / starý názov modelu → vyber znova automaticky
-    if (!retried && thinkingOff && /thinking/i.test(msg) && !/signature|block_binding/i.test(msg)) { thinkingOff = false; return callClaude(apiKey, messages, true); }
-    if (!retried && (r.status === 404 || /model/i.test(msg))) { MODEL = await pickModel(apiKey); return callClaude(apiKey, messages, true); }
+    if (!retried && thinkingOff && /thinking/i.test(msg) && !/signature|block_binding/i.test(msg)) { thinkingOff = false; return callClaude(auth, messages, true); }
+    if (!retried && (r.status === 404 || /model/i.test(msg))) { MODEL = await pickModel(apiKey); return callClaude(auth, messages, true); }
     throw new Error(msg);
   }
   return j;
@@ -112,8 +148,12 @@ async function runAgent(dev, task, apiKey, actions, opts = {}) {
   const f = (v) => Math.max(0, Math.min(1000, Number(v) || 0)) / 1000;
 
   say(`▶ Úloha: ${task}`);
-  if (!MODEL) { MODEL = await pickModel(apiKey); }
-  say(`🧠 Model: ${MODEL}`);
+  if (isKie(apiKey) && !process.env.KIE_AGENT) {
+    // Claude cez KIE neprijíma obrázky → AI by ťukala naslepo (a mohla by napr. zverejniť namiesto naplánovania). To nedovolíme.
+    throw new Error('Ovládanie telefónov cez KIE zatiaľ nejde – KIE neposiela AI obrázok obrazovky. Prepni v Nastaveniach „AI klikanie… cez“ na Claude priamo a vlož Claude kľúč.');
+  }
+  if (isKie(apiKey)) say(`🧠 Model: ${apiKey.model || 'claude-sonnet-5'} (cez KIE)`);
+  else { if (!MODEL) MODEL = await pickModel(keyOf(apiKey)); say(`🧠 Model: ${MODEL}`); }
   const messages = [{ role: 'user', content: [{ type: 'text', text: `Úloha: ${task}\nAktuálna obrazovka:` }, img(await grabFrame(dev.mjpegPort))] }];
 
   for (let step = 1; step <= maxSteps; step++) {
@@ -167,4 +207,22 @@ function startAgent(dev, task, apiKey, actions, opts) {
     .finally(() => { dev.agent.running = false; });
 }
 
-module.exports = { startAgent };
+// jednoduchá textová otázka pre Claude (napr. návrhy popisov)
+async function askText(auth, system, content, maxTokens = 1200) {
+  if (isKie(auth)) {
+    const j = await kieSend(auth, { max_tokens: maxTokens, system, messages: [{ role: 'user', content }] });
+    return (j.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('\n').trim();
+  }
+  const apiKey = keyOf(auth);
+  if (!MODEL) MODEL = await pickModel(apiKey);
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content }] }),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error((j.error && j.error.message) || `Claude API ${r.status}`);
+  return (j.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('\n').trim();
+}
+
+module.exports = { startAgent, askText };

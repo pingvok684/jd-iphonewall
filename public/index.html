@@ -42,6 +42,11 @@
   .nav a.on { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
   .nav a.on svg { color: var(--accent); }
   .nav .badge.upd { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .soonbox { display: grid; justify-items: center; text-align: center; gap: 10px; padding: 56px 20px; }
+  .soonbox h3 { margin: 0; font-size: 22px; justify-content: center; } .soonbox p { color: var(--muted); max-width: 46ch; margin: 0; }
+  .soonic { width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; background: linear-gradient(145deg, var(--accent-2), #c81e4a); box-shadow: 0 10px 30px rgba(255,61,104,.3); }
+  .soonic svg { width: 30px; height: 30px; color: #fff; }
+  .nav .badge.soon { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--accent-2); border-color: rgba(255,61,104,.35); background: rgba(255,61,104,.08); }
   .nav .badge { margin-left: auto; font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--panel-2); border: 1px solid var(--line-2); color: var(--muted); }
   .side .grow { flex: 1; }
   .sbox { border: 1px solid var(--line); background: var(--panel); border-radius: 11px; padding: 10px 12px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
@@ -213,6 +218,78 @@
   .toolframe { border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--panel); height: calc(100vh - 130px); min-height: 560px; }
   .toolframe iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
 
+  /* ---------- kalendár ---------- */
+  .calwrap { overflow-x: auto; padding: 0; }
+  .cg { display: grid; grid-template-columns: 170px repeat(7, minmax(120px, 1fr)); min-width: 1010px; }
+  .cg > div { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 8px; min-height: 64px; }
+  .cg-h { min-height: 0 !important; font-size: 12.5px; color: var(--muted); background: var(--panel-2); position: sticky; top: 0; }
+  .cg-h b { color: var(--text); text-transform: uppercase; font-size: 11px; letter-spacing: .05em; margin-right: 4px; }
+  .cg-h.today { color: var(--accent-2); } .cg-h.today b { color: var(--accent-2); }
+  .cg-ph { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; background: var(--panel); position: sticky; left: 0; z-index: 1; }
+  .pcd { width: 9px; height: 9px; border-radius: 50%; background: var(--pc, var(--faint)); flex: none; display: inline-block; }
+  .cg-c { display: flex; flex-direction: column; gap: 5px; }
+  .cg-c.cg-empty:not(.past) { background: repeating-linear-gradient(135deg, transparent 0 8px, rgba(255,181,71,.035) 8px 16px); }
+  .cg-c.past { opacity: .55; }
+  .cg-free { font-size: 11px; color: var(--warn); opacity: .8; }
+  .ce { all: unset; cursor: pointer; display: block; font-size: 12px; line-height: 1.35; padding: 6px 8px; border-radius: 9px; background: var(--panel-2); border-left: 3px solid var(--pc); color: var(--muted); overflow: hidden; }
+  .ce b { color: var(--text); } .ce span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ce:hover { background: #20232c; } .ce:focus-visible { outline: 2px solid var(--accent); }
+  .ce.s-ok::after, .ce.s-wait::after, .ce.s-bad::after, .ce.s-off::after { content: ""; float: right; width: 7px; height: 7px; border-radius: 50%; margin-top: -26px; }
+  .ce.s-ok::after { background: var(--ok); } .ce.s-wait::after { background: var(--warn); } .ce.s-bad::after { background: var(--bad); } .ce.s-off::after { background: var(--faint); }
+  .callegend { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 0 0 12px; font-size: 12.5px; color: var(--muted); }
+  .callegend span[class^=s-]::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .callegend .s-ok::before { background: var(--ok); } .callegend .s-wait::before { background: var(--warn); } .callegend .s-bad::before { background: var(--bad); } .callegend .s-off::before { background: var(--faint); }
+  .capshow { white-space: pre-wrap; font-size: 13px; padding: 10px 12px; border-radius: 12px; background: rgba(0,0,0,.25); border: 1px solid var(--line); }
+  /* ---------- knižnica ---------- */
+  .libdrop { display: grid; place-items: center; min-height: 96px; margin: 0 0 14px; }
+  .libdrop svg { width: 22px; height: 22px; color: var(--accent-2); }
+  .libgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-top: 14px; }
+  .lcard { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .lprev { position: relative; aspect-ratio: 4/5; background: #000; }
+  .lprev img, .lprev video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .lprev .pvid { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,.5); display: grid; place-items: center; }
+  .lprev .pvid svg { width: 14px; height: 14px; color: #fff; fill: #fff; }
+  .lused, .lnew { position: absolute; left: 6px; top: 6px; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 8px; }
+  .lused { background: var(--bad); color: #fff; } .lnew { background: rgba(0,0,0,.6); color: var(--ok); }
+  .lmeta { padding: 8px 10px; display: grid; gap: 2px; position: relative; padding-right: 40px; }
+  .lmeta b { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lmeta small { font-size: 11px; color: var(--muted); } .lmeta .lu { color: var(--warn); }
+  .lmeta button { position: absolute; right: 6px; top: 8px; padding: 5px; }
+  .pdact { display: flex; justify-content: flex-end; margin-top: 6px; }
+  .pdact button { font-size: 12px; padding: 5px 10px; }
+  .pf .pused { position: absolute; right: 4px; bottom: 5px; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 7px; background: var(--bad); color: #fff; }
+  .libpick { width: min(640px, 100%); }
+  .lgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; max-height: 50vh; overflow: auto; }
+  .lit { all: unset; position: relative; aspect-ratio: 1; border-radius: 11px; overflow: hidden; cursor: pointer; background: #000; border: 2px solid transparent; }
+  .lit img, .lit video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .lit.on { border-color: var(--accent); } .lit .lused { font-size: 10px; }
+  .lit .lnum { position: absolute; right: 5px; top: 5px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; display: none; place-items: center; }
+  .lit.on .lnum { display: grid; }
+  /* ---------- popisy ---------- */
+  .capbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .capbtn { font-size: 12px; padding: 5px 10px; }
+  .capsug { display: grid; gap: 6px; } .capsug:empty { display: none; }
+  .capopt { all: unset; cursor: pointer; white-space: pre-wrap; font-size: 12.5px; color: var(--text); padding: 9px 11px; border-radius: 11px; background: rgba(255,61,104,.07); border: 1px solid rgba(255,61,104,.3); }
+  .capopt:hover { background: rgba(255,61,104,.14); }
+  /* ---------- prieskumy ---------- */
+  .resq { min-width: 260px; }
+  .reslist { display: grid; gap: 12px; }
+  .rcard .rtext { white-space: pre-wrap; font-size: 13.5px; margin-top: 10px; color: var(--text); line-height: 1.55; }
+  .rcard mark { background: rgba(255,181,71,.35); color: inherit; border-radius: 3px; }
+  /* ---------- profily ---------- */
+  .pcolors { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pcol { all: unset; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; box-shadow: inset 0 0 0 2px rgba(0,0,0,.25); }
+  .pcol.on { border-color: #fff; }
+  .card { box-shadow: inset 0 3px 0 var(--pc, transparent); }
+  .card .name small { color: var(--muted); font-weight: 500; margin-left: 4px; }
+  .phchips .phc .pcd { margin-right: 6px; }
+  /* tlačidlá v oknách (prebíja všeobecný štýl tlačidiel v modáloch) */
+  .modal .pcolors .pcol { border: 2px solid transparent !important; padding: 0 !important; }
+  .modal .pcolors .pcol.on { border-color: #fff !important; box-shadow: 0 0 0 2px var(--accent) !important; }
+  .modal .lgrid .lit { background: #000 !important; border: 2px solid transparent !important; padding: 0 !important; }
+  .modal .lgrid .lit.on { border-color: var(--accent) !important; }
+  .modal .capsug .capopt { background: rgba(255,61,104,.07) !important; border: 1px solid rgba(255,61,104,.3) !important; text-align: left; justify-content: flex-start; white-space: pre-wrap; }
+  .modal .capsug .capopt:hover { background: rgba(255,61,104,.14) !important; }
   /* ---------- Magnific ---------- */
   .mgform { display: grid; grid-template-columns: 170px 1fr; gap: 14px; }
   .mgform .fields { display: flex; flex-direction: column; gap: 8px; }
@@ -386,9 +463,12 @@
   <nav class="nav" id="nav">
     <a href="#prehlad" data-v="prehlad"><span data-icon="grid"></span><span class="t">Prehľad</span></a>
     <a href="#telefony" data-v="telefony"><span data-icon="phone"></span><span class="t">Telefóny</span><span class="badge" id="navCount">0</span></a>
-    <a href="#magnific" data-v="magnific"><span data-icon="wand"></span><span class="t">Magnific</span></a>
+    <a href="#kalendar" data-v="kalendar"><span data-icon="calendar"></span><span class="t">Kalendár</span></a>
+    <a href="#kniznica" data-v="kniznica"><span data-icon="folder"></span><span class="t">Knižnica</span></a>
+    <a href="#statistiky" data-v="statistiky"><span data-icon="chart"></span><span class="t">Štatistiky</span></a>
+    <a href="#prieskumy" data-v="prieskumy"><span data-icon="search"></span><span class="t">Prieskumy</span></a>
+    <a href="#magnific" data-v="magnific"><span data-icon="wand"></span><span class="t">Magnific</span><span class="badge soon">čoskoro</span></a>
     <a href="#realism" data-v="realism"><span data-icon="image"></span><span class="t">Tait - Realism filter</span></a>
-    <a href="#inspiracia" data-v="inspiracia"><span data-icon="spark"></span><span class="t">Inšpirácia</span></a>
     <a href="#aktivita" data-v="aktivita"><span data-icon="pulse"></span><span class="t">Aktivita</span></a>
   </nav>
   <div class="grow"></div>
@@ -409,7 +489,6 @@
       <div class="ic" id="bIc"><span data-icon="clock"></span></div>
       <div><b id="bTitle">—</b><div class="sub" id="bSub"></div></div>
       <div class="sp"></div>
-      <a class="btn" href="#inspiracia"><span data-icon="spark"></span>Pridať inšpiráciu</a>
     </div>
     <div class="tiles" id="tiles"></div>
     <div class="row2">
@@ -423,9 +502,8 @@
         <div class="list" id="ovPhones"></div>
       </div>
     </div>
-    <div class="row2b">
+    <div class="row2b" style="grid-template-columns:1fr">
       <div class="panel"><h3>Posledná aktivita<span class="sp"></span><a href="#aktivita">Všetko</a></h3><div class="list" id="ovAct"></div></div>
-      <div class="panel"><h3>Inšpirácia<span class="sp"></span><a href="#inspiracia">Galéria</a></h3><div class="thumbs" id="ovInsp"></div></div>
     </div>
   </section>
 
@@ -449,35 +527,12 @@
 
   <!-- MAGNIFIC -->
   <section class="view" id="v-magnific">
-    <div class="vhead">
-      <div><h2>Magnific</h2><div class="sub">Generuj videá alebo pridaj hotové a jedným klikom ich pošli do telefónov</div></div>
-      <div class="sp"></div><span class="chip" id="mgKeyChip"></span>
+    <div class="vhead"><div><h2>Magnific</h2><div class="sub">Generovanie videí priamo zo stránky</div></div></div>
+    <div class="panel soonbox">
+      <div class="soonic"><span data-icon="wand"></span></div>
+      <h3>Čoskoro</h3>
+      <p>Na tejto funkcii pracujeme. Videá z Magnificu sem čoskoro pridáš a jedným klikom pošleš do telefónov.</p>
     </div>
-    <div class="row2b" style="margin-top:0">
-      <div class="panel"><h3><span data-icon="wand"></span>Generovať video</h3>
-        <div class="mgform">
-          <label class="drop" id="mgImgDrop"><img id="mgImgPrev" alt="" hidden><div id="mgImgTxt"><b>Fotka modelky</b><br>pretiahni sem alebo klikni</div><input type="file" id="mgImg" accept="image/jpeg,image/png,image/webp"></label>
-          <div class="fields">
-            <select id="mgModel"></select>
-            <textarea id="mgPrompt" rows="4" placeholder="Prompt – scéna, pohyb, kamera, štýl (napr. handheld phone video, subtle shake, …)"></textarea>
-            <div class="mgrow"><label class="ctl">Dĺžka <select id="mgDur"><option value="5">5 s</option><option value="10">10 s</option><option value="15">15 s</option></select></label>
-              <label class="ctl">Formát <select id="mgFmt"></select></label></div>
-            <div><button class="go" id="mgGo"><span data-icon="wand"></span>Generovať</button> <span class="sub" id="mgMsg"></span></div>
-            <small class="hint">Generovanie stojí kredity z tvojho Magnific účtu. Wan 3.0 480p verejné API neponúka – také video vygeneruj v Magnificu alebo cez Claude a ulož ho do priečinka magnific-inbox.</small>
-          </div>
-        </div>
-      </div>
-      <div class="panel"><h3><span data-icon="link"></span>Pridať hotové video</h3>
-        <div class="fields" style="display:flex;flex-direction:column;gap:8px">
-          <input id="mgUrl" placeholder="Priamy odkaz na video z Magnificu (https://… .mp4)">
-          <input id="mgName" placeholder="Názov (nepovinné)">
-          <div><button id="mgAddLink"><span data-icon="plus"></span>Pridať z odkazu</button> <span class="sub" id="mgLinkMsg"></span></div>
-          <label class="drop" id="mgVidDrop"><b>alebo pretiahni stiahnuté video</b><br>mp4 / mov z počítača<input type="file" id="mgVid" accept="video/*" multiple></label>
-          <small class="hint" id="mgInbox">Videá uložené do priečinka <b>magnific-inbox</b> sa tu objavia samy.</small>
-        </div>
-      </div>
-    </div>
-    <div class="mgrid" id="mgGrid"></div>
   </section>
 
   <!-- REALISM FILTER (editor od Taita) -->
@@ -490,20 +545,36 @@
     <div class="toolframe"><iframe id="realismFrame" title="Tait - Realism filter" loading="lazy"></iframe></div>
   </section>
 
-  <!-- INŠPIRÁCIA -->
-  <section class="view" id="v-inspiracia">
-    <div class="vhead"><div><h2>Inšpirácia</h2><div class="sub">Reely a fotky, ktoré sa ti páčia – podklady pre nový obsah</div></div></div>
-    <div class="panel iform">
-      <label class="drop" id="iDrop"><div><span data-icon="image"></span><br><b>Pretiahni screenshot alebo video</b><br>alebo klikni<br><small id="iFile"></small></div>
-        <input type="file" id="iInput" accept="image/*,video/*"></label>
-      <div class="fields">
-        <input id="iLink" placeholder="Odkaz na reel (napr. https://www.instagram.com/reel/…)">
-        <textarea id="iNote" rows="3" placeholder="Poznámka – čo sa ti na tom páči, hook, outfit, hudba…"></textarea>
-        <input id="iTags" placeholder="Štítky (napr. gym, outfit, hook)">
-        <div><button class="go" id="iAdd"><span data-icon="plus"></span>Pridať do galérie</button> <span id="iMsg" class="sub"></span></div>
-      </div>
-    </div>
-    <div class="igrid" id="igrid"></div>
+  <!-- KALENDÁR -->
+  <section class="view" id="v-kalendar">
+    <div class="vhead"><div><h2>Kalendár</h2><div class="sub" id="calSum">Príspevky naplánované cez stránku</div></div><div class="sp"></div>
+      <button id="calPrev" title="Predošlý týždeň">‹</button><span class="chip" id="calRange">—</span><button id="calNext" title="Ďalší týždeň">›</button><button id="calToday">Tento týždeň</button></div>
+    <div class="callegend"><span class="s-wait">čaká</span><span class="s-ok">naplánované</span><span class="s-bad">chyba</span><span class="s-off">nespustené</span><span class="sub">· „voľno“ = účet nemá v ten deň nič naplánované</span></div>
+    <div class="panel calwrap"><div id="calGrid"></div></div>
+  </section>
+
+  <!-- KNIŽNICA -->
+  <section class="view" id="v-kniznica">
+    <div class="vhead"><div><h2>Knižnica médií</h2><div class="sub" id="libCount">Videá a fotky pripravené na plánovanie</div></div></div>
+    <label class="drop libdrop" id="libDrop"><input type="file" id="libInput" multiple accept="image/*,video/*,.heic,.mov,.mp4">
+      <div><span data-icon="plus"></span><b>Pretiahni sem videá a fotky</b><br>alebo klikni · v plánovači ich vyberieš cez „Z knižnice“ <small id="libMsg"></small></div></label>
+    <div class="filters" id="libFilters"><button data-f="all" class="on">Všetko</button><button data-f="video">Videá</button><button data-f="photo">Fotky</button><button data-f="unused">Nepoužité</button></div>
+    <div class="libgrid" id="libGrid"></div>
+  </section>
+
+  <!-- ŠTATISTIKY -->
+  <section class="view" id="v-statistiky">
+    <div class="vhead"><div><h2>Štatistiky účtov</h2><div class="sub">Zhliadnutia posledného príspevku – každé spustenie šablóny „📊 Skontroluj posledný post“ pridá meranie</div></div></div>
+    <div class="tiles" id="statTiles"></div>
+    <div class="panel" style="margin-top:14px"><h3>Vývoj zhliadnutí</h3><div class="chart" id="statChart"></div></div>
+    <div class="panel" style="margin-top:14px"><h3>Merania</h3><div class="list" id="statList"></div></div>
+  </section>
+
+  <!-- PRIESKUMY -->
+  <section class="view" id="v-prieskumy">
+    <div class="vhead"><div><h2>Archív prieskumov</h2><div class="sub">Výsledky šablóny „🔎 Prieskum reels“ – hooky, trendy, hudba</div></div><div class="sp"></div>
+      <input id="resQ" class="resq" placeholder="Hľadať (napr. hook, gym, pesnička…)"></div>
+    <div class="reslist" id="resList"></div>
   </section>
 
   <!-- AKTIVITA -->
@@ -620,7 +691,7 @@
         <ol class="gsteps" data-part="web">
           <li>V priečinku <b>JD-IphoneWall</b> na Ploche dvojklik na <b>START_STRANKY.command</b> (prvýkrát pravý klik → Otvoriť). Stránka sa otvorí sama na <code>localhost:3000</code>.</li>
           <li>Okno Terminálu <b>nechaj otvorené</b> – zatvorením sa stránka vypne. Tip: START_STRANKY pretiahni do Docku.</li>
-          <li>V <a href="#nastavenia">Nastaveniach</a> vlož <b>Claude API kľúč</b> (a ak chceš generovať videá, aj Magnific kľúč).</li>
+          <li>V <a href="#nastavenia">Nastaveniach</a> vlož <b>Claude API kľúč</b>.</li>
           <li>V <a href="#telefony">Telefónoch</a> by sa do minúty mal objaviť obraz iPhonu. Skús ťuknúť a poslať jednu fotku.</li>
           <li><b>Aktualizácie</b>: keď vyjde nová verzia, v menu pri <b>Nastaveniach</b> sa objaví „nové“. Otvor <code>Nastavenia → Aktualizácie</code> → <code>Aktualizovať teraz</code>. Stránka sa sama reštartuje, tvoje kľúče, šablóny a nastavenia ostanú.</li>
         </ol>
@@ -729,7 +800,7 @@
         <ol class="gsteps" data-part="wweb">
           <li>V priečinku <b>JD-IphoneWall</b> na Ploche dvojklik na <b>START_STRANKY.bat</b>. Otvorí sa čierne okno a malé okno <b>go-ios tunel</b> (na lište) – obe nechaj otvorené.</li>
           <li>Ak sa Windows Firewall pýta na <b>Node.js</b> → <code>Povoliť prístup</code> (stačia súkromné siete). Stránka sa otvorí sama na <code>localhost:3000</code>.</li>
-          <li>V <b>Nastaveniach</b> (v bočnom menu stránky) vlož <b>Claude API kľúč</b> (a ak chceš generovať videá, aj Magnific kľúč).</li>
+          <li>V <b>Nastaveniach</b> (v bočnom menu stránky) vlož <b>Claude API kľúč</b>.</li>
           <li>V sekcii <b>Telefóny</b> by sa do 1–2 minút mal objaviť obraz iPhonu. Skús ťuknúť a poslať jednu fotku.</li>
           <li><b>Tip:</b> pravý klik na START_STRANKY.bat → <code>Zobraziť ďalšie možnosti → Odoslať do → Pracovná plocha (vytvoriť odkaz)</code> – budeš ho mať vždy po ruke.</li>
           <li><b>Aktualizácie</b>: keď vyjde nová verzia, v menu pri <b>Nastaveniach</b> sa objaví „nové“. Otvor <code>Nastavenia → Aktualizácie</code> → <code>Aktualizovať teraz</code>. Stránka sa sama reštartuje, tvoje kľúče, šablóny a nastavenia ostanú.</li>
@@ -827,16 +898,21 @@
         <p>Potrebný pre AI ovládanie telefónov. Ukladá sa iba na tomto počítači.</p>
         <div class="kv"><span>Stav</span><b id="keyState">—</b></div>
         <div style="margin-top:10px"><button class="go" id="keybtn">Nastaviť kľúč</button></div></div>
+      <div class="panel"><h3><span data-icon="key"></span>KIE API kľúč</h3>
+        <p>Návrhy popisov cez KIE (kredity z kie.ai). Kľúč nájdeš na kie.ai → API Key. Ukladá sa iba na tomto počítači.<br><b>AI klikanie a šablóny</b> potrebujú Claude kľúč – cez KIE AI nevidí obrazovku telefónu.</p>
+        <div class="kv"><span>Stav</span><b id="kieKeyState">—</b></div>
+        <div style="margin-top:10px"><button class="go" id="kieKeyBtn">Nastaviť kľúč</button></div>
+        <label class="ctl" style="display:flex;margin-top:12px"><span style="flex:1">Návrhy popisov cez</span>
+          <select id="aiProv"><option value="auto">Automaticky</option><option value="kie">KIE</option><option value="anthropic">Claude priamo (Anthropic)</option></select></label>
+        <label class="ctl" style="display:flex;margin-top:8px"><span style="flex:1">Model cez KIE</span>
+          <select id="kieModel"><option value="claude-sonnet-5">Claude Sonnet 5 (odporúčané)</option><option value="claude-sonnet-4-6">Claude Sonnet 4.6</option><option value="claude-haiku-4-5">Claude Haiku 4.5 (lacnejší, menej presný)</option><option value="claude-opus-5">Claude Opus 5 (najdrahší)</option></select></label>
+        <p class="sub" id="aiUsing" style="margin-top:8px"></p></div>
       <div class="panel"><h3><span data-icon="list"></span>Písanie na klávesnici</h3>
         <p>Ako rýchlo telefón píše text – ručne zo stránky aj keď píše AI (popisy, hashtagy, vyhľadávanie).</p>
         <label class="ctl" style="display:flex"><span style="flex:1">Rýchlosť</span>
           <select id="typeSpeed"><option value="60">Okamžite (60 znakov/s)</option><option value="20">Rýchlo (20 znakov/s)</option>
             <option value="10">Normálne (10 znakov/s)</option><option value="5">Pomaly (5 znakov/s)</option><option value="3">Veľmi pomaly (3 znaky/s)</option></select></label>
         <p class="sub" id="typeSpeedMsg" style="margin-top:8px"></p></div>
-      <div class="panel"><h3><span data-icon="wand"></span>Magnific API kľúč</h3>
-        <p>Na generovanie videí zo stránky. Kľúč nájdeš v Magnificu: Nastavenia → API Keys.</p>
-        <div class="kv"><span>Stav</span><b id="mgKeyState">—</b></div>
-        <div style="margin-top:10px"><button class="go" id="mgKeyBtn">Nastaviť kľúč</button></div></div>
       <div class="panel"><h3><span data-icon="image"></span>Fotky a videá do galérie</h3>
         <p>Súbory idú do iPhonu cez skratku <b id="scName">JD Save</b> v aplikácii Skratky.</p>
         <div class="kv"><span>Cesta</span><b id="setNet">—</b></div>
@@ -877,6 +953,10 @@ const ICONS = {
   save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/>',
   wand: '<path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8l1.4 1.4M17.8 6.2l1.4-1.4M12.2 6.2l-1.4-1.4"/><path d="M3 21l12-12"/>',
   book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20v-3"/><path d="M8 7h8M8 11h6"/>',
+  calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  folder: '<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2.5h6.5A2.5 2.5 0 0 1 21 10v7.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/>',
+  chart: '<path d="M4 20h16"/><path d="M5 16l4.5-5 3.5 3 6-7"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/>',
   wifi: '<path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0M12 19.5h.01"/>',
 };
 const icon = (n) => `<svg class="i" viewBox="0 0 24 24">${ICONS[n] || ''}</svg>`;
@@ -999,8 +1079,6 @@ function route() {
   document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.v === view));
   if (view === 'prehlad') loadOverview();
   if (view === 'aktivita') loadActivity();
-  if (view === 'inspiracia') loadInspiration();
-  if (view === 'magnific') loadMagnific();
   if (view === 'realism') { const fr = document.getElementById('realismFrame'); if (!fr.src) fr.src = '/tools/realism.html'; }
   if (view === 'nastavenia') { loadSettings(); loadPin(); }
 }
@@ -1035,7 +1113,7 @@ async function loadOverview() {
     tile('image', 'Médiá dnes', t.media, 'poslané do galérie'),
     tile('alert', 'Chyby dnes', t.errors, t.errors ? 'pozri Aktivitu' : 'bez chýb'),
     tile('play', 'Reels prezreté dnes', t.reels + (o.reelsLive || 0), o.reelsLive ? `${o.reelsLive} práve pri prieskume` : `za 7 dní: ${o.week.reduce((n, d) => n + (d.reels || 0), 0) + (o.reelsLive || 0)}`),
-    tile('spark', 'Inšpirácia', o.inspirationCount, 'uložené v galérii'),
+    tile('list', 'Šablóny', o.templates, 'AI príkazy'),
   ].join('');
 
   drawChart(o.week);
@@ -1047,7 +1125,6 @@ async function loadOverview() {
     : '<div class="empty-s">Žiadny pripojený telefón</div>';
 
   document.getElementById('ovAct').innerHTML = o.activity.length ? o.activity.map(actRow).join('') : '<div class="empty-s">Zatiaľ žiadna aktivita</div>';
-  document.getElementById('ovInsp').innerHTML = o.inspiration.length ? o.inspiration.map(thumb).join('') : '<div class="empty-s" style="grid-column:1/-1">Galéria je prázdna</div>';
 }
 
 function drawChart(week) {
@@ -1089,45 +1166,6 @@ function drawChart(week) {
 }
 window.addEventListener('resize', () => { if (view === 'prehlad') loadOverview(); });
 
-// ---------- INŠPIRÁCIA ----------
-const isVid = (f) => /\.(mp4|mov)$/i.test(f || '');
-const thumb = (it) => {
-  const inner = it.file ? (isVid(it.file) ? `<video src="/insp/${esc(it.file)}" muted preload="metadata"></video>` : `<img src="/insp/${esc(it.file)}" loading="lazy" alt="">`)
-    : `<div class="lk">${icon('link')}<br>${esc((it.link || it.note).slice(0, 60))}</div>`;
-  return `<a class="th" href="${esc(it.link || (it.file ? '/insp/' + it.file : '#inspiracia'))}" target="_blank" rel="noopener">${inner}${it.note ? `<div class="cap">${esc(it.note)}</div>` : ''}</a>`;
-};
-let iFileObj = null;
-const iDrop = document.getElementById('iDrop'), iInput = document.getElementById('iInput');
-const setIFile = (f) => { iFileObj = f; document.getElementById('iFile').textContent = f ? f.name : ''; };
-iInput.onchange = () => setIFile(iInput.files[0]);
-iDrop.addEventListener('dragover', (e) => { e.preventDefault(); iDrop.classList.add('over'); });
-iDrop.addEventListener('dragleave', () => iDrop.classList.remove('over'));
-iDrop.addEventListener('drop', (e) => { e.preventDefault(); iDrop.classList.remove('over'); setIFile(e.dataTransfer.files[0]); });
-document.getElementById('iAdd').onclick = async () => {
-  const q = new URLSearchParams({ link: iLink.value.trim(), note: iNote.value.trim(), tags: iTags.value.trim(), name: iFileObj ? iFileObj.name : '' });
-  const msg = document.getElementById('iMsg'); msg.textContent = 'Ukladám…';
-  const r = await fetch('/api/inspiration?' + q, { method: 'POST', body: iFileObj || undefined });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) { msg.textContent = j.error || 'Chyba'; return; }
-  msg.textContent = 'Pridané ✓'; setTimeout(() => (msg.textContent = ''), 2000);
-  iLink.value = iNote.value = iTags.value = ''; setIFile(null); iInput.value = '';
-  loadInspiration();
-};
-async function loadInspiration() {
-  const list = await (await fetch('/api/inspiration')).json();
-  document.getElementById('igrid').innerHTML = list.length ? list.map((it) => `
-    <div class="icard">${thumb(it)}<div class="meta">
-      ${it.note ? `<div>${esc(it.note)}</div>` : ''}${it.tags ? `<div class="tags">${esc(it.tags.split(',').map((t) => '#' + t.trim()).join(' '))}</div>` : ''}
-      <div class="acts">${it.link ? `<a class="btn" href="${esc(it.link)}" target="_blank" rel="noopener">${icon('link')}Otvoriť</a>` : ''}
-        <button data-del="${it.id}">${icon('trash')}</button></div></div></div>`).join('')
-    : '<div class="empty">Zatiaľ nič. Pridaj prvý screenshot alebo odkaz vyššie.</div>';
-  document.querySelectorAll('[data-del]').forEach((b) => b.onclick = async () => {
-    if (!confirm('Zmazať z galérie?')) return;
-    await fetch('/api/inspiration/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: b.dataset.del }) });
-    loadInspiration();
-  });
-}
-
 // ---------- AKTIVITA ----------
 let aFilter = '';
 document.querySelectorAll('#afilters button').forEach((b) => b.onclick = () => {
@@ -1139,133 +1177,17 @@ async function loadActivity() {
 }
 
 
-// ---------- MAGNIFIC ----------
-let MG = { models: [], items: [], hasKey: false };
-const mgSel = {}; // id -> Set(udid) vybrané telefóny
-async function loadMagnific() {
-  try { MG = await (await fetch('/api/magnific')).json(); } catch (_) { return; }
-  const chip = document.getElementById('mgKeyChip');
-  chip.className = 'chip ' + (MG.hasKey ? 'ok' : 'warn');
-  chip.innerHTML = icon('key') + (MG.hasKey ? 'API kľúč nastavený' : 'Chýba API kľúč – Nastavenia');
-  const ms = document.getElementById('mgModel');
-  if (!ms.options.length) { ms.innerHTML = MG.models.map((m) => `<option value="${m.id}">${esc(m.label)}</option>`).join(''); mgModelChanged(); }
-  renderMg();
-}
-const FMT = { vertical: 'Na výšku 9:16', square: 'Štvorec 1:1', horizontal: 'Na šírku 16:9' };
-function mgModelChanged() {
-  const m = MG.models.find((x) => x.id === document.getElementById('mgModel').value); if (!m) return;
-  document.getElementById('mgFmt').innerHTML = m.formats.map((f) => `<option value="${f}">${FMT[f] || f}</option>`).join('');
-  document.getElementById('mgImgDrop').style.opacity = m.needsImage ? 1 : .45;
-  document.getElementById('mgImgTxt').innerHTML = m.needsImage ? '<b>Fotka modelky</b><br>pretiahni sem alebo klikni' : '<b>Tento model fotku nepotrebuje</b><br>(video z textu)';
-}
-document.getElementById('mgModel').onchange = mgModelChanged;
-let mgImgFile = null;
-const mgSetImg = (f) => {
-  mgImgFile = f || null; const pv = document.getElementById('mgImgPrev');
-  if (f) { pv.src = URL.createObjectURL(f); pv.hidden = false; } else { pv.hidden = true; pv.removeAttribute('src'); }
-};
-const mgDrop = document.getElementById('mgImgDrop');
-document.getElementById('mgImg').onchange = (e) => mgSetImg(e.target.files[0]);
-mgDrop.addEventListener('dragover', (e) => { e.preventDefault(); mgDrop.classList.add('over'); });
-mgDrop.addEventListener('dragleave', () => mgDrop.classList.remove('over'));
-mgDrop.addEventListener('drop', (e) => { e.preventDefault(); mgDrop.classList.remove('over'); mgSetImg(e.dataTransfer.files[0]); });
-document.getElementById('mgGo').onclick = async () => {
-  const msg = document.getElementById('mgMsg');
-  const m = MG.models.find((x) => x.id === document.getElementById('mgModel').value);
-  if (!MG.hasKey) { msg.textContent = 'Najprv nastav Magnific API kľúč v Nastaveniach.'; return; }
-  if (m.needsImage && !mgImgFile) { msg.textContent = 'Pridaj fotku.'; return; }
-  const q = new URLSearchParams({ model: m.id, prompt: document.getElementById('mgPrompt').value, duration: document.getElementById('mgDur').value,
-    format: document.getElementById('mgFmt').value, name: mgImgFile ? mgImgFile.name : '' });
-  msg.textContent = 'Odosielam…';
-  const r = await fetch('/api/magnific/generate?' + q, { method: 'POST', body: m.needsImage ? mgImgFile : undefined });
-  const j = await r.json().catch(() => ({}));
-  msg.textContent = r.ok ? 'Generujem – video sa objaví nižšie.' : (j.error || 'Chyba');
-  loadMagnific();
-};
-document.getElementById('mgAddLink').onclick = async () => {
-  const msg = document.getElementById('mgLinkMsg'); msg.textContent = 'Sťahujem…';
-  const r = await fetch('/api/magnific/link', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: document.getElementById('mgUrl').value, name: document.getElementById('mgName').value }) });
-  const j = await r.json().catch(() => ({}));
-  msg.textContent = r.ok ? '' : (j.error || 'Chyba');
-  if (r.ok) { document.getElementById('mgUrl').value = document.getElementById('mgName').value = ''; }
-  loadMagnific();
-};
-const vidDrop = document.getElementById('mgVidDrop');
-const mgUploadVids = async (files) => {
-  const msg = document.getElementById('mgLinkMsg');
-  for (const f of files) {
-    msg.textContent = `Nahrávam ${f.name}…`;
-    const r = await fetch('/api/magnific/upload?name=' + encodeURIComponent(f.name), { method: 'POST', body: f });
-    const j = await r.json().catch(() => ({}));
-    msg.textContent = r.ok ? '' : (j.error || 'Chyba');
-    loadMagnific();
-  }
-};
-document.getElementById('mgVid').onchange = (e) => { mgUploadVids([...e.target.files]); e.target.value = ''; };
-vidDrop.addEventListener('dragover', (e) => { e.preventDefault(); vidDrop.classList.add('over'); });
-vidDrop.addEventListener('dragleave', () => vidDrop.classList.remove('over'));
-vidDrop.addEventListener('drop', (e) => { e.preventDefault(); vidDrop.classList.remove('over'); mgUploadVids([...e.dataTransfer.files]); });
-
-function renderMg() {
-  const grid = document.getElementById('mgGrid');
-  const phones = (typeof lastDevices !== 'undefined' && lastDevices ? lastDevices.devices : []);
-  if (!MG.items.length) { grid.innerHTML = '<div class="empty">Zatiaľ žiadne videá. Vygeneruj nové alebo pridaj hotové.</div>'; return; }
-  // neprekresľuj prehrávajúce sa videá – len aktualizuj karty, ktoré sa zmenili
-  const keep = new Map([...grid.querySelectorAll('.mgcard')].map((c) => [c.dataset.id, c]));
-  const frag = [];
-  for (const it of MG.items) {
-    const sig = `${it.status}|${it.file}|${it.progress}|${phones.map((p) => p.udid + p.wdaOk).join()}|${[...(mgSel[it.id] || [])].join()}`;
-    let el = keep.get(it.id);
-    if (!el || el.dataset.sig !== sig) {
-      const sel = mgSel[it.id] || (mgSel[it.id] = new Set());
-      const top = it.status === 'hotovo'
-        ? `<video src="/mag/${esc(it.file)}" controls muted playsinline preload="metadata"></video>`
-        : it.status === 'chyba' ? `<div class="stat err">${icon('alert')}<br>${esc(it.error || 'Chyba')}</div>`
-        : `<div class="stat"><div><div class="spin"></div>${it.status === 'sťahujem' ? 'Sťahujem video…' : 'Generujem v Magnificu…'}<br><small>${esc(it.progress || '')}</small></div></div>`;
-      const html = `${top}<div class="meta"><div><b>${esc(it.name || (it.kind === 'gen' ? 'Vygenerované video' : 'Video'))}</b> <span class="sub">· ${ago(it.at)}</span></div>
-        ${it.prompt ? `<div class="pr">${esc(it.prompt)}</div>` : ''}
-        ${it.status === 'hotovo' ? `<div class="pchips">${phones.map((p) => `<span class="pchip ${sel.has(p.udid) ? 'on' : ''} ${p.wdaOk ? '' : 'off'}" data-ph="${p.udid}">${esc(p.label)}</span>`).join('') || '<span class="sub">Žiadny pripojený telefón</span>'}</div>` : ''}
-        <div class="acts">${it.status === 'hotovo' ? `<button class="go" data-send>${icon('phone')}Poslať do galérie</button><a class="btn" href="/mag/${esc(it.file)}" download title="Stiahnuť">${icon('save')}</a>` : ''}
-          <button data-mdel title="Zmazať">${icon('trash')}</button></div><span class="sub" data-smsg></span></div>`;
-      if (!el) { el = document.createElement('div'); el.className = 'mgcard'; el.dataset.id = it.id; }
-      el.innerHTML = html; el.dataset.sig = sig;
-    }
-    frag.push(el);
-  }
-  grid.querySelector('.empty')?.remove();
-  frag.forEach((el, i) => { if (grid.children[i] !== el) grid.insertBefore(el, grid.children[i] || null); });
-  [...grid.querySelectorAll('.mgcard')].forEach((c) => { if (!MG.items.some((x) => x.id === c.dataset.id)) c.remove(); });
-}
-document.getElementById('mgGrid').addEventListener('click', async (e) => {
-  const card = e.target.closest('.mgcard'); if (!card) return;
-  const id = card.dataset.id, sel = mgSel[id] || (mgSel[id] = new Set());
-  const ch = e.target.closest('.pchip');
-  if (ch && !ch.classList.contains('off')) { sel.has(ch.dataset.ph) ? sel.delete(ch.dataset.ph) : sel.add(ch.dataset.ph); renderMg(); return; }
-  if (e.target.closest('[data-mdel]')) { if (confirm('Zmazať video zo zoznamu?')) { await fetch('/api/magnific/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); delete mgSel[id]; loadMagnific(); } return; }
-  if (e.target.closest('[data-send]')) {
-    const m = card.querySelector('[data-smsg]');
-    if (!sel.size) { m.textContent = 'Vyber telefóny (ťukni na ich názvy).'; return; }
-    const r = await fetch('/api/magnific/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, phones: [...sel] }) });
-    const j = await r.json().catch(() => ({}));
-    m.textContent = r.ok ? `Posiela sa do: ${j.sent.join(', ')} – stav uvidíš v sekcii Telefóny.` : (j.error || 'Chyba');
-  }
-});
-document.getElementById('mgKeyBtn').onclick = async () => {
-  const k = prompt('Vlož Magnific API kľúč (Magnific → Nastavenia → API Keys). Uloží sa len na tvojom počítači.');
-  if (k == null) return;
-  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ magnificKey: k }) });
-  loadSettings(); loadMagnific();
-};
-
 // ---------- NASTAVENIA ----------
 async function loadSettings() {
   const d = await (await fetch('/api/devices')).json();
-  document.getElementById('keyState').innerHTML = d.hasKey ? '<span style="color:var(--ok)">nastavený ✓</span>' : '<span style="color:var(--bad)">chýba</span>';
+  document.getElementById('keyState').innerHTML = d.keyLooksWrong ? '<span style="color:var(--bad)">nesprávny – nezačína sk-ant-</span>' : d.hasClaudeKey ? '<span style="color:var(--ok)">nastavený ✓</span>' : d.aiUsing === 'kie' ? '<span style="color:var(--faint)">nepoužíva sa – AI ide cez KIE</span>' : '<span style="color:var(--bad)">chýba</span>';
+  document.getElementById('aiProv').value = d.aiProvider || 'auto';
+  const km = document.getElementById('kieModel'); if (d.kieModel && ![...km.options].some((o) => o.value === d.kieModel)) km.insertAdjacentHTML('beforeend', `<option value="${esc(d.kieModel)}">${esc(d.kieModel)}</option>`); km.value = d.kieModel || 'claude-sonnet-5';
+  document.getElementById('aiUsing').innerHTML = d.aiUsing === 'kie' ? 'Popisy idú cez <b>KIE</b>.' + (d.hasClaudeKey ? ' AI klikanie ide cez Claude.' : ' <span style=\"color:var(--warn)\">AI klikanie a šablóny nepôjdu, kým nevložíš Claude kľúč.</span>') : d.aiUsing === 'anthropic' ? 'Popisy aj AI klikanie idú cez <b>Claude priamo</b>.' : '<span style="color:var(--bad)">AI nemá kľúč – nastav KIE alebo Claude kľúč.</span>';
+  document.getElementById('kieKeyState').innerHTML = d.hasKieKey ? '<span style="color:var(--ok)">nastavený ✓</span>' : '<span style="color:var(--faint)">nenastavený</span>';
   const ts = document.getElementById('typeSpeed');
   if (d.typingSpeed && ![...ts.options].some((o) => +o.value === d.typingSpeed)) ts.insertAdjacentHTML('beforeend', `<option value="${d.typingSpeed}">${d.typingSpeed} znakov/s</option>`);
   ts.value = String(d.typingSpeed || 60);
-  document.getElementById('mgKeyState').innerHTML = d.hasMagnificKey ? '<span style="color:var(--ok)">nastavený ✓</span>' : '<span style="color:var(--bad)">chýba</span>';
   document.getElementById('scName').textContent = d.shortcut || 'JD Save';
   const n = d.mediaNet || {};
   document.getElementById('setNet').textContent = n.via === 'internet' ? 'cez internet (iPhony môžu byť na dátach)' : `len Wi-Fi (tunel: ${n.tunnel || '?'})`;
@@ -1284,10 +1206,22 @@ document.getElementById('tplReset').onclick = () => { if (confirm('Obnoviť pôv
 document.getElementById('keybtn').onclick = async () => {
   const k = prompt('Vlož Claude API kľúč (console.anthropic.com → API Keys). Uloží sa len na tvojom počítači.');
   if (k == null) return;
-  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey: k }) });
+  const r = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey: k }) });
+  const j = await r.json().catch(() => ({})); if (j.error) alert(j.error);
   loadSettings(); poll();
+};
+const saveAi = async (body) => { const r = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const j = await r.json().catch(() => ({})); if (j.error) alert(j.error); loadSettings(); poll(); };
+document.getElementById('aiProv').onchange = (e) => saveAi({ aiProvider: e.target.value });
+document.getElementById('kieModel').onchange = (e) => saveAi({ kieModel: e.target.value });
+document.getElementById('kieKeyBtn').onclick = async () => {
+  const k = prompt('Vlož KIE API kľúč (kie.ai → API Key). Uloží sa len na tvojom počítači.');
+  if (k == null) return;
+  const r = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kieKey: k }) });
+  const j = await r.json().catch(() => ({})); if (j.error) alert(j.error);
+  loadSettings();
 };
 </script>
 <script src="/wall.js"></script>
+<script src="/obsah.js"></script>
 </body>
 </html>

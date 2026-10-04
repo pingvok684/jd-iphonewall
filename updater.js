@@ -13,7 +13,7 @@ const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(path.join(R
 // čo smie aktualizácia prepísať (nič iné sa nikdy nemení)
 const ALLOWED_FILES = new Set(['server.js', 'agent.js', 'media.js', 'store.js', 'magnific.js', 'templates.js', 'updater.js',
   'install.command', 'START_STRANKY.command', 'NAVOD.html', 'README.md', 'version.json', 'update.json',
-  'START_STRANKY.bat', 'install-windows.bat', 'install-windows.ps1', 'WebDriverAgent.ipa', 'auth.js']);
+  'START_STRANKY.bat', 'install-windows.bat', 'install-windows.ps1', 'WebDriverAgent.ipa', 'auth.js', 'content.js']);
 const ALLOWED_DIRS = ['public/'];
 
 const local = () => readJson('version.json', { version: '0' });
