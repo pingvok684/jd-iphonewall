@@ -12,7 +12,8 @@ const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(path.join(R
 
 // čo smie aktualizácia prepísať (nič iné sa nikdy nemení)
 const ALLOWED_FILES = new Set(['server.js', 'agent.js', 'media.js', 'store.js', 'magnific.js', 'templates.js', 'updater.js',
-  'install.command', 'START_STRANKY.command', 'NAVOD.html', 'README.md', 'version.json', 'update.json']);
+  'install.command', 'START_STRANKY.command', 'NAVOD.html', 'README.md', 'version.json', 'update.json',
+  'START_STRANKY.bat', 'install-windows.bat', 'install-windows.ps1']);
 const ALLOWED_DIRS = ['public/'];
 
 const local = () => readJson('version.json', { version: '0' });
@@ -60,7 +61,8 @@ async function apply() {
     if (!r.ok) throw new Error(`Stiahnutie zlyhalo (${r.status})`);
     const zip = path.join(tmp, 'u.zip');
     fs.writeFileSync(zip, Buffer.from(await r.arrayBuffer()));
-    await run('unzip', ['-q', '-o', zip, '-d', tmp]);
+    if (process.platform === 'win32') await run('tar', ['-xf', zip, '-C', tmp]); // Windows 10+ má tar, ktorý rozbalí aj zip
+    else await run('unzip', ['-q', '-o', zip, '-d', tmp]);
     const top = fs.readdirSync(tmp, { withFileTypes: true }).find((e) => e.isDirectory());
     if (!top) throw new Error('Balík z GitHubu je prázdny');
     const src = path.join(tmp, top.name);
@@ -78,7 +80,7 @@ async function apply() {
       fs.mkdirSync(path.dirname(dst), { recursive: true });
       fs.copyFileSync(path.join(src, f), dst + '.new');
       fs.renameSync(dst + '.new', dst);
-      if (f.endsWith('.command')) fs.chmodSync(dst, 0o755);
+      if (f.endsWith('.command') && process.platform !== 'win32') fs.chmodSync(dst, 0o755);
     }
     cache = { at: 0, data: null };
     return { ok: true, version: local().version, files: files.length };

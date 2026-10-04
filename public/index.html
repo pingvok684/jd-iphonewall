@@ -291,6 +291,9 @@
   .card .tplrow .tplbtn { flex: 1; justify-content: flex-start; }
 
   /* ---------- návod ---------- */
+  .ostabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); }
+  .ostabs button { border: 0; background: transparent; box-shadow: none; padding: 6px 14px; color: var(--muted); }
+  .ostabs button.on { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
   .gwrap { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 14px; align-items: start; }
   .gintro ul { margin: 0; padding-left: 18px; color: var(--muted); } .gintro li { margin: 4px 0; } .gintro b, .gfix b { color: var(--text); }
   .gnote { color: var(--faint); font-size: 12px; margin: 10px 0 0; }
@@ -465,15 +468,16 @@
   <!-- NÁVOD -->
   <section class="view" id="v-navod">
     <div class="vhead">
-      <div><h2>Návod na spustenie</h2><div class="sub">Všetko, čo treba urobiť na Macu a na iPhonoch – aj keď to dávaš kamarátovi</div></div>
+      <div><h2>Návod na spustenie</h2><div class="sub">Všetko, čo treba urobiť na počítači (Mac alebo Windows) a na iPhonoch – aj keď to dávaš kamarátovi</div></div>
       <div class="sp"></div>
+      <div class="ostabs"><button data-os="mac">Mac</button><button data-os="win">Windows</button></div>
       <span class="chip" id="gProg">0 / 0 hotovo</span>
       <button class="btn" id="gReset"><span data-icon="refresh"></span>Odškrtnúť všetko</button>
     </div>
 
-    <div class="gwrap">
+    <div class="gwrap" data-os="mac">
       <div class="panel gintro gwide">
-        <h3><span data-icon="list"></span>Čo budeš potrebovať</h3>
+        <h3><span data-icon="list"></span>Čo budeš potrebovať (Mac)</h3>
         <ul>
           <li><b>Mac</b> (MacBook alebo iMac) s macOS a aspoň ~40 GB voľného miesta (Xcode je veľký)</li>
           <li><b>Apple ID</b> – stačí bežné, zadarmo</li>
@@ -582,12 +586,122 @@
       </div>
 
       <div class="panel gfix">
-        <h3><span data-icon="alert"></span>Keď niečo nejde</h3>
+        <h3><span data-icon="alert"></span>Keď niečo nejde (Mac)</h3>
         <dl>
           <dt>Nevidím obraz iPhonu</dt><dd>Odomkni iPhone, skontroluj UI Automation (B4) a Dôverovať (B3), potom znova spusti START_STRANKY.</dd>
           <dt>install.command: „CodeSign failed / resource fork“</dt><dd>Spusti install.command znova (opravené). Ak to pretrváva, presuň priečinok mimo Plochy, napr. do domovského priečinka.</dd>
           <dt>Xcode: „Any iOS Device“ / iPhone nie je v zozname</dt><dd>Vyber konkrétny iPhone hore v Xcode, odomkni ho a počkaj, kým ho Xcode pripraví.</dd>
           <dt>Po ~7 dňoch prestal obraz (bezplatné Apple ID)</dt><dd>Podpis aplikácie vyprší. Spusti install.command znova a potom START_STRANKY.</dd>
+          <dt>Fotka/video sa neobjaví v galérii</dt><dd>Skontroluj, či sa skratka volá presne <b>JD Save</b> a má akciu <i>Uložiť do fotoalbumu</i>, a či si povolil prístup.</dd>
+          <dt>AI hlási chybu modelu / kľúča</dt><dd>Skontroluj Claude API kľúč v Nastaveniach a kredit na console.anthropic.com.</dd>
+        </dl>
+        <p class="gnote">Pri AI obsahu zapínaj na Instagrame označenie <b>AI info</b>. API kľúče nikomu neposielaj – každý kamarát si dá vlastný.</p>
+      </div>
+    </div>
+      <div class="gwrap" data-os="win" hidden>
+      <div class="panel gintro gwide">
+        <h3><span data-icon="list"></span>Čo budeš potrebovať (Windows)</h3>
+        <ul>
+          <li><b>PC s Windows 10 alebo 11</b> (64-bit) a internet</li>
+          <li><b>Apple ID</b> – stačí bežné, zadarmo</li>
+          <li><b>iPhone</b> + <b>USB kábel</b> (pri viacerých iPhonoch USB hub s napájaním)</li>
+          <li>Balík <b>JD-IphoneWall-Windows.zip</b></li>
+          <li><b>Claude API kľúč</b> z console.anthropic.com (na AI ovládanie)</li>
+        </ul>
+        <p class="gnote">Na Windowse nie je Xcode, preto sa pomocná aplikácia WebDriverAgent do iPhonu nahrá cez bezplatný program <b>Sideloadly</b>. S bezplatným Apple ID platí jej podpis 7 dní – potom ju v Sideloadly nahráš znova (1 klik). Windows verzia je menej odskúšaná ako Mac.</p>
+      </div>
+
+      <div class="panel gpart gwide">
+        <h3><span class="gnum">A</span>Windows PC – jednorazovo</h3>
+        <ol class="gsteps" data-part="wpc">
+          <li><b>Priprav PC</b>
+            <ul class="gsub">
+              <li>Over verziu: <code>Štart → Nastavenia → Systém → Informácie</code> – Windows 10 alebo 11, 64-bitový systém.</li>
+              <li>Aby PC nezaspávalo, kým beží stránka: <code>Nastavenia → Systém → Napájanie</code> → <b>Režim spánku</b> pri napájaní zo siete → <code>Nikdy</code>.</li>
+              <li>Notebook pripoj na nabíjačku.</li>
+            </ul></li>
+          <li><b>Rozbaľ balík</b>
+            <ul class="gsub">
+              <li>Ulož <b>JD-IphoneWall-Windows.zip</b> – zvyčajne skončí v priečinku <code>Stiahnuté súbory</code>.</li>
+              <li><b>Pravý klik</b> na zip → <code>Extrahovať všetko…</code> → <code>Extrahovať</code>. Súbory nespúšťaj priamo zo zipu – nefungovalo by to.</li>
+              <li>Priečinok <b>JD-IphoneWall</b> presuň na <b>Plochu</b>. Vnútri sú <code>NAVOD.html</code>, <code>install-windows.bat</code>, <code>START_STRANKY.bat</code> a súbory stránky.</li>
+            </ul></li>
+          <li><b>Nainštaluj Apple Devices</b> (ovládače pre iPhone)
+            <ul class="gsub">
+              <li>Otvor <b>Microsoft Store</b> → vyhľadaj <b>Apple Devices</b> (od Apple Inc.) → <code>Získať</code>. Ak ho Store neponúka, nainštaluj <b>iTunes</b> z Microsoft Store.</li>
+              <li>Raz ho otvor a prijmi podmienky.</li>
+            </ul></li>
+          <li><b>Pripoj iPhone k PC</b>
+            <ul class="gsub">
+              <li>Pripoj iPhone káblom a <b>odomkni ho</b>.</li>
+              <li>Na iPhone ťukni <b>„Dôverovať tomuto počítaču?“</b> → <code>Dôverovať</code> → zadaj kód.</li>
+              <li>V aplikácii <b>Apple Devices</b> by sa mal iPhone objaviť vľavo. Ak nie, skús iný kábel alebo USB port.</li>
+            </ul></li>
+          <li><b>Spusti install-windows.bat</b>
+            <ul class="gsub">
+              <li>V priečinku JD-IphoneWall dvojklik na <code>install-windows.bat</code>.</li>
+              <li>Ak sa objaví modré okno <b>„Systém Windows ochránil váš počítač“</b> → <code>Ďalšie informácie</code> → <code>Spustiť aj tak</code>.</li>
+              <li>Ak sa pýta na súhlas s podmienkami (winget) alebo zmeny v počítači → <code>Y</code> / <code>Áno</code>.</li>
+              <li>Nainštaluje <b>Node.js</b>, <b>go-ios</b>, <b>cloudflared</b> a pripraví súbor <code>WebDriverAgent.ipa</code>. Ak sa práve nainštaloval Node.js a inštalácia skončí chybou, okno zavri a spusti <code>install-windows.bat</code> ešte raz.</li>
+              <li>Na konci sa otvorí stránka Sideloadly a priečinok JD-IphoneWall.</li>
+            </ul></li>
+          <li><b>Nainštaluj Sideloadly</b>
+            <ul class="gsub">
+              <li>Na <b>sideloadly.io</b> stiahni verziu pre <b>Windows</b> a nainštaluj ju (ďalej → ďalej → dokončiť).</li>
+            </ul></li>
+          <li><b>Nahraj WebDriverAgent do iPhonu</b>
+            <ul class="gsub">
+              <li>Otvor <b>Sideloadly</b>. Hore v poli <b>iDevice</b> musí byť tvoj iPhone.</li>
+              <li>Z priečinka JD-IphoneWall pretiahni súbor <code>WebDriverAgent.ipa</code> do okna Sideloadly (na ikonu IPA).</li>
+              <li>Do poľa <b>Apple account</b> napíš e-mail svojho Apple ID → <code>Start</code>.</li>
+              <li>Zadaj heslo k Apple ID a overovací kód, ak príde. Počkaj, kým dole uvidíš <b>Done</b>.</li>
+              <li>Ostatné nastavenia v Sideloadly nemeň.</li>
+            </ul></li>
+        </ol>
+      </div>
+
+      <div class="panel gpart">
+        <h3><span class="gnum">B</span>Každý iPhone – jednorazovo</h3>
+        <ol class="gsteps" data-part="wiphone">
+          <li><b>Režim pre vývojárov</b>: <code>Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov → Zapnúť</code> → iPhone sa reštartuje → potvrď <b>Zapnúť</b>. (Položka sa objaví až po kroku A7.)</li>
+          <li><b>Dôveruj aplikácii</b>: <code>Nastavenia → Všeobecné → VPN a správa zariadení → tvoj Apple ID e-mail → Dôverovať</code>.</li>
+          <li><b>UI Automation</b>: <code>Nastavenia → Vývojár → Enable UI Automation → Zapnúť</code>.</li>
+          <li><b>Nezamykanie</b>: <code>Nastavenia → Displej a jas → Automatické zamknutie → Nikdy</code>. iPhone nechaj na nabíjačke.</li>
+          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): aplikácia <b>Skratky</b> → <code>+</code> → názov <b>JD Save</b> (presne takto) → pridaj akciu <code>Získať obsah URL</code> (URL = <i>Vstup skratky</i>) → pridaj akciu <code>Uložiť do fotoalbumu</code> (album Nedávne). Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>.</li>
+          <li>Prihlás sa do <b>Instagramu</b> a do aplikácie <b>Meta Business Suite</b> (na plánovanie príspevkov).</li>
+        </ol>
+      </div>
+
+      <div class="panel gpart">
+        <h3><span class="gnum">C</span>Stránka – prvé spustenie</h3>
+        <ol class="gsteps" data-part="wweb">
+          <li>V priečinku <b>JD-IphoneWall</b> na Ploche dvojklik na <b>START_STRANKY.bat</b>. Otvorí sa čierne okno a malé okno <b>go-ios tunel</b> (na lište) – obe nechaj otvorené.</li>
+          <li>Ak sa Windows Firewall pýta na <b>Node.js</b> → <code>Povoliť prístup</code> (stačia súkromné siete). Stránka sa otvorí sama na <code>localhost:3000</code>.</li>
+          <li>V <b>Nastaveniach</b> (v bočnom menu stránky) vlož <b>Claude API kľúč</b> (a ak chceš generovať videá, aj Magnific kľúč).</li>
+          <li>V sekcii <b>Telefóny</b> by sa do 1–2 minút mal objaviť obraz iPhonu. Skús ťuknúť a poslať jednu fotku.</li>
+          <li><b>Tip:</b> pravý klik na START_STRANKY.bat → <code>Zobraziť ďalšie možnosti → Odoslať do → Pracovná plocha (vytvoriť odkaz)</code> – budeš ho mať vždy po ruke.</li>
+          <li><b>Aktualizácie</b>: keď vyjde nová verzia, v menu pri <b>Nastaveniach</b> sa objaví „nové“. Otvor <code>Nastavenia → Aktualizácie</code> → <code>Aktualizovať teraz</code>. Stránka sa sama reštartuje, tvoje kľúče, šablóny a nastavenia ostanú.</li>
+        </ol>
+      </div>
+
+      <div class="panel gpart">
+        <h3><span class="gnum">+</span>Ďalší iPhone</h3>
+        <ol class="gsteps" data-part="wmore">
+          <li>Pripoj ho káblom, odomkni, ťukni <b>Dôverovať</b>.</li>
+          <li>V Sideloadly ho vyber hore v poli iDevice a nahraj doň <code>WebDriverAgent.ipa</code> (krok A7).</li>
+          <li>Urob na ňom kroky <b>B1 – B6</b>.</li>
+          <li>Reštartuj stránku: zavri okno START_STRANKY a spusti ho znova.</li>
+        </ol>
+      </div>
+
+      <div class="panel gfix">
+        <h3><span data-icon="alert"></span>Keď niečo nejde (Windows)</h3>
+        <dl>
+          <dt>Stránka hlási „Žiadny telefón“</dt><dd>Skontroluj, či je nainštalované Apple Devices a či v ňom vidno iPhone. Odomkni iPhone, ťukni Dôverovať, skús iný kábel.</dd>
+          <dt>„WebDriverAgent nie je v telefóne nainštalovaný“</dt><dd>Nahraj ho cez Sideloadly (krok A7) a na iPhone urob B1 – B3.</dd>
+          <dt>Po ~7 dňoch prestal obraz</dt><dd>Podpis z bezplatného Apple ID vypršal. V Sideloadly znova pretiahni WebDriverAgent.ipa → Start, potom reštartuj START_STRANKY.bat.</dd>
+          <dt>Nevidím obraz (iOS 17 a novší)</dt><dd>Musí bežať malé okno „go-ios tunel“. Zavri všetky okná stránky a spusti START_STRANKY.bat znova.</dd>
+          <dt>Sideloadly: „maximum number of apps“</dt><dd>Bezplatné Apple ID dovolí len 3 vlastné aplikácie na iPhone. Zmaž z iPhonu iné aplikácie nahraté cez Sideloadly a skús znova.</dd>
           <dt>Fotka/video sa neobjaví v galérii</dt><dd>Skontroluj, či sa skratka volá presne <b>JD Save</b> a má akciu <i>Uložiť do fotoalbumu</i>, a či si povolil prístup.</dd>
           <dt>AI hlási chybu modelu / kľúča</dt><dd>Skontroluj Claude API kľúč v Nastaveniach a kredit na console.anthropic.com.</dd>
         </dl>
@@ -695,11 +809,23 @@ const actRow = (a) => {
   }));
   function sync() {
     try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (_) {}
-    const n = items.filter(([, id]) => done[id]).length;
-    const c = document.getElementById('gProg'); c.textContent = `${n} / ${items.length} hotovo`; c.classList.toggle('ok', n === items.length);
+    const vis = items.filter(([li]) => !li.closest('.gwrap').hidden);
+    const n = vis.filter(([, id]) => done[id]).length;
+    const c = document.getElementById('gProg'); c.textContent = `${n} / ${vis.length} hotovo`; c.classList.toggle('ok', n === vis.length);
   }
+  // Mac / Windows
+  const OSKEY = 'jd-guide-os';
+  let os = /Windows/i.test(navigator.userAgent) ? 'win' : 'mac';
+  try { os = localStorage.getItem(OSKEY) || os; } catch (_) {}
+  function setOs(v) {
+    os = v; try { localStorage.setItem(OSKEY, v); } catch (_) {}
+    document.querySelectorAll('.gwrap[data-os]').forEach((w) => { w.hidden = w.dataset.os !== v; });
+    document.querySelectorAll('.ostabs button').forEach((b) => b.classList.toggle('on', b.dataset.os === v));
+    sync();
+  }
+  document.querySelectorAll('.ostabs button').forEach((b) => b.addEventListener('click', () => setOs(b.dataset.os)));
   document.getElementById('gReset').addEventListener('click', () => { done = {}; items.forEach(([li]) => li.classList.remove('done')); sync(); });
-  sync();
+  setOs(os);
 })();
 
 // ---------- aktualizácie ----------

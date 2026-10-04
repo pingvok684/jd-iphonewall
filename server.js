@@ -116,7 +116,7 @@ function findWdaBundle(dev, tries = 0) {
   if (WDA_BUNDLE) return Promise.resolve(WDA_BUNDLE);
   return new Promise((resolve) => {
     execFile(IOS_BIN, ['apps', '--list', `--udid=${dev.udid}`], { timeout: 20000, maxBuffer: 4e6 }, (err, so) => {
-      const m = String(so || '').match(/[A-Za-z0-9.\-]*xctrunner/i);
+      const m = String(so || '').match(/[A-Za-z0-9._\-]*(?:xctrunner|WebDriverAgentRunner)[A-Za-z0-9._\-]*/i);
       if (m) return resolve(m[0]);
       if (tries < 40 && !dev.gone) return setTimeout(() => findWdaBundle(dev, tries + 1).then(resolve), 15000);
       resolve(null);
