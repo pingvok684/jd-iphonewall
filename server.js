@@ -550,8 +550,39 @@ const mediaCtx = {
   home: (dev) => wda(dev, 'POST', '/wda/homescreen'),
   onMedia: (dev, item) => store.addActivity('media', `${item.name} → ${dev.label}`, { phone: dev.label }),
   onMediaDone: (dev, item, ok) => store.addActivity(ok ? 'media_done' : 'error',
-    ok ? `${item.name} je v telefóne ${dev.label}` : `${item.name}: ${item.status}`, { phone: dev.label }),
+    ok ? `${item.name} je v telefóne ${dev.label}${item.via ? ' (cez ' + item.via + ')' : ''}` : `${item.name}: ${item.status}`, { phone: dev.label }),
+  // posielanie cez kábel: súbor do Documents WebDriverAgenta cez go-ios (AFC / house_arrest)
+  usb: {
+    enabled: () => config.mediaUsb !== false,
+    async push(dev, src, name, size) {
+      const b = dev.wdaBundle || WDA_BUNDLE || await findWdaBundle(dev, 40);
+      if (!b) return { ok: false, err: 'v telefóne som nenašiel WebDriverAgent' };
+      let err = '';
+      for (const dst of [`Documents/${name}`, name]) {
+        const r = await afc(dev, b, ['push', `--srcPath=${src}`, `--dstPath=${dst}`], Math.round(60000 + size / 5e3));
+        if (!r.ok) { err = r.err; continue; }
+        const f = { b, dst };
+        if ((await mediaCtx.usb.exists(dev, f)) !== false) return { ok: true, ...f };
+        err = 'súbor sa po nahratí v telefóne nenašiel';
+      }
+      return { ok: false, err: err || 'neznáma chyba' };
+    },
+    async exists(dev, f) {
+      const dir = path.posix.dirname(f.dst);
+      const r = await afc(dev, f.b, ['tree', `--path=${dir === '.' ? '/' : dir}`]);
+      if (!r.ok) return null;
+      return r.out.includes(path.posix.basename(f.dst));
+    },
+    remove: (dev, f) => afc(dev, f.b, ['rm', `--path=${f.dst}`]),
+  },
 };
+function afc(dev, bundle, args, timeout = 20000) {
+  return new Promise((ok) => execFile(IOS_BIN, ['fsync', `--app=${bundle}`, `--udid=${dev.udid}`, ...args], { timeout: Math.round(timeout), maxBuffer: 8e6, windowsHide: true }, (e, so, se) => {
+    const last = String(se || (e && e.message) || '').trim().split('\n').pop() || '';
+    let msg = last; try { const j = JSON.parse(last); msg = j.err || j.error || j.msg || last; } catch (_) {}
+    ok({ ok: !e, out: String(so || ''), err: String(msg).slice(0, 200) });
+  }));
+}
 
 // koľko reelov AI prezrela pri prieskume (prvý reel + každé potiahnutie na ďalší, max. zvolený počet)
 function isResearch(task) { return /Postupne si pozri\s+\d+\s+reel/i.test(task || ''); }
@@ -996,6 +1027,7 @@ const server = http.createServer(async (req, res) => {
       keyLooksWrong: !!(config.apiKey && !/^sk-ant-/.test(config.apiKey)),
       typingSpeed: typingSpeed(),
       cleanupDays: config.cleanupDays || 0,
+      mediaUsb: config.mediaUsb !== false,
       telegram: { bot: tgCfg().bot || '', linked: !!(tgCfg().token && tgCfg().chatId), chatName: tgCfg().chatName || '', events: { ...TG_EVENTS, ...(tgCfg().events || {}) } },
       lanIp: media.lanIp(),
       mediaNet: media.mediaInfo(),
@@ -1005,6 +1037,7 @@ const server = http.createServer(async (req, res) => {
         wdaOk: d.wdaOk, size: d.size, lastLog: d.wdaOk ? '' : d.lastLog,
         agent: d.agent ? { running: d.agent.running, log: d.agent.log.slice(-15) } : null,
         media: media.mediaState(d),
+        usb: d.usbInfo || '',
         locked: !!d.locked,
         profile: content.getProfile(d.udid),
         info: d.info ? { battery: d.info.battery, charging: d.info.charging, freeGB: d.info.freeGB, totalGB: d.info.totalGB } : null,
@@ -1336,6 +1369,7 @@ const server = http.createServer(async (req, res) => {
       config.kieKey = k;
     }
     if (b.magnificKey !== undefined) config.magnificKey = String(b.magnificKey || '').trim();
+    if (b.mediaUsb !== undefined) { config.mediaUsb = !!b.mediaUsb; for (const d of devices.values()) { d.usbSkipUntil = 0; d.usbInfo = ''; } }
     if (b.cleanupDays !== undefined) config.cleanupDays = [0, 14, 30, 60, 90].includes(+b.cleanupDays) ? +b.cleanupDays : 0;
     if (b.typingSpeed !== undefined) config.typingSpeed = Math.max(1, Math.min(60, parseInt(b.typingSpeed, 10) || 60));
     fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), () => {});

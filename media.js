@@ -2,6 +2,8 @@
 // Ako to funguje: súbor sa nahrá na Mac → server cez WebDriverAgent otvorí v iPhone skratku
 // „JD Save“ (aplikácia Skratky) s odkazom na súbor → skratka si ho stiahne a uloží do Fotiek.
 // Odkaz ide cez internet (Cloudflare tunel), takže iPhone môže byť na mobilných dátach / hotspote.
+// Cez kábel (USB): súbor sa najprv nahrá priamo do priečinka WebDriverAgenta v iPhone (go-ios, bez internetu)
+// a skratka si ho vezme odtiaľ (Súbory → Na mojom iPhone). Ak to nejde, automaticky sa použije internet.
 // Cez tunel je dostupné IBA sťahovanie súborov s jednorazovým tajným kľúčom – nič iné zo stránky.
 
 const fs = require('fs');
@@ -152,11 +154,19 @@ async function runQueue(dev, ctx) {
     let item;
     while ((item = (dev.media || []).find((m) => m.status === 'čaká'))) {
       if (dev.gone) break;
-      if (publicUrl && !verified) { item.status = 'čakám na tunel…'; for (let i = 0; i < 30 && publicUrl && !verified; i++) await sleep(1000); }
-      const base = baseUrl(ctx.port);
-      if (!base) { item.status = 'chyba: tunel nebeží a počítač nie je na sieti'; done(ctx, dev, item, false); continue; }
       if (!dev.wdaOk) { item.status = 'čaká'; await sleep(3000); continue; }
 
+      // 1) najprv cez kábel – rýchlejšie a bez internetu
+      if (await sendUsb(dev, item, ctx)) {
+        item.status = '✓ uložené cez kábel – skontroluj Fotky'; item.via = 'kábel';
+        done(ctx, dev, item, true); fs.unlink(item.file, () => {});
+        continue;
+      }
+
+      // 2) cez internet / Wi-Fi
+      if (publicUrl && !verified) { item.status = 'čakám na tunel…'; for (let i = 0; i < 30 && publicUrl && !verified; i++) await sleep(1000); }
+      const base = baseUrl(ctx.port);
+      if (!base) { item.status = 'chyba: kábel nevyšiel, tunel nebeží a počítač nie je na sieti'; done(ctx, dev, item, false); continue; }
       tokens.set(item.token, item);
       const fileUrl = `${base}/media/${item.token}/${encodeURIComponent(item.name)}`;
       const open = `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}&input=text&text=${encodeURIComponent(fileUrl)}`;
@@ -191,6 +201,42 @@ async function runQueue(dev, ctx) {
   } finally {
     dev.mediaBusy = false;
   }
+}
+
+// ---------- cez kábel ----------
+// Súbor sa nahrá do Documents WebDriverAgenta (go-ios fsync --app). Skratka dostane ako vstup len meno súboru,
+// vezme ho zo Súborov (Na mojom iPhone → WebDriverAgentRunner), uloží do Fotiek a zmaže → podľa zmazania vieme, že je hotovo.
+async function sendUsb(dev, item, ctx) {
+  if (!ctx.usb || !ctx.usb.enabled()) return false;
+  if (dev.usbSkipUntil && Date.now() < dev.usbSkipUntil) return false;
+  const name = `JD-${item.id}${item.ext}`;
+  item.status = 'posielam cez kábel…';
+  const up = await ctx.usb.push(dev, item.file, name, item.size);
+  if (!up.ok) {
+    console.log(`[médiá] ${dev.label}: kábel nevyšiel (${up.err}) → internet`);
+    dev.usbInfo = `nedá sa nahrať: ${up.err}`;
+    dev.usbSkipUntil = Date.now() + 10 * 60000; item.status = 'čaká';
+    return false;
+  }
+  console.log(`[médiá] ${dev.label}: ${item.name} nahraté cez kábel → otváram skratku`);
+  try {
+    await ctx.openUrl(dev, `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}&input=text&text=${encodeURIComponent(name)}`);
+  } catch (e) { await ctx.usb.remove(dev, up); item.status = 'čaká'; return false; }
+  item.status = 'skratka ukladá súbor z kábla do Fotiek…';
+  const limit = Date.now() + 60000 + item.size / 2e4;
+  await sleep(4000);
+  while (Date.now() < limit && !dev.gone) {
+    const ex = await ctx.usb.exists(dev, up);
+    if (ex === false) { dev.usbInfo = 'funguje ✓'; dev.usbSkipUntil = 0; await sleep(2000); return true; }
+    await sleep(2500);
+  }
+  // skratka si súbor nevzala (stará verzia skratky / chýba prístup k priečinku) → upraceme a skúsime internet
+  await ctx.usb.remove(dev, up);
+  dev.usbInfo = `skratka „${SHORTCUT_NAME}“ si súbor z kábla nevzala – uprav ju podľa návodu (Nastavenia → Fotky a videá)`;
+  dev.usbSkipUntil = Date.now() + 30 * 60000;
+  console.log(`[médiá] ${dev.label}: ${dev.usbInfo} → internet`);
+  item.status = 'čaká';
+  return false;
 }
 
 // GET /media/<token>/<meno> – sem si iPhone (skratka) chodí po súbor

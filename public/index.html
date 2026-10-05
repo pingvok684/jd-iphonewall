@@ -626,6 +626,12 @@
     .navmore { display: none !important; } .nav .badge.soon { display: none; } .navsub, .navsub[hidden] { display: contents !important; }
     .titem { flex-wrap: wrap; } .titem .tc { flex-basis: 100%; order: 5; white-space: normal; } .tday h4 small { display: none; }
   }
+  .usbtog{display:flex!important;gap:10px;align-items:flex-start;margin:10px 0 6px;font-size:13.5px;line-height:1.45}
+  .usbtog input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:var(--acc,#ff3d68)}
+  .usbdevs{display:grid;gap:4px;margin:4px 0 8px;font-size:12.5px}
+  .usbdevs div{display:flex;gap:8px;min-width:0}.usbdevs span{color:var(--faint,#6b7080);flex:none}.usbdevs b{font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .usbhow{margin:6px 0 10px;font-size:13px}.usbhow summary{cursor:pointer;color:var(--acc,#ff3d68);font-weight:600}
+  .usbhow ol{padding-left:20px;margin:8px 0;display:grid;gap:6px}.usbhow ol ol{margin:6px 0 0}
 </style>
 </head>
 <body>
@@ -894,7 +900,7 @@
           <li><b>Dôveruj aplikácii</b>: <code>Nastavenia → Všeobecné → VPN a správa zariadení → Apple Development: tvoj e-mail → Dôverovať</code> → a ťukni <b>Verify App / Overiť aplikáciu</b> (iPhone musí mať internet).</li>
           <li><b>UI Automation</b>: <code>Nastavenia → Vývojár → Enable UI Automation → Zapnúť</code>.</li>
           <li><b>Nezamykanie</b>: <code>Nastavenia → Displej a jas → Automatické zamknutie → Nikdy</code>. iPhone nechaj na nabíjačke.</li>
-          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): aplikácia <b>Skratky</b> → <code>+</code> → názov <b>JD Save</b> (presne takto) → pridaj akciu <code>Získať obsah URL</code> (URL = <i>Vstup skratky</i>) → pridaj akciu <code>Uložiť do fotoalbumu</code> (album Nedávne). Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>.</li>
+          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): aplikácia <b>Skratky</b> → <code>+</code> → názov <b>JD Save</b> (presne takto) → pridaj akciu <code>Získať obsah URL</code> (URL = <i>Vstup skratky</i>) → pridaj akciu <code>Uložiť do fotoalbumu</code> (album Nedávne). Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>. Pre rýchlejšie posielanie <b>cez kábel</b> pozri Nastavenia → Fotky a videá.</li>
           <li>Prihlás sa do <b>Instagramu</b> a do aplikácie <b>Meta Business Suite</b> (na plánovanie príspevkov).</li>
         </ol>
       </div>
@@ -1003,7 +1009,7 @@
           <li><b>Dôveruj aplikácii</b>: <code>Nastavenia → Všeobecné → VPN a správa zariadení → tvoj Apple ID e-mail → Dôverovať</code>.</li>
           <li><b>UI Automation</b>: <code>Nastavenia → Vývojár → Enable UI Automation → Zapnúť</code>.</li>
           <li><b>Nezamykanie</b>: <code>Nastavenia → Displej a jas → Automatické zamknutie → Nikdy</code>. iPhone nechaj na nabíjačke.</li>
-          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): aplikácia <b>Skratky</b> → <code>+</code> → názov <b>JD Save</b> (presne takto) → pridaj akciu <code>Získať obsah URL</code> (URL = <i>Vstup skratky</i>) → pridaj akciu <code>Uložiť do fotoalbumu</code> (album Nedávne). Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>.</li>
+          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): aplikácia <b>Skratky</b> → <code>+</code> → názov <b>JD Save</b> (presne takto) → pridaj akciu <code>Získať obsah URL</code> (URL = <i>Vstup skratky</i>) → pridaj akciu <code>Uložiť do fotoalbumu</code> (album Nedávne). Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>. Pre rýchlejšie posielanie <b>cez kábel</b> pozri Nastavenia → Fotky a videá.</li>
           <li>Prihlás sa do <b>Instagramu</b> a do aplikácie <b>Meta Business Suite</b> (na plánovanie príspevkov).</li>
         </ol>
       </div>
@@ -1131,6 +1137,25 @@
         <p class="sub" id="typeSpeedMsg" style="margin-top:8px"></p></div>
       <div class="panel"><h3><span data-icon="image"></span>Fotky a videá do galérie</h3>
         <p>Súbory idú do iPhonu cez skratku <b id="scName">JD Save</b> v aplikácii Skratky.</p>
+        <label class="ctl usbtog"><input type="checkbox" id="mediaUsb"> <span><b>Najprv cez kábel (USB)</b> – rýchlejšie, bez internetu. Keď to nejde, automaticky sa použije internet.</span></label>
+        <div id="usbDevs" class="usbdevs"></div>
+        <button id="usbRetry" style="margin:0 0 8px">Skúsiť kábel znova</button>
+        <details class="usbhow"><summary>Ako nastaviť posielanie cez kábel (raz na každom iPhone)</summary>
+          <ol>
+            <li>Nahraj do iPhonu <b>nový WebDriverAgent.ipa</b> cez Sideloadly (rovnako ako pri obnove podpisu). Nový má zapnutý priečinok v aplikácii Súbory.</li>
+            <li>Pošli do iPhonu jednu fotku – vytvorí sa priečinok. Over: aplikácia <b>Súbory</b> → <b>Na mojom iPhone</b> → <b>WebDriverAgentRunner-Runner</b>.</li>
+            <li>Uprav skratku <b>JD Save</b> v aplikácii Skratky takto:
+              <ol type="a">
+                <li>Na začiatok pridaj <code>Ak</code> (If): <i>Vstup skratky</i> <b>začína na</b> <code>http</code>.</li>
+                <li>Do vetvy <b>Ak</b> presuň doterajšie akcie <code>Získať obsah URL</code> a <code>Uložiť do fotoalbumu</code>.</li>
+                <li>Do vetvy <b>Inak</b> pridaj <code>Získať súbor z priečinka</code> → priečinok <b>WebDriverAgentRunner-Runner</b>, cesta = <i>Vstup skratky</i>, vypni „Chyba, ak nenájdené“.</li>
+                <li>Pod to <code>Uložiť do fotoalbumu</code> (vstup = <i>Súbor</i>).</li>
+                <li>Pod to <code>Vymazať súbory</code> (vstup = <i>Súbor</i>) a vypni <b>Potvrdiť pred vymazaním</b>.</li>
+              </ol></li>
+            <li>Klikni tu <b>Skúsiť kábel znova</b> a pošli fotku. Pri prvom spustení povoľ prístup (<b>Vždy povoliť</b>). Pri telefóne sa tu zobrazí <b>kábel: funguje ✓</b>.</li>
+          </ol>
+          <p class="sub">Telefón musí byť pripojený káblom k tomuto počítaču. Telefóny bez upravenej skratky alebo s WDA cez Xcode budú posielať cez internet ako doteraz.</p>
+        </details>
         <div class="kv"><span>Cesta</span><b id="setNet">—</b></div>
         <div class="kv"><span>Adresa tunela</span><b id="setTunnel">—</b></div>
         <div class="kv"><span>IP počítača v sieti</span><b id="setIp">—</b></div>
@@ -1526,6 +1551,8 @@ async function loadSettings() {
   document.getElementById('setTunnel').textContent = n.url || '—';
   document.getElementById('setIp').textContent = d.lanIp || '—';
   document.getElementById('cleanDays').value = String(d.cleanupDays || 0);
+  document.getElementById('mediaUsb').checked = d.mediaUsb !== false;
+  document.getElementById('usbDevs').innerHTML = d.mediaUsb === false ? '' : (d.devices || []).map((x) => `<div><span>${esc(x.label || x.name || x.udid)} · kábel:</span><b style="color:${/funguje/.test(x.usb) ? 'var(--ok)' : x.usb ? 'var(--warn)' : 'var(--faint)'}" title="${esc(x.usb || '')}">${esc(x.usb || 'zatiaľ neskúšané')}</b></div>`).join('');
   renderTg(d.telegram || {});
   loadRemote();
   loadUsage(); loadCleanInfo();
@@ -1553,6 +1580,14 @@ document.getElementById('cleanDays').onchange = async (e) => {
   document.getElementById('cleanMsg').textContent = +e.target.value ? 'Uložené ✓ – upratuje sa samo každých 6 hodín.' : 'Automatické upratovanie je vypnuté.';
 };
 document.getElementById('cleanNow').onclick = () => openCleanup();
+document.getElementById('usbRetry').onclick = async () => {
+  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mediaUsb: true }) });
+  document.getElementById('mediaUsb').checked = true; toast ? toast('Pri ďalšom poslaní sa znova skúsi kábel') : null;
+  document.querySelectorAll('#usbDevs b').forEach((b) => { b.textContent = 'zatiaľ neskúšané'; b.style.color = 'var(--faint)'; });
+};
+document.getElementById('mediaUsb').addEventListener('change', async (e) => {
+  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mediaUsb: e.target.checked }) });
+});
 // ---------- prístup z mobilu (rozcestník + QR párovanie) ----------
 let REM = null;
 async function loadRemote() {
