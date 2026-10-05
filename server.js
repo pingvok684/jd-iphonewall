@@ -541,11 +541,25 @@ async function kieVision(key, system, parts) {
   const content = [];
   for (const p of parts) {
     if (p.type === 'text') { content.push({ type: 'text', text: p.text }); continue; }
-    const f = path.join(CAP_TMP, require('crypto').randomBytes(8).toString('hex') + '.jpg');
-    fs.writeFileSync(f, Buffer.from(p.source.data, 'base64'));
-    setTimeout(() => fs.unlink(f, () => {}), 20 * 60000);
-    const url = media.publishTemp(f, path.basename(f), 20);
-    if (!url) throw new Error('Na prezretie fotiek cez KIE treba bežiaci tunel (v Prehľade „Médiá cez internet“). Reštartuj START_STRANKY, alebo napíš popis bez fotiek.');
+    // 1) nahraj obrázok priamo do KIE (dočasné úložisko KIE, 3 dni) – nepotrebuje tunel
+    let url = null, upErr = '';
+    try {
+      const up = await fetch(process.env.KIE_UPLOAD_URL || 'https://api.kie.ai/api/file-base64-upload', {
+        method: 'POST', headers: { Authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ base64Data: `data:image/jpeg;base64,${p.source.data}`, uploadPath: 'iphonewall', fileName: require('crypto').randomBytes(6).toString('hex') + '.jpg' }),
+      });
+      const uj = await up.json().catch(() => ({}));
+      url = (uj.data && (uj.data.downloadUrl || uj.data.fileUrl || uj.data.url)) || null;
+      if (!url) upErr = uj.msg || `HTTP ${up.status}`;
+    } catch (e) { upErr = e.message; }
+    // 2) záloha: dočasne cez vlastný tunel
+    if (!url) {
+      const f = path.join(CAP_TMP, require('crypto').randomBytes(8).toString('hex') + '.jpg');
+      fs.writeFileSync(f, Buffer.from(p.source.data, 'base64'));
+      setTimeout(() => fs.unlink(f, () => {}), 20 * 60000);
+      url = media.publishTemp(f, path.basename(f), 20);
+    }
+    if (!url) throw new Error(`KIE: fotku sa nepodarilo nahrať (${upErr || 'neznáma chyba'}). Skús znova, alebo napíš popis bez fotiek.`);
     content.push({ type: 'image_url', image_url: { url } });
   }
   // text daj na začiatok (pokyn), obrázky za ním
