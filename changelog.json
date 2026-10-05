@@ -1,5 +1,10 @@
 [
   {
+    "version": "2026.10.05-0850",
+    "date": "2026-10-05",
+    "notes": "Oprava nahrávania fotiek do KIE"
+  },
+  {
     "version": "2026.10.05-0839",
     "date": "2026-10-05",
     "notes": "Návrhy popisov cez KIE bez tunela; Úvodná obrazovka; Sekcie Novinky a Aktualizácie"
