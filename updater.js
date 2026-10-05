@@ -16,7 +16,7 @@ const ALLOWED_FILES = new Set(['server.js', 'agent.js', 'media.js', 'store.js', 
   'START_STRANKY.bat', 'install-windows.bat', 'install-windows.ps1', 'WebDriverAgent.ipa', 'auth.js', 'content.js', 'changelog.json']);
 const ALLOWED_DIRS = ['public/'];
 // aby budúce verzie mohli pridať nové súbory: povolené sú aj ďalšie súbory v hlavnom priečinku s týmito príponami
-const ALLOWED_EXT = /^[\w.-]+\.(js|command|bat|ps1|html|md|txt|ipa)$/i;
+const ALLOWED_EXT = /^[\w.-]+\.(js|command|bat|ps1|html|md|txt|ipa|ico)$/i;
 const PROTECTED = new Set(['config.json', 'templates.json', 'labels.json']); // tvoje nastavenia sa nikdy neprepíšu
 
 const local = () => readJson('version.json', { version: '0' });
