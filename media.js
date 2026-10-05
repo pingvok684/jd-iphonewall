@@ -27,23 +27,46 @@ function startMediaServer(config) {
   // samostatný mini-server len na súbory → tunel nevidí ovládanie telefónov
   http.createServer((req, res) => {
     const parts = new URL(req.url, 'http://x').pathname.split('/').filter(Boolean);
+    if (req.method === 'GET' && parts[0] === 'media' && parts[1] === 'ping') { res.writeHead(200, { 'Content-Type': 'text/plain' }); return res.end('ok'); }
     if (req.method === 'GET' && parts[0] === 'media') return serveMedia(req, res, parts);
     res.writeHead(404); res.end();
   }).listen(MEDIA_PORT, '127.0.0.1');
 
   const fixed = process.env.MEDIA_PUBLIC_URL || (config && config.mediaPublicUrl);
-  if (fixed) { publicUrl = fixed.replace(/\/+$/, ''); tunnelState = 'vlastná adresa'; return; }
+  if (fixed) { publicUrl = fixed.replace(/\/+$/, ''); tunnelState = 'vlastná adresa'; verified = true; return; }
   startTunnel();
+  setInterval(healthCheck, 60000);
 }
+
+// ---------- kontrola, či je tunel naozaj dostupný z internetu ----------
+// quick tunel občas „zamrzne“ (adresa prestane existovať) – vtedy ho spustíme znova s novou adresou
+let tunnelProc = null, verified = false, fails = 0;
+async function ping(url) {
+  try { const r = await fetch(`${url}/media/ping?t=${Date.now()}`, { signal: AbortSignal.timeout(8000) }); return r.ok; } catch (_) { return false; }
+}
+async function verifyNew(url) {
+  verified = false; fails = 0;
+  for (let i = 0; i < 20 && publicUrl === url; i++) { // nová adresa sa v DNS objaví až o pár sekúnd
+    if (await ping(url)) { verified = true; tunnelState = 'beží'; console.log('Tunel overený:', url); return; }
+    await sleep(3000);
+  }
+  if (publicUrl === url) { tunnelState = 'nedostupný – reštartujem'; restartTunnel(); }
+}
+async function healthCheck() {
+  if (!publicUrl || !tunnelProc || !verified) return;
+  if (await ping(publicUrl)) { fails = 0; return; }
+  if (++fails >= 2) { console.log('Tunel neodpovedá – reštartujem'); restartTunnel(); }
+}
+function restartTunnel() { verified = false; publicUrl = null; try { tunnelProc && tunnelProc.kill(); } catch (_) {} }
 
 function startTunnel() {
   tunnelState = 'spúšťam…';
   const local = path.join(__dirname, 'bin', process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared');
   const bin = process.env.CLOUDFLARED || (fs.existsSync(local) ? local : 'cloudflared');
-  const p = spawn(bin, ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${MEDIA_PORT}`], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const p = tunnelProc = spawn(bin, ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${MEDIA_PORT}`], { stdio: ['ignore', 'pipe', 'pipe'] });
   const onData = (d) => {
     const m = String(d).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
-    if (m && m[0] !== publicUrl) { publicUrl = m[0]; tunnelState = 'beží'; console.log('Tunel pre fotky/videá:', publicUrl); }
+    if (m && m[0] !== publicUrl) { publicUrl = m[0]; tunnelState = 'overujem…'; console.log('Tunel pre fotky/videá:', publicUrl); verifyNew(m[0]); }
   };
   p.stdout.on('data', onData); p.stderr.on('data', onData);
   p.on('error', (e) => { tunnelState = e.code === 'ENOENT' ? 'chýba program cloudflared' : e.message; publicUrl = null; });
@@ -55,11 +78,11 @@ function startTunnel() {
 }
 
 function baseUrl(port) {
-  if (publicUrl) return publicUrl;
+  if (publicUrl && verified) return publicUrl;
   const ip = lanIp();
   return ip ? `http://${ip}:${port}` : null; // záloha: rovnaká Wi-Fi
 }
-function mediaInfo() { return { via: publicUrl ? 'internet' : 'wifi', tunnel: tunnelState, url: publicUrl }; }
+function mediaInfo() { return { via: publicUrl && verified ? 'internet' : 'wifi', tunnel: tunnelState, url: publicUrl }; }
 
 const TYPES = {
   '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.heic': 'image/heic', '.heif': 'image/heif',
@@ -129,6 +152,7 @@ async function runQueue(dev, ctx) {
     let item;
     while ((item = (dev.media || []).find((m) => m.status === 'čaká'))) {
       if (dev.gone) break;
+      if (publicUrl && !verified) { item.status = 'čakám na tunel…'; for (let i = 0; i < 30 && publicUrl && !verified; i++) await sleep(1000); }
       const base = baseUrl(ctx.port);
       if (!base) { item.status = 'chyba: tunel nebeží a počítač nie je na sieti'; done(ctx, dev, item, false); continue; }
       if (!dev.wdaOk) { item.status = 'čaká'; await sleep(3000); continue; }
@@ -190,7 +214,7 @@ function mediaState(dev) {
 
 // dočasne zverejní súbor cez tunel (napr. obrázok pre Magnific, ktorý potrebuje verejnú adresu)
 function publishTemp(file, name, minutes = 60) {
-  if (!publicUrl) return null;
+  if (!publicUrl || !verified) return null;
   const token = crypto.randomBytes(16).toString('hex');
   const ext = path.extname(name).toLowerCase();
   tokens.set(token, { name: safeName(name), file, ext, size: fs.statSync(file).size, temp: true });

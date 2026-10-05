@@ -1,5 +1,10 @@
 [
   {
+    "version": "2026.10.05-1126",
+    "date": "2026-10-05",
+    "notes": "Oprava bugov pri posielani do zariadenia"
+  },
+  {
     "version": "2026.10.05-0857",
     "date": "2026-10-05",
     "notes": "ikona"

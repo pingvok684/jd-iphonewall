@@ -974,7 +974,9 @@
         <p>Súbory idú do iPhonu cez skratku <b id="scName">JD Save</b> v aplikácii Skratky.</p>
         <div class="kv"><span>Cesta</span><b id="setNet">—</b></div>
         <div class="kv"><span>Adresa tunela</span><b id="setTunnel">—</b></div>
-        <div class="kv"><span>IP počítača v sieti</span><b id="setIp">—</b></div></div>
+        <div class="kv"><span>IP počítača v sieti</span><b id="setIp">—</b></div>
+        <div style="margin-top:10px"><button id="mediaUrlBtn">Vlastná adresa pre fotky…</button></div>
+        <p class="sub" style="margin-top:6px">Voliteľné: stála adresa cez tvoju doménu v Cloudflare (napr. https://media.tvojadomena.com → http://localhost:3001). Spoľahlivejšia ako automatický tunel.</p></div>
       <div class="panel"><h3><span data-icon="list"></span>Šablóny AI príkazov<span class="sp"></span><span class="lnk" id="tplReset">Obnoviť pôvodné</span></h3>
         <div class="list" id="tplList"></div></div>
     </div>
@@ -1293,6 +1295,12 @@ document.getElementById('keybtn').onclick = async () => {
 const saveAi = async (body) => { const r = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const j = await r.json().catch(() => ({})); if (j.error) alert(j.error); loadSettings(); poll(); };
 document.getElementById('aiProv').onchange = (e) => saveAi({ aiProvider: e.target.value });
 document.getElementById('kieModel').onchange = (e) => saveAi({ kieModel: e.target.value });
+document.getElementById('mediaUrlBtn').onclick = async () => {
+  const u = prompt('Stála adresa pre fotky/videá (napr. https://media.tvojadomena.com). Prázdne = automatický tunel. Po uložení reštartuj START_STRANKY.');
+  if (u == null) return;
+  const r = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mediaPublicUrl: u }) });
+  const j = await r.json().catch(() => ({})); alert(j.error || 'Uložené. Reštartuj START_STRANKY.');
+};
 document.getElementById('kieKeyBtn').onclick = async () => {
   const k = prompt('Vlož KIE API kľúč (kie.ai → API Key). Uloží sa len na tvojom počítači.');
   if (k == null) return;

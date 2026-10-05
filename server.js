@@ -840,6 +840,11 @@ const server = http.createServer(async (req, res) => {
       if (k && !/^sk-ant-/.test(k)) return json(res, 400, { error: 'Toto nie je Claude API kľúč – ten začína „sk-ant-“ (console.anthropic.com → API Keys). Kľúč z KIE patrí do poľa „KIE API kľúč“.' });
       config.apiKey = k;
     }
+    if (b.mediaPublicUrl !== undefined) {
+      const u = String(b.mediaPublicUrl || '').trim().replace(/\/+$/, '');
+      if (u && !/^https:\/\/[\w.-]+(:\d+)?$/.test(u)) return json(res, 400, { error: 'Adresa musí byť v tvare https://media.tvojadomena.com' });
+      if (u) config.mediaPublicUrl = u; else delete config.mediaPublicUrl;
+    }
     if (b.aiProvider !== undefined && ['auto', 'anthropic', 'kie'].includes(b.aiProvider)) config.aiProvider = b.aiProvider;
     if (b.kieModel !== undefined) config.kieModel = String(b.kieModel || '').trim().slice(0, 60) || 'claude-sonnet-5';
     if (b.kieKey !== undefined) {
