@@ -1142,7 +1142,7 @@
         <button id="usbRetry" style="margin:0 0 8px">Skúsiť kábel znova</button>
         <details class="usbhow"><summary>Ako nastaviť posielanie cez kábel (raz na každom iPhone)</summary>
           <ol>
-            <li>Nahraj do iPhonu <b>nový WebDriverAgent.ipa</b> cez Sideloadly (rovnako ako pri obnove podpisu). Nový má zapnutý priečinok v aplikácii Súbory.</li>
+            <li><b>Sideloadly:</b> nahraj do iPhonu <b>nový WebDriverAgent.ipa</b> (rovnako ako pri obnove podpisu). <b>Xcode režim (Mac):</b> netreba nič – stačí reštartovať stránku, WebDriverAgent sa prestavia sám.</li>
             <li>Pošli do iPhonu jednu fotku – vytvorí sa priečinok. Over: aplikácia <b>Súbory</b> → <b>Na mojom iPhone</b> → <b>WebDriverAgentRunner-Runner</b>.</li>
             <li>Uprav skratku <b>JD Save</b> v aplikácii Skratky takto:
               <ol type="a">
@@ -1154,7 +1154,7 @@
               </ol></li>
             <li>Klikni tu <b>Skúsiť kábel znova</b> a pošli fotku. Pri prvom spustení povoľ prístup (<b>Vždy povoliť</b>). Pri telefóne sa tu zobrazí <b>kábel: funguje ✓</b>.</li>
           </ol>
-          <p class="sub">Telefón musí byť pripojený káblom k tomuto počítaču. Telefóny bez upravenej skratky alebo s WDA cez Xcode budú posielať cez internet ako doteraz.</p>
+          <p class="sub">Telefón musí byť pripojený káblom k tomuto počítaču. Telefóny bez upravenej skratky budú posielať cez internet ako doteraz.</p>
         </details>
         <div class="kv"><span>Cesta</span><b id="setNet">—</b></div>
         <div class="kv"><span>Adresa tunela</span><b id="setTunnel">—</b></div>
