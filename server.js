@@ -77,7 +77,8 @@ let nextSlot = 0;
 
 function log(...a) { console.log(new Date().toLocaleTimeString(), ...a); }
 
-function startProc(dev, bin, args, tag, delay = 3000) {
+function startProc(dev, bin, args, tag, delay = 3000, opts = {}) {
+  const t0 = Date.now();
   const p = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
   p.on('error', (e) => log(`[${dev.label}] ${tag} chyba:`, e.message));
   const onOut = (d) => {
@@ -95,11 +96,90 @@ function startProc(dev, bin, args, tag, delay = 3000) {
   p.on('exit', (code) => {
     dev.procs = dev.procs.filter((x) => x !== p);
     if (!dev.gone) {
+      if (opts.stop && opts.stop(code, Date.now() - t0)) return;
       log(`[${dev.label}] ${tag} skončil (${code}), reštart o ${delay / 1000} s${dev.lastLog ? ' – ' + dev.lastLog : ''}`);
-      setTimeout(() => { if (!dev.gone) dev.procs.push(startProc(dev, bin, args, tag, delay)); }, delay);
+      setTimeout(() => { if (!dev.gone) dev.procs.push(startProc(dev, bin, args, tag, delay, opts)); }, delay);
     }
   });
   return p;
+}
+
+// ---------- Xcode režim ----------
+// 1) build-for-testing  2) do aplikácie WebDriverAgentu doplníme priečinok pre aplikáciu Súbory (posielanie cez kábel)
+//    a znova ju podpíšeme tým istým certifikátom  3) test-without-building (nainštaluje a spustí WDA)
+// Keď čokoľvek z 1–2 zlyhá, použije sa pôvodný spôsob (xcodebuild test).
+function xcodeArgs(dev) {
+  return ['-project', WDA_PROJECT, '-scheme', 'WebDriverAgentRunner', '-destination', `id=${dev.udid}`,
+    '-derivedDataPath', path.join(BUILD_ROOT, dev.udid), '-allowProvisioningUpdates',
+    `DEVELOPMENT_TEAM=${config.teamId}`, `PRODUCT_BUNDLE_IDENTIFIER=${config.bundleId}`, 'CODE_SIGN_STYLE=Automatic'];
+}
+const sh = (bin, args, timeout = 60000) => new Promise((ok) => execFile(bin, args, { timeout, maxBuffer: 8e6 }, (e, so, se) => ok({ ok: !e, out: String(so || ''), err: String(se || (e && e.message) || '') })));
+function startXcode(dev) {
+  if (dev.gone) return;
+  dev.lastLog = 'xcode: pripravujem WebDriverAgent (prvýkrát to trvá pár minút)…';
+  const b = spawn('xcodebuild', [...xcodeArgs(dev), 'build-for-testing'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  dev.procs.push(b);
+  const on = (d) => { for (const l of String(d).split('\n')) if (/error:|BUILD FAILED|not trusted|Developer Mode|locked/i.test(l)) dev.lastLog = `xcode: ${l.trim().slice(-300)}`; };
+  b.stdout.on('data', on); b.stderr.on('data', on);
+  b.on('error', (e) => log(`[${dev.label}] xcode chyba:`, e.message));
+  b.on('exit', async (code) => {
+    dev.procs = dev.procs.filter((x) => x !== b);
+    if (dev.gone) return;
+    const products = path.join(BUILD_ROOT, dev.udid, 'Build', 'Products');
+    let xr = null;
+    if (code === 0) {
+      try { await patchRunner(dev, products); } catch (e) { dev.usbInfo = `WebDriverAgent bez priečinka v Súboroch: ${e.message}`; log(`[${dev.label}] ${dev.usbInfo}`); }
+      try { const f = fs.readdirSync(products).find((x) => x.endsWith('.xctestrun')); if (f) xr = path.join(products, f); } catch (_) {}
+    } else log(`[${dev.label}] xcode build-for-testing skončil (${code}) – používam pôvodný spôsob`);
+    if (!xr) {
+      dev.procs.push(startProc(dev, 'xcodebuild', [...xcodeArgs(dev), 'test'], 'xcode', 15000));
+      return;
+    }
+    // po 3 rýchlych pádoch za sebou znova build (napr. obnova podpisu / profilu)
+    let fails = 0;
+    dev.procs.push(startProc(dev, 'xcodebuild', ['test-without-building', '-xctestrun', xr, '-destination', `id=${dev.udid}`], 'xcode', 15000, {
+      stop: (c, ms) => {
+        fails = ms < 90000 ? fails + 1 : 0;
+        if (fails < 3) return false;
+        log(`[${dev.label}] WebDriverAgent opakovane padá – staviam znova`);
+        setTimeout(() => startXcode(dev), 5000);
+        return true;
+      },
+    }));
+  });
+}
+async function patchRunner(dev, products) {
+  const dirs = fs.readdirSync(products).filter((d) => /-iphoneos$/.test(d));
+  for (const d of dirs) {
+    const app = path.join(products, d, 'WebDriverAgentRunner-Runner.app');
+    const plist = path.join(app, 'Info.plist');
+    if (!fs.existsSync(plist)) continue;
+    const has = await sh('/usr/libexec/PlistBuddy', ['-c', 'Print :UIFileSharingEnabled', plist]);
+    if (has.ok && /true/.test(has.out) && (await sh('codesign', ['--verify', app])).ok) continue; // už upravené a podpísané
+    // kto aplikáciu podpísal (Apple Development: …) → ten istý certifikát použijeme znova
+    const info = await sh('codesign', ['-dvv', app]);
+    const auth = ((info.err + info.out).match(/Authority=(.+)/) || [])[1];
+    if (!auth) throw new Error('nenašiel som podpis aplikácie');
+    const ids = await sh('security', ['find-identity', '-v', '-p', 'codesigning']);
+    const line = ids.out.split('\n').find((l) => l.includes(`"${auth.trim()}"`));
+    const identity = (line && (line.match(/\b([0-9A-F]{40})\b/) || [])[1]) || auth.trim();
+    let ent = await sh('codesign', ['-d', '--entitlements', '-', '--xml', app]);
+    if (!/<plist/.test(ent.out)) ent = await sh('codesign', ['-d', '--entitlements', ':-', app]);
+    const xml = ent.out.slice(ent.out.indexOf('<?xml') >= 0 ? ent.out.indexOf('<?xml') : ent.out.indexOf('<plist'));
+    if (!/<plist/.test(xml)) throw new Error('nenašiel som oprávnenia aplikácie');
+    const entFile = path.join(products, d, 'jd-runner-entitlements.plist');
+    fs.writeFileSync(entFile, xml);
+    for (const k of ['UIFileSharingEnabled', 'LSSupportsOpeningDocumentsInPlace']) {
+      const r = await sh('/usr/libexec/PlistBuddy', ['-c', `Set :${k} true`, plist]);
+      if (!r.ok) await sh('/usr/libexec/PlistBuddy', ['-c', `Add :${k} bool true`, plist]);
+    }
+    let sign = await sh('codesign', ['-f', '-s', identity, '--entitlements', entFile, '--generate-entitlement-der', app], 120000);
+    if (!sign.ok) sign = await sh('codesign', ['-f', '-s', identity, '--entitlements', entFile, app], 120000);
+    if (!sign.ok) throw new Error(`podpis zlyhal: ${sign.err.trim().split('\n').pop()}`);
+    const v = await sh('codesign', ['--verify', '--deep', app]);
+    if (!v.ok) throw new Error(`overenie podpisu: ${v.err.trim().split('\n').pop()}`);
+    log(`[${dev.label}] WebDriverAgent: zapnutý priečinok v aplikácii Súbory (posielanie cez kábel)`);
+  }
 }
 
 function startDevice(dev) {
@@ -109,18 +189,7 @@ function startDevice(dev) {
 
   if (WDA_MODE === 'xcode') {
     // WebDriverAgent spúšťa priamo Xcode (xcodebuild) – najspoľahlivejšie, bez otvárania Xcode
-    dev.lastLog = 'xcode: pripravujem WebDriverAgent (prvýkrát to trvá pár minút)…';
-    dev.procs.push(startProc(dev, 'xcodebuild', [
-      '-project', WDA_PROJECT,
-      '-scheme', 'WebDriverAgentRunner',
-      '-destination', `id=${dev.udid}`,
-      '-derivedDataPath', path.join(BUILD_ROOT, dev.udid),
-      '-allowProvisioningUpdates',
-      `DEVELOPMENT_TEAM=${config.teamId}`,
-      `PRODUCT_BUNDLE_IDENTIFIER=${config.bundleId}`,
-      'CODE_SIGN_STYLE=Automatic',
-      'test',
-    ], 'xcode', 15000));
+    startXcode(dev);
   } else if (WDA_MODE === 'goios') {
     // Developer Disk Image – bez neho WDA na iOS 17+ nenaštartuje (testmanagerd chýba)
     execFile(IOS_BIN, ['image', 'auto', u], { timeout: 120000 }, (err, so, se) => {
