@@ -663,14 +663,14 @@ const mediaCtx = {
     async exists(dev, f) {
       const dir = path.posix.dirname(f.dst);
       const r = await afc(dev, f.b, ['tree', `--path=${dir === '.' ? '/' : dir}`]);
-      if (!r.ok) return null;
+      if (!r.ok) { if (!dev.treeErrLogged) { dev.treeErrLogged = true; console.log(`[médiá] ${dev.label}: fsync tree zlyhal: ${r.err}`); } return null; }
       return r.out.includes(path.posix.basename(f.dst));
     },
     remove: (dev, f) => afc(dev, f.b, ['rm', `--path=${f.dst}`]),
     // počet súborov v galérii (DCIM) – podľa nárastu vieme, že skratka fotku/video uložila, aj keď súbor nezmazala
     async mediaCount(dev) {
       const r = await new Promise((ok) => execFile(IOS_BIN, ['fsync', `--udid=${dev.udid}`, 'tree', '--path=/DCIM'], { timeout: 30000, maxBuffer: 64e6, windowsHide: true }, (e, so) => ok(e ? null : String(so || ''))));
-      if (r == null) return null;
+      if (r == null) { console.log(`[médiá] ${dev.label}: galériu (DCIM) sa nepodarilo prečítať`); return null; }
       return (r.match(/\.(jpe?g|heic|heif|png|gif|webp|mov|mp4|m4v)\b/gi) || []).length;
     },
   },

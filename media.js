@@ -229,10 +229,12 @@ async function sendUsb(dev, item, ctx) {
   await sleep(4000);
   while (Date.now() < limit && !dev.gone) {
     const ex = await ctx.usb.exists(dev, up);
+    item.status = `skratka ukladá súbor z kábla do Fotiek… (súbor v priečinku: ${ex === null ? 'neviem zistiť' : ex ? 'ešte je' : 'zmazaný'}${before == null ? ', galéria: neviem zistiť' : ''})`;
     if (ex === false) { dev.usbInfo = 'funguje ✓'; dev.usbSkipUntil = 0; await sleep(2000); return true; }
     // súbor ešte je, ale v galérii pribudla fotka/video → uložené; súbor z priečinka zmažeme sami
     if (before != null) {
       const now = await ctx.usb.mediaCount(dev);
+      item.status += ` · galéria ${before}→${now == null ? '?' : now}`;
       if (now != null && now > before) { await sleep(3000); await ctx.usb.remove(dev, up); dev.usbInfo = 'funguje ✓'; dev.usbSkipUntil = 0; return true; }
     }
     await sleep(2500);
