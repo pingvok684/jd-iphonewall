@@ -304,6 +304,19 @@
   .nitem .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
   .nitem.cur .tag { background: rgba(61,220,151,.15); color: var(--ok); } .nitem.pending .tag { background: rgba(255,61,104,.15); color: var(--accent-2); }
   .nitem ul { color: var(--text); font-size: 13.5px; }
+  /* ---------- úvodná obrazovka (3 s) ---------- */
+  #splash { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, #3a1422 0%, #0c0d11 62%); transition: opacity .6s ease, visibility .6s; }
+  #splash.out { opacity: 0; visibility: hidden; }
+  .sp-in { display: grid; justify-items: center; gap: 22px; padding: 24px; }
+  .sp-logo { width: min(34vw, 220px); height: auto; filter: drop-shadow(0 18px 40px rgba(255,61,104,.35)); animation: spPop .9s cubic-bezier(.2,.9,.25,1.2) both; }
+  .sp-name { font: 700 clamp(30px, 6vw, 64px)/1.1 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: -.02em; color: #fff; text-align: center;
+    animation: spUp .9s .25s ease both; }
+  .sp-bar { width: min(240px, 50vw); height: 3px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; animation: spUp .6s .4s ease both; }
+  .sp-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff6a8b, #ff3d68); animation: spLoad 2.6s .3s linear forwards; }
+  @keyframes spPop { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
+  @keyframes spUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes spLoad { to { width: 100%; } }
+  @media (prefers-reduced-motion: reduce) { .sp-logo, .sp-name, .sp-bar, .sp-bar i { animation: none; } .sp-bar i { width: 100%; } }
   /* ---------- Magnific ---------- */
   .mgform { display: grid; grid-template-columns: 170px 1fr; gap: 14px; }
   .mgform .fields { display: flex; flex-direction: column; gap: 8px; }
@@ -469,6 +482,13 @@
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <div class="sp-in">
+    <img src="/ikona.png" alt="" class="sp-logo">
+    <div class="sp-name">Juraj Dvorščák</div>
+    <div class="sp-bar"><i></i></div>
+  </div>
+</div>
 <aside class="side">
   <div class="brand">
     <div class="logo" id="logo"></div>
@@ -952,6 +972,8 @@
 <script>
 // z mobilu: keď vyprší prihlásenie, ukáž znova prihlasovaciu stránku
 (() => { const f = window.fetch; window.fetch = async (...a) => { const r = await f(...a); if (r.status === 401) location.reload(); return r; }; })();
+// úvodná obrazovka: 3 sekundy, potom zmizne
+setTimeout(() => { const sp = document.getElementById('splash'); if (!sp) return; sp.classList.add('out'); setTimeout(() => sp.remove(), 700); }, 3000);
 // ---------- ikony ----------
 const ICONS = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',

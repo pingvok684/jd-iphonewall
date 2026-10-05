@@ -1,5 +1,10 @@
 [
   {
+    "version": "2026.10.05-0831",
+    "date": "2026-10-05",
+    "notes": "Loading menu"
+  },
+  {
     "version": "2026.10.05-0808",
     "date": "2026-10-05",
     "notes": "Nové sekcie Novinky a Aktualizácie; Oprava aktualizácií (nové súbory sa už stiahnu); Návrhy popisov cez KIE vidia fotky"
