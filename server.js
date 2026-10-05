@@ -647,6 +647,8 @@ const mediaCtx = {
       if (!dev.usbReadme) {
         const t = path.join(require('os').tmpdir(), '_Nemazat-JD-Phone-Studio.txt');
         try { fs.writeFileSync(t, 'Priečinok pre JD Phone Studio – sem chodia fotky a videá cez kábel. Nemaž ho.\n'); } catch (_) {}
+        // starý názov začínal na JD- → skratka by ho brala ako fotku; zmažeme ho
+        for (const d of ['Documents/JD-Phone-Studio.txt', 'JD-Phone-Studio.txt']) await afc(dev, b, ['rm', `--path=${d}`]);
         for (const d of ['Documents/_Nemazat-JD-Phone-Studio.txt', '_Nemazat-JD-Phone-Studio.txt']) if ((await afc(dev, b, ['push', `--srcPath=${t}`, `--dstPath=${d}`])).ok) { dev.usbReadme = true; break; }
       }
       for (const dst of [`Documents/${name}`, name]) {
@@ -665,6 +667,12 @@ const mediaCtx = {
       return r.out.includes(path.posix.basename(f.dst));
     },
     remove: (dev, f) => afc(dev, f.b, ['rm', `--path=${f.dst}`]),
+    // počet súborov v galérii (DCIM) – podľa nárastu vieme, že skratka fotku/video uložila, aj keď súbor nezmazala
+    async mediaCount(dev) {
+      const r = await new Promise((ok) => execFile(IOS_BIN, ['fsync', `--udid=${dev.udid}`, 'tree', '--path=/DCIM'], { timeout: 30000, maxBuffer: 64e6, windowsHide: true }, (e, so) => ok(e ? null : String(so || ''))));
+      if (r == null) return null;
+      return (r.match(/\.(jpe?g|heic|heif|png|gif|webp|mov|mp4|m4v)\b/gi) || []).length;
+    },
   },
 };
 function afc(dev, bundle, args, timeout = 20000) {

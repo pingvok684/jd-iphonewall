@@ -219,6 +219,7 @@ async function sendUsb(dev, item, ctx) {
     return false;
   }
   console.log(`[médiá] ${dev.label}: ${item.name} nahraté cez kábel → otváram skratku`);
+  const before = ctx.usb.mediaCount ? await ctx.usb.mediaCount(dev) : null;
   try {
     // bez vstupu → skratka ide do vetvy „Inak/Otherwise“ (vezme súbory JD-… z priečinka)
     await ctx.openUrl(dev, `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}`);
@@ -229,6 +230,11 @@ async function sendUsb(dev, item, ctx) {
   while (Date.now() < limit && !dev.gone) {
     const ex = await ctx.usb.exists(dev, up);
     if (ex === false) { dev.usbInfo = 'funguje ✓'; dev.usbSkipUntil = 0; await sleep(2000); return true; }
+    // súbor ešte je, ale v galérii pribudla fotka/video → uložené; súbor z priečinka zmažeme sami
+    if (before != null) {
+      const now = await ctx.usb.mediaCount(dev);
+      if (now != null && now > before) { await sleep(3000); await ctx.usb.remove(dev, up); dev.usbInfo = 'funguje ✓'; dev.usbSkipUntil = 0; return true; }
+    }
     await sleep(2500);
   }
   // skratka si súbor nevzala (stará verzia skratky / chýba prístup k priečinku) → upraceme a skúsime internet
