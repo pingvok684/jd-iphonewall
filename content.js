@@ -18,12 +18,14 @@ let cal = store.readJson('calendar.json', []);
 let stats = store.readJson('stats.json', []);
 let research = store.readJson('research.json', []);
 let profiles = store.readJson('profiles.json', {});
+function reloadAll() { lib = store.readJson('library.json', []); cal = store.readJson('calendar.json', []); stats = store.readJson('stats.json', []); research = store.readJson('research.json', []); profiles = store.readJson('profiles.json', {}); }
 const saveLib = () => store.writeJson('library.json', lib);
 const saveCal = () => store.writeJson('calendar.json', cal);
 
 // ---------- knižnica ----------
 // nahranie súboru; rovnaký súbor (podľa obsahu) sa neukladá dvakrát
-function addToLibrary(req, name) {
+function addToLibrary(req, name, owner) {
+  owner = owner ? String(owner).slice(0, 80) : '';
   return new Promise((resolve, reject) => {
     name = String(name || 'subor').replace(/[\\/:*?"<>|]/g, '_').slice(0, 120);
     const ext = path.extname(name).toLowerCase();
@@ -39,15 +41,15 @@ function addToLibrary(req, name) {
     out.on('finish', () => {
       const hash = h.digest('hex');
       const dup = lib.find((x) => x.hash === hash);
-      if (dup) { fs.unlink(tmp, () => {}); return resolve(view(dup)); }
+      if (dup) { fs.unlink(tmp, () => {}); if (owner && !(dup.owners || []).includes(owner)) { dup.owners = [...(dup.owners || []), owner]; saveLib(); } return resolve(view(dup)); }
       fs.renameSync(tmp, path.join(LIB_DIR, id));
-      const it = { id, name, ext, size, hash, kind: isVideo(ext) ? 'video' : 'photo', addedAt: new Date().toISOString(), used: [] };
+      const it = { id, name, ext, size, hash, kind: isVideo(ext) ? 'video' : 'photo', addedAt: new Date().toISOString(), used: [], owners: owner ? [owner] : [] };
       lib.unshift(it); saveLib();
       resolve(view(it));
     });
   });
 }
-const view = (it) => ({ ...it, used: it.used || [] });
+const view = (it) => ({ ...it, used: it.used || [], owners: it.owners || [] });
 const listLibrary = () => lib.map(view);
 const libFile = (id) => {
   if (!/^[a-f0-9]{16}\.[a-z0-9]{2,5}$/.test(String(id))) return null;
@@ -60,9 +62,41 @@ function removeFromLibrary(id) {
 }
 function markUsed(ids, udid, calId) {
   let ch = false;
-  for (const it of lib) if (ids.includes(it.id)) { it.used = it.used || []; it.used.push({ udid, at: new Date().toISOString(), calId }); ch = true; }
+  for (const it of lib) if (ids.includes(it.id)) {
+    it.used = it.used || []; it.used.push({ udid, at: new Date().toISOString(), calId });
+    if (!(it.owners || []).includes(udid)) it.owners = [...(it.owners || []), udid]; // použité na profile = patrí k nemu
+    ch = true;
+  }
   if (ch) saveLib();
 }
+function setOwners(id, owners) { const it = lib.find((x) => x.id === id); if (it) { it.owners = [...new Set((Array.isArray(owners) ? owners : []).map(String))].slice(0, 30); saveLib(); } }
+// hromadné akcie: pridať / odobrať telefóny, zmazať
+function bulkLibrary(ids, action, owners) {
+  ids = new Set((Array.isArray(ids) ? ids : []).map(String));
+  owners = (Array.isArray(owners) ? owners : []).map(String);
+  if (action === 'delete') { for (const id of ids) { const fp = libFile(id); if (fp) fs.unlink(fp, () => {}); } lib = lib.filter((x) => !ids.has(x.id)); saveLib(); return ids.size; }
+  let n = 0;
+  for (const it of lib) if (ids.has(it.id)) {
+    const cur = new Set(it.owners || []);
+    if (action === 'assign') owners.forEach((u) => cur.add(u)); else if (action === 'unassign') owners.forEach((u) => cur.delete(u));
+    it.owners = [...cur].slice(0, 30); n++;
+  }
+  saveLib(); return n;
+}
+// upratovanie: použité súbory, ktoré sa naposledy použili pred viac ako N dňami a nečakajú v kalendári
+function cleanupCandidates(days) {
+  days = Math.max(1, Number(days) || 30);
+  const limit = Date.now() - days * 86400000;
+  const pending = new Set(cal.filter((c) => c.status === 'čaká').flatMap((c) => (c.files || []).map((f) => f.id)));
+  return lib.filter((it) => (it.used || []).length && !pending.has(it.id) && Math.max(...it.used.map((u) => +new Date(u.at))) < limit);
+}
+function cleanupLibrary(days, dry) {
+  const list = cleanupCandidates(days);
+  const bytes = list.reduce((n, it) => n + (it.size || 0), 0);
+  if (!dry && list.length) bulkLibrary(list.map((x) => x.id), 'delete');
+  return { count: list.length, bytes };
+}
+const librarySize = () => lib.reduce((n, it) => n + (it.size || 0), 0);
 function setLibNote(id, note) { const it = lib.find((x) => x.id === id); if (it) { it.note = String(note || '').slice(0, 200); saveLib(); } }
 
 // ---------- kalendár ----------
@@ -73,6 +107,7 @@ function addCalendar(e) {
 }
 function setCalendar(id, patch) { const it = cal.find((x) => x.id === id); if (it) { Object.assign(it, patch); saveCal(); } }
 function removeCalendar(id) { cal = cal.filter((x) => x.id !== id); saveCal(); }
+const getCalendar = (id) => cal.find((x) => x.id === id);
 const listCalendar = (from, to) => cal.filter((x) => (!from || x.when >= from) && (!to || x.when < to));
 
 // ---------- štatistiky ----------
@@ -115,11 +150,13 @@ function setProfile(udid, p) {
     handle: String(p.handle ?? cur.handle ?? '').trim().replace(/^@?/, '').slice(0, 40),
     color: /^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : (cur.color || ''),
     note: String(p.note ?? cur.note ?? '').slice(0, 500),
+    // stále hashtagy účtu – AI ich pridá do každého návrhu popisu
+    hashtags: [...new Set((String(p.hashtags ?? cur.hashtags ?? '').match(/#[\p{L}\p{N}_]+/gu) || []))].slice(0, 5).join(' '),
   };
   store.writeJson('profiles.json', profiles);
   return profiles[udid];
 }
 
-module.exports = { TYPES, LIB_DIR, addToLibrary, listLibrary, libFile, removeFromLibrary, markUsed, setLibNote,
-  addCalendar, setCalendar, removeCalendar, listCalendar, addStatFromText, listStats, removeStat, addResearch, listResearch, removeResearch,
+module.exports = { TYPES, LIB_DIR, addToLibrary, listLibrary, libFile, removeFromLibrary, markUsed, setLibNote, setOwners, bulkLibrary, cleanupLibrary, librarySize, reloadAll,
+  addCalendar, setCalendar, removeCalendar, listCalendar, getCalendar, addStatFromText, listStats, removeStat, addResearch, listResearch, removeResearch,
   getProfile, setProfile };

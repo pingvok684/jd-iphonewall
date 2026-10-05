@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="sk"><head><meta charset="utf-8"><title>JD Phone Studio</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self'">
+<style>
+  html,body{margin:0;height:100%;background:radial-gradient(circle at 50% 30%,#3a1422,#0c0d11 62%);color:#eceef3;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:grid;place-items:center;user-select:none}
+  .in{display:grid;justify-items:center;gap:16px;text-align:center;padding:24px}
+  img{width:110px;height:110px;border-radius:28px;box-shadow:0 20px 60px rgba(255,61,104,.35)}
+  h1{margin:0;font-size:30px;letter-spacing:.01em}
+  .bar{width:220px;height:4px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden}
+  .bar i{display:block;height:100%;width:40%;border-radius:4px;background:linear-gradient(90deg,#ff4f76,#e8285a);animation:m 1.2s ease-in-out infinite}
+  @keyframes m{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+  .sub{color:#8d92a0;font-size:13px}.err{color:#ff7d8f;max-width:440px}
+  button{font:600 14px inherit;padding:10px 16px;border-radius:12px;border:0;color:#fff;background:linear-gradient(180deg,#ff4f76,#e8285a);cursor:pointer}
+</style></head>
+<body><div class="in">
+  <img src="tray@2x.png" alt="">
+  <h1>Juraj Dvorščák</h1>
+  <div class="bar" id="bar"><i></i></div>
+  <div class="sub" id="msg">Spúšťam JD Phone Studio…</div>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('err')) {
+    document.getElementById('bar').style.display = 'none';
+    const m = document.getElementById('msg'); m.className = 'err';
+    m.innerHTML = 'Stránka sa nespustila do 90 sekúnd.<br><small>Záznam: ' + (q.get('log') || '') + '</small><br><br><button id="r">Skúsiť znova</button>';
+    document.getElementById('r').onclick = () => { window.jdApp && window.jdApp.restart(); location.href = 'splash.html'; };
+  }
+</script></body></html>

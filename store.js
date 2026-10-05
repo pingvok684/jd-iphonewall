@@ -73,4 +73,41 @@ function removeInspiration(id) {
 }
 const listInspiration = () => insp;
 
-module.exports = { DATA, INSP_DIR, readJson, writeJson, newId, addActivity, listActivity, activityStats, addInspiration, removeInspiration, listInspiration };
+// ---------- míňanie na AI (odhad podľa cenníka) ----------
+// ceny v USD za 1 milión tokenov [vstup, výstup]
+const PRICES = [
+  [/opus/i, 5, 25], [/haiku/i, 1, 5], [/sonnet|claude/i, 3, 15], [/gemini.*flash/i, 0.5, 3], [/gemini/i, 2, 12],
+];
+const priceOf = (model) => (PRICES.find(([re]) => re.test(model || '')) || [null, 3, 15]).slice(1);
+let usage = readJson('usage.json', []);
+let usageTimer = null;
+function addUsage({ kind, provider, model, input, output, phone }) {
+  input = Math.max(0, Number(input) || 0); output = Math.max(0, Number(output) || 0);
+  if (!input && !output) return;
+  const [pi, po] = priceOf(model);
+  usage.push({ at: new Date().toISOString(), kind: kind || 'iné', provider: provider || '', model: model || '', input, output, phone: phone || '', usd: +(input / 1e6 * pi + output / 1e6 * po).toFixed(5) });
+  if (usage.length > 50000) usage = usage.slice(-50000);
+  clearTimeout(usageTimer); usageTimer = setTimeout(() => writeJson('usage.json', usage), 1500);
+}
+function usageSummary(days = 30) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const out = { today: 0, month: 0, total: 0, days: [], byKind: {}, byPhone: {}, byProvider: {} };
+  for (let i = days - 1; i >= 0; i--) { const d = new Date(today); d.setDate(d.getDate() - i); out.days.push({ date: d.toISOString(), key: dayKey(d), usd: 0, calls: 0 }); }
+  const byKey = new Map(out.days.map((d) => [d.key, d]));
+  for (const u of usage) {
+    const t = new Date(u.at);
+    out.total += u.usd;
+    if (t >= today) out.today += u.usd;
+    if (t >= monthStart) {
+      out.month += u.usd;
+      out.byKind[u.kind] = (out.byKind[u.kind] || 0) + u.usd;
+      if (u.phone) out.byPhone[u.phone] = (out.byPhone[u.phone] || 0) + u.usd;
+      out.byProvider[u.provider || '?'] = (out.byProvider[u.provider || '?'] || 0) + u.usd;
+    }
+    const d = byKey.get(dayKey(t)); if (d) { d.usd += u.usd; d.calls++; }
+  }
+  return out;
+}
+
+module.exports = { addUsage, usageSummary, DATA, INSP_DIR, readJson, writeJson, newId, addActivity, listActivity, activityStats, addInspiration, removeInspiration, listInspiration };

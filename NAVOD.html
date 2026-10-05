@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="sk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>JD - IphoneWall Návod</title>
+<title>JD Phone Studio Návod</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -65,7 +65,7 @@
 </head><body>
 <div class="page">
   <header>
-    <div class="eyebrow">JD - IphoneWall</div>
+    <div class="eyebrow">JD Phone Studio</div>
     <h1>Návod na spustenie</h1>
     <p class="lead">Postup od nuly: počítač, iPhony a prvé spustenie stránky.<span class="osonly"> Najprv hore vyber svoj počítač.</span> Nič nemusí byť nastavené vopred. Kroky si odškrtávaj kliknutím – stránka si ich pamätá v tomto prehliadači.</p>
     <div class="ostabs" role="tablist" aria-label="Počítač"><button type="button" data-os="mac">Mac</button><button type="button" data-os="win">Windows</button></div>
@@ -78,7 +78,7 @@
           <li><b>Mac</b> (MacBook alebo iMac) s macOS a aspoň ~40 GB voľného miesta (Xcode je veľký)</li>
           <li><b>Apple ID</b> – stačí bežné, zadarmo</li>
           <li><b>iPhone</b> + <b>USB kábel</b> (pri viacerých iPhonoch USB hub s napájaním)</li>
-          <li>Balík <b>JD-IphoneWall-Mac.zip</b></li>
+          <li>Balík <b>JD-PhoneStudio-Mac.zip</b></li>
           <li><b>Claude API kľúč</b> z console.anthropic.com (na AI ovládanie)</li>
         </ul>
       </div>
@@ -94,8 +94,8 @@
             </ul></li>
           <li><b>Stiahni a rozbaľ balík</b>
             <ul class="gsub">
-              <li>Ulož <b>JD-IphoneWall-Mac.zip</b> (z chatu, AirDropu alebo Disku) – zvyčajne skončí v priečinku <code>Stiahnuté</code>.</li>
-              <li>Dvojklik na zip → vznikne priečinok <b>JD-IphoneWall</b> (bez „-Mac“). Zip potom môžeš zmazať.</li>
+              <li>Ulož <b>JD-PhoneStudio-Mac.zip</b> (z chatu, AirDropu alebo Disku) – zvyčajne skončí v priečinku <code>Stiahnuté</code>.</li>
+              <li>Dvojklik na zip → vznikne priečinok <b>JD-PhoneStudio</b> (bez „-Mac“). Zip potom môžeš zmazať.</li>
               <li>Presuň ho na <b>Plochu</b>. Súbory vnútri nepremenúvaj ani nepresúvaj.</li>
               <li>Vnútri uvidíš <code>NAVOD.html</code>, <code>install.command</code>, <code>START_STRANKY.command</code> a súbory stránky.</li>
             </ul></li>
@@ -131,12 +131,12 @@
           <li><b>Nechaj Xcode pripraviť iPhone</b>
             <ul class="gsub">
               <li>V Xcode stlač <code>⇧ ⌘ 2</code> (menu <code>Window → Devices and Simulators</code>) a vľavo klikni na svoj iPhone.</li>
-              <li>Ak tam táto ponuka nie je: otvor priečinok <code>JD-IphoneWall → WebDriverAgent</code> → dvojklik na <code>WebDriverAgent.xcodeproj</code> (objaví sa po prvom spustení install.command) → hore v strede klikni na výber zariadenia a vyber <b>svoj iPhone</b> – nie „Any iOS Device“.</li>
+              <li>Ak tam táto ponuka nie je: otvor priečinok <code>JD-PhoneStudio → WebDriverAgent</code> → dvojklik na <code>WebDriverAgent.xcodeproj</code> (objaví sa po prvom spustení install.command) → hore v strede klikni na výber zariadenia a vyber <b>svoj iPhone</b> – nie „Any iOS Device“.</li>
               <li>Xcode ukáže <b>„Preparing iPhone / Copying shared cache“</b>. iPhone nechaj odomknutý a počkaj, kým to zmizne (5–15 minút).</li>
             </ul></li>
           <li><b>Spusti install.command</b>
             <ul class="gsub">
-              <li>V priečinku <b>JD-IphoneWall</b> na Ploche <b>pravý klik</b> na <code>install.command</code> → <code>Otvoriť</code> → v okne znova <code>Otvoriť</code>.</li>
+              <li>V priečinku <b>JD-PhoneStudio</b> na Ploche <b>pravý klik</b> na <code>install.command</code> → <code>Otvoriť</code> → v okne znova <code>Otvoriť</code>.</li>
               <li>Ak Mac napíše, že súbor nemôže otvoriť: <code>Nastavenia systému → Súkromie a bezpečnosť</code> → dole <code>Aj tak otvoriť</code>.</li>
               <li>Otvorí sa Terminál. Keď chce <b>heslo</b>, napíš heslo k Macu a Enter (pri písaní sa nič nezobrazuje – to je v poriadku). Ak píše „Press RETURN“, stlač Enter.</li>
               <li>Ak vyskočí okno <b>„codesign chce použiť kľúč…“</b> → zadaj heslo k Macu → <code>Vždy povoliť</code>.</li>
@@ -162,7 +162,7 @@
       <div class="panel gpart">
         <h3><span class="gnum">C</span>Stránka – prvé spustenie</h3>
         <ol class="gsteps" data-part="web">
-          <li>V priečinku <b>JD-IphoneWall</b> na Ploche dvojklik na <b>START_STRANKY.command</b> (prvýkrát pravý klik → Otvoriť). Stránka sa otvorí sama na <code>localhost:3000</code>.</li>
+          <li>V priečinku <b>JD-PhoneStudio</b> na Ploche dvojklik na <b>START_STRANKY.command</b> (prvýkrát pravý klik → Otvoriť). Stránka sa otvorí sama na <code>localhost:3000</code>.</li>
           <li>Okno Terminálu <b>nechaj otvorené</b> – zatvorením sa stránka vypne. Tip: START_STRANKY pretiahni do Docku.</li>
           <li>V <b>Nastaveniach</b> (v bočnom menu stránky) vlož <b>Claude API kľúč</b>.</li>
           <li>V sekcii <b>Telefóny</b> by sa do minúty mal objaviť obraz iPhonu. Skús ťuknúť a poslať jednu fotku.</li>
@@ -199,7 +199,7 @@
           <li><b>PC s Windows 10 alebo 11</b> (64-bit) a internet</li>
           <li><b>Apple ID</b> – stačí bežné, zadarmo</li>
           <li><b>iPhone</b> + <b>USB kábel</b> (pri viacerých iPhonoch USB hub s napájaním)</li>
-          <li>Balík <b>JD-IphoneWall-Windows.zip</b></li>
+          <li>Balík <b>JD-PhoneStudio-Windows.zip</b></li>
           <li><b>Claude API kľúč</b> z console.anthropic.com (na AI ovládanie)</li>
         </ul>
         <p class="gnote">Pomocná aplikácia WebDriverAgent sa do iPhonu nahrá cez bezplatný program <b>Sideloadly</b>. S bezplatným Apple ID platí jej podpis 7 dní – potom ju v Sideloadly nahráš znova (1 klik).</p>
@@ -216,9 +216,9 @@
             </ul></li>
           <li><b>Rozbaľ balík</b>
             <ul class="gsub">
-              <li>Ulož <b>JD-IphoneWall-Windows.zip</b> – zvyčajne skončí v priečinku <code>Stiahnuté súbory</code>.</li>
+              <li>Ulož <b>JD-PhoneStudio-Windows.zip</b> – zvyčajne skončí v priečinku <code>Stiahnuté súbory</code>.</li>
               <li><b>Pravý klik</b> na zip → <code>Extrahovať všetko…</code> → <code>Extrahovať</code>. Súbory nespúšťaj priamo zo zipu – nefungovalo by to.</li>
-              <li>Priečinok <b>JD-IphoneWall</b> presuň na <b>Plochu</b>. Vnútri sú <code>NAVOD.html</code>, <code>install-windows.bat</code>, <code>START_STRANKY.bat</code> a súbory stránky.</li>
+              <li>Priečinok <b>JD-PhoneStudio</b> presuň na <b>Plochu</b>. Vnútri sú <code>NAVOD.html</code>, <code>install-windows.bat</code>, <code>START_STRANKY.bat</code> a súbory stránky.</li>
             </ul></li>
           <li><b>Nainštaluj Apple Devices a iTunes</b> (ovládače pre iPhone – treba <b>oboje</b>)
             <ul class="gsub">
@@ -234,11 +234,11 @@
             </ul></li>
           <li><b>Spusti install-windows.bat</b>
             <ul class="gsub">
-              <li>V priečinku JD-IphoneWall dvojklik na <code>install-windows.bat</code>.</li>
+              <li>V priečinku JD-PhoneStudio dvojklik na <code>install-windows.bat</code>.</li>
               <li>Ak sa objaví modré okno <b>„Systém Windows ochránil váš počítač“</b> → <code>Ďalšie informácie</code> → <code>Spustiť aj tak</code>.</li>
               <li>Ak sa pýta na súhlas s podmienkami (winget) alebo zmeny v počítači → <code>Y</code> / <code>Áno</code>.</li>
               <li>Nainštaluje <b>Node.js</b>, <b>go-ios</b>, <b>cloudflared</b> a pripraví súbor <code>WebDriverAgent.ipa</code>. Ak sa práve nainštaloval Node.js a inštalácia skončí chybou, okno zavri a spusti <code>install-windows.bat</code> ešte raz.</li>
-              <li>Na konci sa otvorí stránka Sideloadly a priečinok JD-IphoneWall.</li>
+              <li>Na konci sa otvorí stránka Sideloadly a priečinok JD-PhoneStudio.</li>
             </ul></li>
           <li><b>Nainštaluj Sideloadly</b>
             <ul class="gsub">
@@ -247,7 +247,7 @@
           <li><b>Nahraj WebDriverAgent do iPhonu</b>
             <ul class="gsub">
               <li>Otvor <b>Sideloadly</b>. Hore v poli <b>iDevice</b> musí byť tvoj iPhone.</li>
-              <li>Z priečinka JD-IphoneWall pretiahni súbor <code>WebDriverAgent.ipa</code> do okna Sideloadly (na ikonu IPA).</li>
+              <li>Z priečinka JD-PhoneStudio pretiahni súbor <code>WebDriverAgent.ipa</code> do okna Sideloadly (na ikonu IPA).</li>
               <li>Do poľa <b>Apple account</b> napíš e-mail svojho Apple ID → <code>Start</code>.</li>
               <li>Zadaj heslo k Apple ID a overovací kód, ak príde. Počkaj, kým dole uvidíš <b>Done</b>.</li>
               <li>Ostatné nastavenia v Sideloadly nemeň.</li>
@@ -270,7 +270,7 @@
       <div class="panel gpart">
         <h3><span class="gnum">C</span>Stránka – prvé spustenie</h3>
         <ol class="gsteps" data-part="wweb">
-          <li>V priečinku <b>JD-IphoneWall</b> na Ploche dvojklik na <b>START_STRANKY.bat</b>. Otvorí sa čierne okno a malé okno <b>go-ios tunel</b> (na lište) – obe nechaj otvorené.</li>
+          <li>V priečinku <b>JD-PhoneStudio</b> na Ploche dvojklik na <b>START_STRANKY.bat</b>. Otvorí sa čierne okno a malé okno <b>go-ios tunel</b> (na lište) – obe nechaj otvorené.</li>
           <li>Ak sa Windows Firewall pýta na <b>Node.js</b> → <code>Povoliť prístup</code> (stačia súkromné siete). Stránka sa otvorí sama na <code>localhost:3000</code>.</li>
           <li>V <b>Nastaveniach</b> (v bočnom menu stránky) vlož <b>Claude API kľúč</b>.</li>
           <li>V sekcii <b>Telefóny</b> by sa do 1–2 minút mal objaviť obraz iPhonu. Skús ťuknúť a poslať jednu fotku.</li>

@@ -2,6 +2,7 @@
 // Používa Claude API (potrebuje API kľúč z console.anthropic.com).
 
 const http = require('http');
+const store = require('./store');
 
 let MODEL = process.env.CLAUDE_MODEL || ''; // prázdne = vyberie sa automaticky najnovší dostupný
 
@@ -101,6 +102,14 @@ async function kieSend(auth, body) {
   return d;
 }
 
+// zapíše spotrebu tokenov (Prehľad → míňanie na AI)
+function track(kind, auth, res, phone) {
+  try {
+    const u = (res && res.usage) || {};
+    store.addUsage({ kind, provider: isKie(auth) ? 'KIE' : 'Claude', model: isKie(auth) ? (auth.model || 'claude-sonnet-5') : (res.model || MODEL || ''),
+      input: (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0) * 0.1, output: u.output_tokens || 0, phone });
+  } catch (_) {}
+}
 async function callClaude(auth, messages, retried) {
   if (isKie(auth)) return kieSend(auth, { max_tokens: 1024, system: SYSTEM, tools: TOOLS, messages });
   const apiKey = keyOf(auth);
@@ -160,6 +169,7 @@ async function runAgent(dev, task, apiKey, actions, opts = {}) {
     if (A.stop) { say('■ Zastavené'); return; }
     if (thinkingOff) trimImages(messages);
     const res = await callClaude(apiKey, messages);
+    track('agent', apiKey, res, dev.label);
     // bloky premýšľania si necháme len vtedy, keď sa premýšľanie nedá vypnúť (vtedy históriu nemeníme)
     const content = thinkingOff ? res.content.filter((b) => b.type !== 'thinking' && b.type !== 'redacted_thinking') : res.content;
     messages.push({ role: 'assistant', content });
@@ -211,6 +221,7 @@ function startAgent(dev, task, apiKey, actions, opts) {
 async function askText(auth, system, content, maxTokens = 1200) {
   if (isKie(auth)) {
     const j = await kieSend(auth, { max_tokens: maxTokens, system, messages: [{ role: 'user', content }] });
+    track('popisy', auth, j);
     return (j.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('\n').trim();
   }
   const apiKey = keyOf(auth);
@@ -222,7 +233,8 @@ async function askText(auth, system, content, maxTokens = 1200) {
   });
   const j = await r.json();
   if (!r.ok) throw new Error((j.error && j.error.message) || `Claude API ${r.status}`);
+  track('popisy', auth, j);
   return (j.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('\n').trim();
 }
 
-module.exports = { startAgent, askText };
+module.exports = { startAgent, askText, grabFrame };

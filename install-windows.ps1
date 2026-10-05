@@ -1,4 +1,4 @@
-﻿# JD - IphoneWall – inštalácia pre Windows
+﻿# JD Phone Studio – inštalácia pre Windows
 # Spúšťa sa cez install-windows.bat (dvojklik)
 $ErrorActionPreference = 'Stop'
 Set-Location -Path $PSScriptRoot
@@ -9,7 +9,7 @@ function Step($t) { Write-Host ""; Write-Host "> $t" -ForegroundColor Cyan }
 function Fail($t) { Write-Host ""; Write-Host "[CHYBA] $t" -ForegroundColor Red; Read-Host "Stlac Enter na zatvorenie"; exit 1 }
 
 Write-Host "=============================================="
-Write-Host "   JD - IphoneWall - instalacia (Windows)"
+Write-Host "   JD Phone Studio - instalacia (Windows)"
 Write-Host "=============================================="
 
 # 1) Ovládače Apple (bez nich Windows iPhone neuvidí)

@@ -1,0 +1,83 @@
+# Zostaví aplikáciu JD Phone Studio pre Mac (.dmg) a Windows (.exe) a nahrá ju do GitHub Releases („aplikacia“).
+# Spúšťa sa samo po PUBLIKOVAT_UPDATE (zmena version.json alebo desktop/) alebo ručne: Actions → Aplikácia → Run workflow.
+name: Aplikácia
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['desktop/**', 'version.json', '.github/workflows/**']
+permissions:
+  contents: write
+concurrency: { group: aplikacia, cancel-in-progress: true }
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Release „aplikacia“
+        run: |
+          gh release view aplikacia -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+          gh release create aplikacia -R "$GITHUB_REPOSITORY" --title "JD Phone Studio – aplikácia" \
+            --notes "Stiahni súbor pre svoj počítač: Mac s čipom Apple (M1 a novší) = JD-PhoneStudio-mac-arm64.dmg, starší Mac s Intelom = JD-PhoneStudio-mac-x64.dmg, Windows = JD-PhoneStudio-Setup.exe" --latest
+
+  mac:
+    needs: release
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: go-ios a cloudflared
+        run: |
+          set -e
+          cd desktop && mkdir -p bin/mac-arm64 bin/mac-x64 tmp && cd tmp
+          curl -fsSL -o goios.zip https://github.com/danielpaulus/go-ios/releases/latest/download/go-ios-mac.zip
+          unzip -q -o goios.zip -d goios
+          for f in $(find goios -type f -name ios); do
+            A=$(lipo -archs "$f" 2>/dev/null || echo "")
+            echo "$f: $A"
+            case "$A" in *arm64*) cp "$f" ../bin/mac-arm64/ios;; esac
+            case "$A" in *x86_64*) cp "$f" ../bin/mac-x64/ios;; esac
+          done
+          test -f ../bin/mac-arm64/ios && test -f ../bin/mac-x64/ios
+          for a in arm64:arm64 x64:amd64; do
+            curl -fsSL -o cf.tgz "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-${a#*:}.tgz"
+            tar -xzf cf.tgz && mv cloudflared "../bin/mac-${a%%:*}/cloudflared"
+          done
+          chmod +x ../bin/mac-*/*
+          cd .. && rm -rf tmp && ls -la bin/*
+      - name: Zostavenie
+        working-directory: desktop
+        env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+        run: npm install --no-audit --no-fund && npm run dist:mac
+      - name: Nahranie
+        working-directory: desktop
+        run: gh release upload aplikacia dist/*.dmg --clobber -R "$GITHUB_REPOSITORY"
+
+  windows:
+    needs: release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: go-ios a cloudflared
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force desktop/bin/win-x64, tmp | Out-Null
+          Invoke-WebRequest 'https://github.com/danielpaulus/go-ios/releases/latest/download/go-ios-win.zip' -OutFile tmp/goios.zip
+          Expand-Archive tmp/goios.zip tmp/goios -Force
+          $exe = Get-ChildItem tmp/goios -Recurse -Filter 'ios.exe' | Select-Object -First 1
+          Copy-Item $exe.FullName desktop/bin/win-x64/ios.exe
+          Invoke-WebRequest 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' -OutFile desktop/bin/win-x64/cloudflared.exe
+          Get-ChildItem desktop/bin/win-x64
+      - name: Zostavenie
+        working-directory: desktop
+        run: npm install --no-audit --no-fund; npm run dist:win
+      - name: Nahranie
+        working-directory: desktop
+        shell: bash
+        run: gh release upload aplikacia dist/JD-PhoneStudio-Setup.exe --clobber -R "$GITHUB_REPOSITORY"

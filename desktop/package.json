@@ -1,0 +1,53 @@
+{
+  "name": "jd-phonestudio",
+  "productName": "JD Phone Studio",
+  "version": "1.0.0",
+  "description": "JD Phone Studio – ovládanie iPhonov z počítača",
+  "author": "Juraj Dvorščák",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "prepare-app": "node scripts/prepare.js",
+    "start": "node scripts/prepare.js && electron .",
+    "dist:mac": "node scripts/prepare.js && electron-builder --mac --publish never",
+    "dist:win": "node scripts/prepare.js && electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "sk.jd.phonestudio",
+    "productName": "JD Phone Studio",
+    "artifactName": "JD-PhoneStudio-${os}-${arch}.${ext}",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main.js", "preload.js", "splash.html", "setup.html", "tray.png", "tray@2x.png", "package.json"],
+    "extraResources": [
+      { "from": "app-files", "to": "app" },
+      { "from": "bin/${os}-${arch}", "to": "bin" },
+      { "from": "xcode-setup.command", "to": "xcode-setup.command" }
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }]
+    },
+    "dmg": { "title": "JD Phone Studio" },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [{ "target": "nsis", "arch": ["x64"] }]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "JD Phone Studio",
+      "artifactName": "JD-PhoneStudio-Setup.${ext}"
+    }
+  }
+}

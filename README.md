@@ -1,4 +1,4 @@
-# JD - IphoneWall (Mac)
+# JD Phone Studio (Mac)
 
 Stránka na Macu, cez ktorú vidíš a ovládaš svoje iPhony pripojené káblom.
 

@@ -1,14 +1,14 @@
 #!/bin/bash
-# JD Phone Studio – jednorazová inštalácia. Dvojklik (prvýkrát pravý klik → Otvoriť).
+# JD Phone Studio (aplikácia) – nastavenie WebDriverAgenta cez Xcode. Spúšťa ho aplikácia (Sprievodca nastavením).
 cd "$(dirname "$0")"
 DIR="$(pwd)"
-
+IOS="$DIR/bin/ios"
 ok()   { echo "  ✅ $1"; }
 step() { echo; echo "▶ $1"; }
 fail() { echo; echo "❌ $1"; echo; read -r -p "Stlač Enter na zatvorenie…"; exit 1; }
 
 echo "=============================================="
-echo "   JD Phone Studio – inštalácia"
+echo "   JD Phone Studio – nastavenie cez Xcode"
 echo "=============================================="
 
 # 1) Xcode
@@ -25,24 +25,6 @@ sudo -n true 2>/dev/null || echo "  (môže sa pýtať heslo k Macu – je to na
 sudo xcodebuild -license accept >/dev/null 2>&1
 xcodebuild -runFirstLaunch >/dev/null 2>&1
 ok "Xcode pripravený"
-
-# 2) Homebrew + Node + go-ios
-step "Kontrolujem Node.js a go-ios"
-if ! command -v node >/dev/null; then
-  if ! command -v brew >/dev/null; then
-    echo "  Inštalujem Homebrew (správca programov)…"
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || fail "Homebrew sa nenainštaloval."
-    eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"
-  fi
-  brew install node || fail "Node.js sa nenainštaloval."
-fi
-ok "Node.js $(node -v)"
-if ! command -v ios >/dev/null; then
-  npm install -g go-ios || sudo npm install -g go-ios || fail "go-ios sa nenainštaloval."
-fi
-ok "go-ios"
-if ! command -v cloudflared >/dev/null; then brew install cloudflared || echo "  (cloudflared sa nenainštaloval – fotky/videá pôjdu len cez Wi-Fi)"; fi
-command -v cloudflared >/dev/null && ok "cloudflared (fotky/videá cez mobilné dáta)"
 
 # 3) WebDriverAgent
 step "Sťahujem WebDriverAgent"
@@ -61,25 +43,29 @@ if [ -z "$TEAM" ]; then
   echo "  Nenašiel som Apple ID v Xcode. Urob toto:"
   echo "   1. Otvor Xcode → v menu Xcode → Settings… → Accounts"
   echo "   2. Vľavo dole + → Apple ID → prihlás sa (stačí bežné Apple ID, zadarmo)"
-  echo "   3. Spusti install.command znova"
+  echo "   3. V aplikácii klikni znova „Nastaviť cez Xcode“"
   open -a Xcode
   fail "Chýba Apple ID v Xcode."
 fi
 ok "Tím: $TEAM"
 
 USERSLUG=$(whoami | tr -cd 'a-zA-Z0-9' | tr 'A-Z' 'a-z')
-BUNDLE=$(node -e 'try{process.stdout.write(require("./config.json").bundleId||"")}catch(_){}')
+BUNDLE=$(/usr/bin/python3 -c 'import json;print(json.load(open("config.json")).get("bundleId",""))' 2>/dev/null)
 [ -z "$BUNDLE" ] && BUNDLE="com.${USERSLUG}.${TEAM}.WebDriverAgentRunner"
-node -e '
-const fs=require("fs");let c={};try{c=JSON.parse(fs.readFileSync("config.json","utf8"))}catch(_){}
-c.teamId=process.argv[1];c.bundleId=process.argv[2];fs.writeFileSync("config.json",JSON.stringify(c,null,2));
-' "$TEAM" "$BUNDLE"
+/usr/bin/python3 - "$TEAM" "$BUNDLE" <<'PY' || fail "Nepodarilo sa uložiť nastavenia."
+import json, sys
+try: c = json.load(open("config.json"))
+except Exception: c = {}
+c["buildPending"] = True
+c["bundleId"] = sys.argv[2]
+json.dump(c, open("config.json", "w"), indent=2)
+PY
 ok "Uložené do config.json"
 
 # 5) Telefón
 step "Pripoj iPhone káblom, odomkni ho a ťukni „Dôverovať“"
 for i in $(seq 1 60); do
-  UDID=$(ios list 2>/dev/null | grep -Eo '"[0-9A-Fa-f-]{24,40}"' | head -1 | tr -d '"')
+  UDID=$("$IOS" list 2>/dev/null | grep -Eo '"[0-9A-Fa-f-]{24,40}"' | head -1 | tr -d '"')
   [ -n "$UDID" ] && break
   sleep 2
 done
@@ -111,18 +97,17 @@ if [ "$RC" != "0" ]; then
 fi
 ok "WebDriverAgent je pripravený"
 
-chmod +x "$DIR"/*.command 2>/dev/null
-
+# až teraz zapni Xcode režim (aplikácia sa prepne sama)
+/usr/bin/python3 - "$TEAM" <<'PY'
+import json, sys
+c = json.load(open("config.json")); c.pop("buildPending", None); c["teamId"] = sys.argv[1]
+json.dump(c, open("config.json", "w"), indent=2)
+PY
 echo
 echo "=============================================="
-echo " ✅ HOTOVO. Teraz:"
-echo "   1. Dvojklik na START_STRANKY.command (otvorí sa stránka)"
-echo "   2. Na iPhone: Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov → Zapnúť"
-echo "   3. Keď server nahrá aplikáciu do iPhonu: Nastavenia → Všeobecné →"
-echo "      VPN a správa zariadení → tvoj účet → Dôverovať → Verify App"
-echo "   4. Nastavenia → Vývojár → Enable UI Automation → Zapnúť"
-echo
-echo " Do minúty sa na stránke objaví obraz. Ďalší iPhone = len ho pripoj"
-echo " a urob na ňom body 2–4, server ho nahrá sám."
+echo " ✅ HOTOVO. Aplikácia JD Phone Studio sa o chvíľu"
+echo "    prepne do Xcode režimu – toto okno môžeš zavrieť."
+echo "    Na iPhone zapni: Nastavenia → Súkromie a bezpečnosť"
+echo "    → Režim pre vývojárov."
 echo "=============================================="
 read -r -p "Stlač Enter na zatvorenie…"

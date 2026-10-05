@@ -74,7 +74,7 @@ function validSession(req) {
 function page(res, code, body) {
   res.writeHead(code, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Frame-Options': 'DENY' });
   res.end(`<!doctype html><html lang="sk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>JD - IphoneWall</title><link rel="apple-touch-icon" href="/ikona.png"><meta name="theme-color" content="#0c0d11">
+<title>JD Phone Studio</title><link rel="apple-touch-icon" href="/ikona.png"><meta name="theme-color" content="#0c0d11">
 <style>
 :root{--bg:#0c0d11;--panel:#14161c;--line:#2e323c;--text:#eceef3;--muted:#8d92a0;--accent:#ff3d68;--bad:#ff5468}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 50% 0,#3a1422,#0c0d11 60%);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:24px 16px}
@@ -87,17 +87,67 @@ button{font:600 16px -apple-system,sans-serif;padding:14px;border-radius:13px;bo
 </style></head><body><div class="box"><div class="logo"></div>${body}</div></body></html>`);
 }
 function loginPage(res, msg) {
-  page(res, 200, `<h1>JD - IphoneWall</h1><p>Zadaj PIN, ktorý si nastavil na počítači.</p>
+  page(res, 200, `<h1>JD Phone Studio</h1><p>Zadaj PIN, ktorý si nastavil na počítači.</p>
 <form method="post" action="/login"><input name="pin" type="password" inputmode="numeric" autocomplete="current-password" autofocus required minlength="6" maxlength="12" pattern="[0-9]*"></form>
 ${msg ? `<p class="err">${msg}</p>` : ''}<button onclick="document.forms[0].submit()">Prihlásiť</button>`);
+}
+
+// ---------- spárované mobily (prístup cez rozcestník bez Cloudflare Access) ----------
+// config.remote = { enabled, id, secret, devices: [{ id, name, keyHash, created, lastSeen }] }
+const sha = (t) => crypto.createHash('sha256').update(String(t)).digest('hex');
+const remoteCfg = () => { if (!cfg.remote) cfg.remote = {}; if (!Array.isArray(cfg.remote.devices)) cfg.remote.devices = []; return cfg.remote; };
+const pairCodes = new Map(); // kód → platnosť (jednorazový, 10 minút)
+function newPairCode() {
+  for (const [c, exp] of pairCodes) if (exp < Date.now()) pairCodes.delete(c);
+  const code = crypto.randomBytes(16).toString('hex');
+  pairCodes.set(code, Date.now() + 10 * 60000);
+  return code;
+}
+function claimPair(code, key, name) {
+  const exp = pairCodes.get(String(code || ''));
+  if (!exp || exp < Date.now()) return null;
+  if (!/^[a-f0-9]{64}$/.test(String(key || ''))) return null;
+  pairCodes.delete(code);
+  const r = remoteCfg();
+  const dev = { id: crypto.randomBytes(6).toString('hex'), name: String(name || 'Mobil').slice(0, 60), keyHash: sha(key), created: new Date().toISOString(), lastSeen: new Date().toISOString() };
+  r.devices.push(dev); r.devices = r.devices.slice(-20); saveCfg();
+  return dev;
+}
+const findDevice = (key) => remoteCfg().devices.find((d) => d.keyHash === sha(key));
+function removeDevice(id) { const r = remoteCfg(); r.devices = r.devices.filter((d) => d.id !== id); saveCfg(); }
+const listDevices = () => remoteCfg().devices.map(({ keyHash, ...d }) => d);
+const DCOOKIE = 'jdps_m';
+function deviceCookie(dev) {
+  const exp = Date.now() + 30 * 86400000, v = `${exp}.${dev.id}`;
+  return `${DCOOKIE}=${v}.${sign(v)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${30 * 86400}`;
+}
+let seenSave = 0;
+function validDevice(req) {
+  const m = String(req.headers.cookie || '').match(new RegExp(`${DCOOKIE}=([^;]+)`));
+  if (!m) return false;
+  const p = m[1].split('.'); if (p.length !== 3) return false;
+  const v = `${p[0]}.${p[1]}`, want = sign(v);
+  if (want.length !== p[2].length || !crypto.timingSafeEqual(Buffer.from(want), Buffer.from(p[2]))) return false;
+  if (Number(p[0]) < Date.now()) return false;
+  const dev = remoteCfg().devices.find((d) => d.id === p[1]);
+  if (!dev) return false; // mobil bol odobraný
+  if (Date.now() - seenSave > 10 * 60000) { dev.lastSeen = new Date().toISOString(); seenSave = Date.now(); saveCfg(); }
+  return true;
 }
 
 // Vráti true, ak požiadavku smie spracovať server; inak odpovie sám (prihlásenie / zákaz).
 async function gate(req, res, url) {
   if (!isRemote(req)) return true;
-  // bez Cloudflare Access nič zvonku nepustíme
+  // párovanie mobilu cez rozcestník – rieši server (vlastná kontrola kódu / kľúča)
+  if (url.pathname.startsWith('/pair/')) return true;
+  if (validDevice(req)) {
+    if (url.pathname === '/logout') { res.writeHead(303, { 'Set-Cookie': `${DCOOKIE}=; Path=/; Max-Age=0; Secure; HttpOnly`, Location: '/' }); res.end(); return false; }
+    return true;
+  }
+  // bez Cloudflare Access (alebo spárovaného mobilu) nič zvonku nepustíme
   if (!req.headers['cf-access-jwt-assertion']) {
-    page(res, 403, '<h1>Prístup je vypnutý</h1><p>Táto stránka sa dá otvoriť zvonku len cez Cloudflare Access (prihlásenie e-mailom). Nastav ho podľa návodu na počítači.</p>');
+    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/stream/')) { res.writeHead(401, { 'Content-Type': 'application/json' }); res.end('{"error":"Mobil nie je spárovaný"}'); return false; }
+    page(res, 403, '<h1>Otvor stránku cez ikonu</h1><p>Tento mobil nie je prihlásený. Otvor JD Phone Studio cez ikonu na ploche mobilu. Ak ju ešte nemáš, v aplikácii na počítači klikni <b>Nastavenia → Prístup z mobilu → Pridať mobil</b> a naskenuj QR kód.</p>');
     return false;
   }
   if (!hasPin()) {
@@ -130,4 +180,4 @@ async function gate(req, res, url) {
   return false;
 }
 
-module.exports = { init, gate, isRemote, hasPin, setPin, removePin };
+module.exports = { init, gate, isRemote, hasPin, setPin, removePin, newPairCode, claimPair, findDevice, removeDevice, listDevices, deviceCookie, remoteCfg, tooMany, noteFail, clientIp, page };

@@ -1,10 +1,10 @@
 #!/bin/bash
-# JD - IphoneWall – toto spúšťaj vždy. Dvojklik (prvýkrát pravý klik → Otvoriť).
+# JD Phone Studio – toto spúšťaj vždy. Dvojklik (prvýkrát pravý klik → Otvoriť).
 cd "$(dirname "$0")"
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 echo "=============================================="
-echo "   JD - IphoneWall – spúšťam stránku"
+echo "   JD Phone Studio – spúšťam stránku"
 echo "=============================================="
 
 # ešte nie je nainštalované → najprv inštalácia
@@ -22,7 +22,7 @@ cleanup_old() {
     kill $OLD 2>/dev/null; sleep 2
     kill -9 $(lsof -ti tcp:3000 2>/dev/null) 2>/dev/null
   fi
-  pkill -f "cloudflared.*3001" 2>/dev/null
+  pkill -f "cloudflared.*127.0.0.1:300" 2>/dev/null
   pkill -f "JD-IphoneWall/build" 2>/dev/null   # staré xcodebuild procesy (WDA)
 }
 cleanup_old

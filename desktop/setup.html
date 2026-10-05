@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="sk"><head><meta charset="utf-8"><title>Sprievodca nastavením – JD Phone Studio</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self'">
+<style>
+  :root{--bg:#0c0d11;--panel:#14161c;--line:#262a33;--text:#eceef3;--muted:#8d92a0;--faint:#5d6270;--ok:#3ddc97;--warn:#ffb547;--bad:#ff5468;--acc:#ff3d68}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(circle at 50% -10%,#2a1019,var(--bg) 55%);color:var(--text);font:14.5px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+  .wrap{max-width:860px;margin:0 auto;padding:34px 22px 120px}
+  header{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  header img{width:52px;height:52px;border-radius:14px}
+  h1{margin:0;font-size:24px}.lead{color:var(--muted);margin:4px 0 22px}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:12px;display:grid;grid-template-columns:38px 1fr;gap:4px 14px}
+  .num{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:rgba(255,255,255,.06);color:var(--muted)}
+  .step.ok .num{background:rgba(61,220,151,.16);color:var(--ok)} .step.bad .num{background:rgba(255,84,104,.14);color:var(--bad)} .step.wait .num{background:rgba(255,181,71,.14);color:var(--warn)}
+  h2{margin:4px 0 2px;font-size:16px;display:flex;align-items:center;gap:10px}
+  .st{font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;background:rgba(255,255,255,.07);color:var(--muted)}
+  .ok .st{background:rgba(61,220,151,.15);color:var(--ok)} .bad .st{background:rgba(255,84,104,.15);color:var(--bad)} .wait .st{background:rgba(255,181,71,.15);color:var(--warn)}
+  .body{grid-column:2;color:#c9ccd5}
+  ol{margin:6px 0;padding-left:20px} li{margin:3px 0} b{color:#fff}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button{font:600 13px inherit;padding:9px 14px;border-radius:11px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:var(--text);cursor:pointer}
+  button:hover{background:rgba(255,255,255,.09)} button.go{border:0;color:#fff;background:linear-gradient(180deg,#ff4f76,#e8285a);box-shadow:0 6px 18px rgba(255,61,104,.3)}
+  .ph{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.03);margin-top:6px;font-size:13.5px}
+  .ph i{width:9px;height:9px;border-radius:50%;background:var(--faint)} .ph.y i{background:var(--ok)} .ph.n i{background:var(--warn)}
+  .tabs{display:flex;gap:6px;margin:8px 0} .tabs button.on{border-color:#ff5b80;background:rgba(255,61,104,.13)}
+  .hint{color:var(--muted);font-size:12.5px} code{background:rgba(255,255,255,.07);padding:1px 6px;border-radius:6px}
+  .foot{position:fixed;left:0;right:0;bottom:0;padding:14px 22px;background:rgba(12,13,17,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;justify-content:center}
+  .foot .in{max-width:860px;width:100%;display:flex;align-items:center;gap:12px} .foot .sp{flex:1}
+  .hidden{display:none}
+</style></head>
+<body><div class="wrap">
+  <header><img src="tray@2x.png" alt=""><div><h1>Sprievodca nastavením</h1></div></header>
+  <p class="lead">Prejdi kroky zhora nadol. Stav sa kontroluje sám každých pár sekúnd – zelené = hotovo. Kedykoľvek ho znova otvoríš cez ikonu aplikácie → <b>Sprievodca nastavením</b>.</p>
+
+  <div class="step" id="s-drv">
+    <div class="num">1</div><h2>Ovládače Apple <span class="st" data-st>kontrolujem…</span></h2>
+    <div class="body">Bez nich Windows iPhone neuvidí. Nainštaluj <b>Apple Devices</b> z Microsoft Store (alebo iTunes) a reštartuj počítač.
+      <div class="btns"><button data-open="ms-windows-store://pdp/?productid=9NP83LWLPZ9K">Apple Devices (Microsoft Store)</button><button data-open="https://www.apple.com/itunes/">iTunes</button></div></div>
+  </div>
+
+  <div class="step" id="s-phone">
+    <div class="num" data-n>2</div><h2>Pripoj iPhone <span class="st" data-st>kontrolujem…</span></h2>
+    <div class="body"><ol><li>Pripoj iPhone <b>USB káblom</b> a odomkni ho.</li><li>Na iPhone ťukni <b>Dôverovať</b> a zadaj kód.</li></ol><div data-list></div></div>
+  </div>
+
+  <div class="step" id="s-wda">
+    <div class="num" data-n>3</div><h2>Nainštaluj WebDriverAgent do iPhonu <span class="st" data-st>—</span></h2>
+    <div class="body">Malý pomocník, cez ktorý stránka vidí obrazovku a ťuká. Stačí raz (pri bezplatnom Apple ID treba podpis obnoviť raz za 7 dní).
+      <div class="tabs" data-tabs><button data-t="sl" class="on">Sideloadly (jednoduché)</button><button data-t="xc" class="mac">Xcode (Mac)</button></div>
+      <div data-pane="sl"><ol>
+        <li>Stiahni a nainštaluj <b>Sideloadly</b> (zadarmo) a otvor ho.</li>
+        <li>Klikni <b>Ukázať WebDriverAgent.ipa</b> a súbor pretiahni do okna Sideloadly.</li>
+        <li>V Sideloadly vyber svoj iPhone, zadaj <b>Apple ID</b> (stačí bežné) a klikni <b>Start</b>.</li>
+        <li>Na iPhone: <b>Nastavenia → Všeobecné → VPN a správa zariadení</b> → tvoje Apple ID → <b>Dôverovať</b>.</li>
+      </ol><div class="btns"><button data-open="https://sideloadly.io/">Stiahnuť Sideloadly</button><button class="go" id="ipa">Ukázať WebDriverAgent.ipa</button></div></div>
+      <div data-pane="xc" class="hidden"><ol>
+        <li>Nainštaluj <b>Xcode</b> z App Store a raz ho otvor.</li>
+        <li>V Xcode → <b>Settings → Accounts</b> pridaj svoje Apple ID.</li>
+        <li>Klikni <b>Nastaviť cez Xcode</b> – otvorí sa okno, ktoré všetko pripraví (2–5 minút). Potom sa aplikácia sama prepne.</li>
+      </ol><div class="btns"><button data-open="macappstore://apps.apple.com/app/xcode/id497799835">Xcode v App Store</button><button class="go" id="xcode">Nastaviť cez Xcode</button></div>
+      <p class="hint" data-xcinfo></p></div>
+    </div>
+  </div>
+
+  <div class="step" id="s-dev">
+    <div class="num" data-n>4</div><h2>Režim pre vývojárov na iPhone</h2>
+    <div class="body">Na iPhone: <b>Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov → Zapnúť</b>. iPhone sa reštartuje – potom potvrď <b>Zapnúť</b>.<br>
+      <span class="hint">Táto položka sa v Nastaveniach objaví až po kroku 3.</span></div>
+  </div>
+
+  <div class="step" id="s-sc">
+    <div class="num" data-n>5</div><h2>Skratka JD Save (fotky a videá do galérie)</h2>
+    <div class="body"><ol><li>Na iPhone otvor aplikáciu <b>Skratky</b> → <code>+</code> → názov <b>JD Save</b> (presne takto).</li>
+      <li>Pridaj akciu <code>Získať obsah URL</code> (URL = <i>Vstup skratky</i>).</li>
+      <li>Pridaj akciu <code>Uložiť do fotoalbumu</code> (album Nedávne).</li>
+      <li>Pri prvom poslaní fotky povoľ <b>Vždy povoliť</b>.</li></ol></div>
+  </div>
+
+  <div class="step" id="s-ai">
+    <div class="num" data-n>6</div><h2>AI kľúč</h2>
+    <div class="body">Na stránke otvor <b>Nastavenia</b> a vlož <b>Claude API kľúč</b> (AI ovládanie a plánovanie) a voliteľne <b>KIE kľúč</b> (návrhy popisov). Ukladajú sa len v tomto počítači.</div>
+  </div>
+</div>
+<div class="foot"><div class="in"><span class="hint" id="sum">Kontrolujem…</span><span class="sp"></span><button id="re">Skontrolovať</button><button class="go" id="done">Pokračovať na stránku →</button></div></div>
+
+<script>
+const A = window.jdApp;
+const $ = (s, r = document) => r.querySelector(s);
+const set = (id, cls, txt) => { const el = document.getElementById(id); el.classList.remove('ok', 'bad', 'wait'); if (cls) el.classList.add(cls); const st = $('[data-st]', el); if (st) st.textContent = txt; };
+const esc = (t) => String(t || '').replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) A.open(b.dataset.open); });
+$('[data-tabs]').onclick = (e) => { const b = e.target.closest('[data-t]'); if (!b) return; document.querySelectorAll('[data-tabs] button').forEach((x) => x.classList.toggle('on', x === b)); document.querySelectorAll('[data-pane]').forEach((p) => p.classList.toggle('hidden', p.dataset.pane !== b.dataset.t)); };
+$('#ipa').onclick = () => A.showIpa();
+$('#xcode').onclick = async () => { await A.xcodeSetup(); $('[data-xcinfo]').textContent = 'Otvoril som okno Terminálu – sleduj ho. Keď napíše HOTOVO, aplikácia sa prepne sama.'; };
+$('#done').onclick = () => A.done();
+$('#re').onclick = () => refresh();
+
+let busy = false;
+async function refresh() {
+  if (busy) return; busy = true;
+  let r; try { r = await A.check(); } catch (e) { busy = false; return; }
+  busy = false;
+  const win = r.platform === 'win32';
+  document.getElementById('s-drv').classList.toggle('hidden', !win);
+  document.querySelectorAll('.mac').forEach((x) => x.classList.toggle('hidden', win));
+  document.querySelectorAll('[data-n]').forEach((n, i) => (n.textContent = (win ? 2 : 1) + i));
+  if (win) set('s-drv', r.drivers ? 'ok' : 'bad', r.drivers ? 'nainštalované' : 'chýba');
+  // telefóny
+  const list = $('#s-phone [data-list]');
+  if (!r.hasIos) { set('s-phone', 'bad', 'chýba go-ios'); list.innerHTML = '<p class="hint">Aplikácia je neúplná – nainštaluj ju znova.</p>'; }
+  else if (!r.phones.length) { set('s-phone', 'wait', 'čakám na iPhone'); list.innerHTML = r.listError ? `<p class="hint">${esc(r.listError)}</p>` : ''; }
+  else { set('s-phone', 'ok', r.phones.length === 1 ? '1 iPhone' : r.phones.length + ' iPhony'); list.innerHTML = r.phones.map((p) => `<div class="ph ${p.wda ? 'y' : 'n'}"><i></i><b>${esc(p.name || 'iPhone')}</b> ${p.version ? 'iOS ' + esc(p.version) : ''} <span class="hint">· ${p.wda ? 'WebDriverAgent ✓' : 'bez WebDriverAgenta'}</span></div>`).join(''); }
+  // WDA
+  if (!r.phones.length) set('s-wda', '', '—');
+  else if (r.phones.every((p) => p.wda)) set('s-wda', 'ok', 'hotovo');
+  else set('s-wda', 'wait', `chýba na ${r.phones.filter((p) => !p.wda).length}`);
+  if (!win && r.xcodeMode) $('[data-xcinfo]').textContent = 'Xcode režim je nastavený ✓';
+  else if (!win && !r.xcode) $('[data-xcinfo]').textContent = 'Xcode nie je nainštalovaný.';
+  const ready = r.phones.length && r.phones.every((p) => p.wda) && (!win || r.drivers);
+  $('#sum').textContent = ready ? 'Všetko pripravené ✓ – ešte skontroluj kroky bez kontroly (režim pre vývojárov, skratka, AI kľúč).' : 'Dokonči kroky označené oranžovou alebo červenou. Pokračovať môžeš aj neskôr.';
+}
+refresh();
+setInterval(refresh, 6000);
+</script></body></html>

@@ -1,6 +1,6 @@
 {
-  "name": "JD - IphoneWall",
-  "short_name": "IphoneWall",
+  "name": "JD Phone Studio",
+  "short_name": "Phone Studio",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0c0d11",

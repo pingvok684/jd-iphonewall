@@ -222,4 +222,4 @@ function publishTemp(file, name, minutes = 60) {
   return `${publicUrl}/media/${token}/${encodeURIComponent(safeName(name))}`;
 }
 
-module.exports = { publishTemp, TYPES, safeName, enqueueCopy, handleUpload, serveMedia, mediaState, lanIp, SHORTCUT_NAME, startMediaServer, mediaInfo };
+module.exports = { publishTemp, TYPES, safeName, enqueueCopy, handleUpload, serveMedia, mediaState, lanIp, SHORTCUT_NAME, startMediaServer, mediaInfo, restartTunnel };

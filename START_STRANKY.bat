@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
-title JD - IphoneWall
+title JD Phone Studio
 cd /d "%~dp0"
 echo ==============================================
-echo    JD - IphoneWall - spustam stranku
+echo    JD Phone Studio - spustam stranku
 echo ==============================================
 
 rem Este nie je nainstalovane - najprv instalacia

@@ -31,7 +31,7 @@ function makeCard(d) {
     <div class="top"><span class="dot"></span><span class="name" title="Dvojklik = premenovať"></span><span class="ver"></span>
       <button data-a="unlock" title="Zobudiť a odomknúť">${icon('unlock')}</button><button data-a="lock" title="Uspať">${icon('lock')}</button>
       <button data-a="solo" title="Zväčšiť">${icon('expand')}</button></div>
-    <div class="screen"><img alt=""><div class="ph">Čakám na WebDriverAgent…</div></div>
+    <div class="screen"><img alt=""><div class="ph">Čakám na WebDriverAgent…</div><div class="pstat"></div></div>
     <div class="log"></div>
     <div class="bar">
       <input placeholder="Text… (Enter = poslať)">
@@ -45,7 +45,7 @@ function makeCard(d) {
       <input type="file" multiple accept="image/*,video/*,.heic,.mov,.mp4"></label>
     <div class="mlist"></div>`;
   const c = { el, d, img: el.querySelector('img'), ph: el.querySelector('.ph'), dot: el.querySelector('.dot'),
-    name: el.querySelector('.name'), ver: el.querySelector('.ver'), log: el.querySelector('.log'),
+    name: el.querySelector('.name'), ver: el.querySelector('.ver'), pstat: el.querySelector('.pstat'), log: el.querySelector('.log'),
     input: el.querySelector('.bar input'), streaming: false };
 
   // obraz
@@ -267,28 +267,43 @@ function dupCheck(rows) {
     for (const u of r.phones) { const hit = (it.used || []).find((x) => x.udid === u); if (hit) w.push(`• ${f.name} → ${phoneLabel(u)} (už použité ${new Date(hit.at).toLocaleDateString('sk-SK')})`); } }
   return !w.length || confirm('Tieto médiá už boli na danom účte použité:\n' + w.join('\n') + '\n\nNaozaj ich chceš použiť znova?');
 }
-// výber z knižnice
-function pickFromLibrary(kind) {
+// výber z knižnice – najprv súbory daného telefónu (každý telefón má vlastnú knižnicu)
+function pickFromLibrary(kind, udid) {
   return new Promise(async (resolve) => {
     await loadLib();
-    const items = LIB.filter((x) => (kind === 'reel' ? x.kind === 'video' : x.kind === 'photo'));
+    const all = LIB.filter((x) => (kind === 'reel' ? x.kind === 'video' : x.kind === 'photo'));
+    const mine = udid ? all.filter((x) => (x.owners || []).includes(udid)) : [];
+    const none = all.filter((x) => !(x.owners || []).length);
+    let tab = udid && mine.length ? 'mine' : 'all';
     const bg = document.createElement('div'); bg.className = 'modal-bg';
     const sel = [];
     bg.innerHTML = `<div class="modal libpick"><div class="mhead"><h3>Knižnica · ${kind === 'reel' ? 'videá' : 'fotky'}</h3></div>
+      ${udid ? `<div class="libtabs"><button type="button" data-t="mine">${esc(phoneLabel(udid))} (${mine.length})</button><button type="button" data-t="none">Nepriradené (${none.length})</button><button type="button" data-t="all">Všetky (${all.length})</button></div>` : ''}
       <small class="hint">${kind === 'reel' ? 'Vyber 1 video.' : 'Vyber fotky v poradí, v akom majú byť v carouseli.'} Červený štítok = už použité.</small>
-      <div class="lgrid">${items.map((it) => `<button type="button" class="lit" data-id="${it.id}" title="${esc(it.name + (usedText(it) ? '\n' + usedText(it) : ''))}">
-        ${it.kind === 'video' ? `<video src="/lib/${it.id}#t=0.1" muted playsinline preload="metadata"></video>` : `<img src="/lib/${it.id}" loading="lazy" alt="">`}
-        ${it.used && it.used.length ? `<span class="lused">${it.used.length}×</span>` : ''}<span class="lnum"></span></button>`).join('') || '<div class="empty-s" style="grid-column:1/-1">Knižnica je prázdna – nahraj médiá v sekcii Knižnica.</div>'}</div>
+      <div class="lgrid"></div>
       <div class="mact"><button data-x>Zrušiť</button><button class="go" data-ok>Pridať</button></div></div>`;
     document.body.appendChild(bg);
+    const grid = bg.querySelector('.lgrid');
+    const mark = () => bg.querySelectorAll('.lit').forEach((x) => { const n = sel.indexOf(x.dataset.id); x.classList.toggle('on', n >= 0); x.querySelector('.lnum').textContent = n >= 0 ? n + 1 : ''; });
+    const draw = () => {
+      const items = tab === 'mine' ? mine : tab === 'none' ? none : all;
+      bg.querySelectorAll('.libtabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === tab));
+      grid.innerHTML = items.map((it) => `<button type="button" class="lit" data-id="${it.id}" title="${esc(it.name + (usedText(it) ? '\n' + usedText(it) : ''))}">
+        ${it.kind === 'video' ? `<video src="/lib/${it.id}#t=0.1" muted playsinline preload="metadata"></video>` : `<img src="/lib/${it.id}" loading="lazy" alt="">`}
+        ${it.used && it.used.length ? `<span class="lused">${it.used.length}×</span>` : ''}<span class="lnum"></span></button>`).join('')
+        || `<div class="empty-s" style="grid-column:1/-1">${tab === 'mine' ? 'Tento telefón zatiaľ nemá v knižnici nič – pozri „Všetky“ alebo nahraj súbory v Knižnici pod jeho záložkou.' : 'Knižnica je prázdna – nahraj médiá v sekcii Knižnica.'}</div>`;
+      mark();
+    };
+    draw();
     const close = (v) => { bg.remove(); resolve(v); };
     bg.querySelector('[data-x]').onclick = () => close(null);
     bg.onclick = (e) => { if (e.target === bg) close(null); };
-    bg.querySelector('.lgrid').addEventListener('click', (e) => {
+    const tabs = bg.querySelector('.libtabs'); if (tabs) tabs.onclick = (e) => { const b = e.target.closest('button'); if (b) { tab = b.dataset.t; draw(); } };
+    grid.addEventListener('click', (e) => {
       const b = e.target.closest('.lit'); if (!b) return;
       const id = b.dataset.id, k = sel.indexOf(id);
       if (k >= 0) sel.splice(k, 1); else { if (kind === 'reel') sel.length = 0; sel.push(id); }
-      bg.querySelectorAll('.lit').forEach((x) => { const n = sel.indexOf(x.dataset.id); x.classList.toggle('on', n >= 0); x.querySelector('.lnum').textContent = n >= 0 ? n + 1 : ''; });
+      mark();
     });
     bg.querySelector('[data-ok]').onclick = () => close(sel.map(libItem).filter(Boolean));
   });
@@ -297,6 +312,8 @@ function pickFromLibrary(kind) {
 function attachDrop(box, onChange, prev) {
   const st = prev || { files: [] };
   const kind = box.dataset.drop, list = box.querySelector('[data-files]'), lab = box.querySelector('.drop'), inp = box.querySelector('input');
+  // telefón, ku ktorému štvorček patrí (čipy v tom istom príspevku, inak v okne)
+  const boxPhone = () => { const sc = box.closest('.mitem2') || box.closest('.modal'); return readChips(sc && sc.querySelector('[data-ph]'))[0] || ''; };
   const render = () => {
     // náhľady: obrázok / prvý snímok videa; stav nahrávania v rohu
     const sig = st.files.map((f) => f.url).join('|');
@@ -326,7 +343,7 @@ function attachDrop(box, onChange, prev) {
       const it = { name: f.name, pct: 0, url: URL.createObjectURL(f), video: /^video\//.test(f.type) || /\.(mov|mp4|m4v)$/i.test(f.name) };
       st.files.push(it);
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', `/api/plan-file?name=${encodeURIComponent(f.name)}`);
+      xhr.open('POST', `/api/plan-file?name=${encodeURIComponent(f.name)}${boxPhone() ? '&owner=' + encodeURIComponent(boxPhone()) : ''}`);
       xhr.upload.onprogress = (e) => { if (e.lengthComputable) { it.pct = Math.round(e.loaded / e.total * 100); st.render(); } };
       xhr.onload = () => { let j = {}; try { j = JSON.parse(xhr.responseText); } catch (_) {}
         if (xhr.status >= 400 || !j.id) it.err = j.error || 'Chyba nahrávania'; else { it.id = j.id; if (!libItem(j.id)) LIB.unshift(j); else Object.assign(libItem(j.id), j); list.dataset.sig = ''; } st.render(); };
@@ -341,7 +358,7 @@ function attachDrop(box, onChange, prev) {
   lab.addEventListener('drop', (e) => { e.preventDefault(); lab.classList.remove('over'); add(e.dataTransfer.files); });
   list.addEventListener('click', (e) => { const b = e.target.closest('[data-rm]'); if (b) { st.files.splice(+b.dataset.rm, 1); render(); } });
   box.querySelector('[data-lib]').onclick = async () => {
-    const got = await pickFromLibrary(kind); if (!got || !got.length) return;
+    const got = await pickFromLibrary(kind, boxPhone()); if (!got || !got.length) return;
     if (kind === 'reel') st.files = [];
     for (const it of got) st.files.push({ id: it.id, name: it.name, url: `/lib/${it.id}`, video: it.kind === 'video', pct: 100 });
     list.dataset.sig = ''; render();
@@ -405,8 +422,48 @@ async function previewsFor(files, kind) {
   return out.slice(0, 6);
 }
 
+// ---------- kam zverejniť: klikacie karty ----------
+const PLACES = [['Len Instagram', '📸', 'Len Instagram', 'príspevok pôjde iba na IG'], ['Instagram aj Facebook', '📸📘', 'Instagram aj Facebook', 'rovnaký príspevok aj na FB stránku']];
+let PLACE_DEF = 'Len Instagram';
+try { PLACE_DEF = localStorage.getItem('jd-place') || PLACE_DEF; } catch (_) {}
+const placeHtml = (extra = 'data-place') => `<div class="plc" ${extra}>${PLACES.map(([v, ic, t, s]) => `<button type="button" class="plcb${v === PLACE_DEF ? ' on' : ''}" data-pv="${v}"><span class="pic">${ic}</span><span><b>${t}</b><small>${s}</small></span></button>`).join('')}</div>`;
+const readPlace = (box) => { const b = box && box.querySelector('.plcb.on'); return b ? b.dataset.pv : PLACE_DEF; };
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.plcb'); if (!b) return;
+  b.closest('.plc').querySelectorAll('.plcb').forEach((x) => x.classList.toggle('on', x === b));
+  PLACE_DEF = b.dataset.pv; try { localStorage.setItem('jd-place', PLACE_DEF); } catch (_) {}
+});
+
+// ---------- hashtagy: áno / nie, najviac 5 (viac Instagram ani Facebook neprijme) ----------
+const MAX_TAGS = 5;
+const TAG_RE = /#[\p{L}\p{N}_]+/gu;
+let TAGS_DEF = true;
+try { TAGS_DEF = localStorage.getItem('jd-tags') !== '0'; } catch (_) {}
+const tagsHtml = () => `<div class="tagsel" data-tags><span class="hint">Hashtagy:</span>
+  <button type="button" class="tgc${TAGS_DEF ? ' on' : ''}" data-tv="1"># Áno (max ${MAX_TAGS})</button><button type="button" class="tgc${TAGS_DEF ? '' : ' on'}" data-tv="0">🚫 Bez hashtagov</button></div>`;
+const readTags = (box) => { const b = box && box.querySelector('.tgc.on'); return b ? b.dataset.tv === '1' : TAGS_DEF; };
+function setTags(box, on) { if (box) box.querySelectorAll('.tgc').forEach((x) => x.classList.toggle('on', (x.dataset.tv === '1') === !!on)); }
+// upraví popis: bez hashtagov = všetky # zmaže; s hashtagmi = najprv stále hashtagy účtu, potom tie z popisu, spolu najviac 5 (na konci)
+function applyTags(cap, on, fixed) {
+  cap = String(cap || '');
+  const own = cap.match(TAG_RE) || [];
+  const text = cap.replace(TAG_RE, '').replace(/[ \t]+$/gm, '').replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  if (!on) return text;
+  const tags = [];
+  for (const t of [...(String(fixed || '').match(TAG_RE) || []), ...own]) if (!tags.some((x) => x.toLowerCase() === t.toLowerCase())) tags.push(t);
+  const top = tags.slice(0, MAX_TAGS);
+  return top.length ? (text ? text + '\n\n' : '') + top.join(' ') : text;
+}
+const fixedTagsOf = (u) => (((phoneList().find((p) => p.udid === u) || {}).profile) || {}).hashtags || '';
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.tgc'); if (!b) return;
+  setTags(b.closest('[data-tags]'), b.dataset.tv === '1');
+  TAGS_DEF = b.dataset.tv === '1'; try { localStorage.setItem('jd-tags', TAGS_DEF ? '1' : '0'); } catch (_) {}
+  const w = b.closest('[data-capwrap]'); if (w) w.dispatchEvent(new CustomEvent('tagschange', { bubbles: true }));
+});
+
 // ✨ návrhy popisov – tlačidlo pod poľom popisu
-const capHtml = () => `<div class="capbar"><button type="button" class="ghost capbtn" data-capgen>✨ Navrhni popis</button><small class="hint">AI si prezrie nahraté ${''}fotky / video a navrhne 3 popisy v štýle účtu. Do poľa môžeš dopísať pár slov navyše.</small></div><div class="capsug" data-capsug></div>`;
+const capHtml = () => tagsHtml() + `<div class="capbar"><button type="button" class="ghost capbtn" data-capgen>✨ Navrhni popis</button><small class="hint">AI si prezrie nahraté ${''}fotky / video a navrhne 3 popisy v štýle účtu. Do poľa môžeš dopísať pár slov navyše.</small></div><div class="capsug" data-capsug></div>`;
 function wireCaptions(root, getCtx) {
   root.addEventListener('click', async (e) => {
     const pick = e.target.closest('[data-capuse]');
@@ -421,7 +478,7 @@ function wireCaptions(root, getCtx) {
       if (ctx.files && ctx.files.length) { sug.innerHTML = `<small class="hint">Pozerám ${ctx.kind === 'reel' ? 'video' : 'fotky'}…</small>`; images = await previewsFor(ctx.files, ctx.kind); }
       sug.innerHTML = '<small class="hint">Píšem návrhy…</small>';
       const { files, ...rest } = ctx;
-      const r = await (await fetch('/api/captions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...rest, images, hint: ta.value }) })).json();
+      const r = await (await fetch('/api/captions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...rest, tags: readTags(wrap), images, hint: ta.value }) })).json();
       if (r.error) throw new Error(r.error);
       sug.innerHTML = r.captions.map((c) => `<button type="button" class="capopt" data-capuse data-text="${esc(c)}">${esc(c)}</button>`).join('');
     } catch (err) { sug.innerHTML = `<small class="hint" style="color:var(--bad)">${esc(err.message)}</small>`; }
@@ -435,13 +492,15 @@ function askVars(title, vars, kind, defUdid) {
     const bg = document.createElement('div'); bg.className = 'modal-bg';
     const fields = vars.map((v, i) => {
       const [label, ...opts] = v.slice(1, -1).split('|');
-      const ctl = opts.length
+      const isPlace = /kam zverejniť/i.test(label);
+      const ctl = isPlace ? placeHtml(`data-i="${i}"`) : opts.length
         ? `<select data-i="${i}">${opts.map((o) => `<option>${esc(o)}</option>`).join('')}</select>`
         : /dátum a čas/i.test(label) ? dtPicker(i)
-        : /popis/i.test(label) ? `<textarea data-i="${i}" rows="3"></textarea>${kind ? capHtml() : ''}` : `<input data-i="${i}">`;
+        : /popis/i.test(label) ? `<textarea data-i="${i}" rows="3"></textarea>${kind ? capHtml() : ''}`
+        : /pesnič/i.test(label) ? musicHtml(`data-i="${i}"`) : `<input data-i="${i}">`;
       const hint = /dátum a čas/i.test(label) ? '<small class="hint">Čas zadávaš slovenský. Meta dovolí naplánovať najskôr asi 20 minút dopredu.</small><small class="hint us-conv" data-conv></small>' : '';
-      const tag = kind && /popis/i.test(label) ? 'div' : 'label';
-      return `<${tag} class="${tag === 'div' ? 'fld' : ''}"${tag === 'div' ? ' data-capwrap' : ''}><span>${esc(label.replace(/\s*\(napr\..*\)$/, ''))}</span>${ctl}${hint}</${tag}>`;
+      const isMus = /pesnič/i.test(label), tag = (kind && /popis/i.test(label)) || isMus || isPlace ? 'div' : 'label';
+      return `<${tag} class="${tag === 'div' ? 'fld' : ''}"${tag === 'div' && !isMus && !isPlace ? ' data-capwrap' : ''}><span>${esc(isMus ? 'Hudba' : isPlace ? 'Kam zverejniť' : label.replace(/\s*\(napr\..*\)$/, ''))}</span>${ctl}${hint}</${tag}>`;
     }).join('');
     const phones = kind ? `<div class="fld"><span>Na ktorý telefón (môžeš vybrať viac)</span>${chipsHtml(defUdid ? [defUdid] : [])}</div>` : '';
     const drop = kind ? phones + `<div class="fld"><span>${kind === 'reel' ? 'Video' : 'Fotky'} (voliteľné)</span>${dropHtml(kind)}<small class="hint">${kind === 'reel' ? 'Ak ho sem pretiahneš, pred plánovaním sa pošle' : 'Ak ich sem pretiahneš, pred plánovaním sa pošlú'} do galérie iPhonu ako najnovšie – AI tak vyberie presne ${kind === 'reel' ? 'toto video' : 'tieto fotky'}. Inak použije ${kind === 'reel' ? 'najnovšie video' : 'najnovšie fotky'}, ktoré už v iPhone sú.</small></div>` : '';
@@ -462,6 +521,7 @@ function askVars(title, vars, kind, defUdid) {
     bg.querySelector('[data-ok]').onclick = () => {
       const out = [];
       out.meta = { kind };
+      const firstPhone = kind ? readChips(bg.querySelector('[data-ph]'))[0] : null;
       for (let i = 0; i < vars.length; i++) {
         const el = bg.querySelector(`[data-i="${i}"]`);
         if (el.dataset.dt !== undefined) {
@@ -471,11 +531,11 @@ function askVars(title, vars, kind, defUdid) {
           if (d < minSched()) { alert(`Tento čas je príliš skoro. Najskorší možný čas je ${fmtSk(minSched())}.`); el.querySelector('[data-h]').focus(); return; }
           out.push(fmtSk(d)); out.meta.when = d.toISOString(); out.meta.whenText = fmtSk(d);
         } else {
-          out.push(el.value);
-          const lab = vars[i];
-          if (/popis/i.test(lab)) out.meta.caption = el.value.trim();
-          else if (/pesnič/i.test(lab)) out.meta.music = el.value.trim();
-          else if (/kam zverejniť/i.test(lab)) out.meta.place = el.value;
+          const lab = vars[i], capW = /popis/i.test(lab) && el.closest('[data-capwrap]');
+          out.push(el.classList.contains('plc') ? readPlace(el) : el.classList.contains('mus') ? readMusic(el) : capW ? applyTags(el.value, readTags(capW), fixedTagsOf(firstPhone)) : el.value);
+          if (/popis/i.test(lab)) out.meta.caption = String(out[out.length - 1]).trim();
+          else if (/pesnič/i.test(lab)) out.meta.music = out[out.length - 1];
+          else if (/kam zverejniť/i.test(lab)) out.meta.place = out[out.length - 1];
         }
       }
       if (kind) {
@@ -530,6 +590,56 @@ async function applyTemplateByName(name, target) {
   return true;
 }
 
+// ---------- úloha pre AI: naplánuj 1 reel / carousel v Meta Business Suite ----------
+// x = { files, cap, mus, when (text), whenISO, cnt }; pick = null → médiá poslané pred tým (najnovšie), inak k-te najnovšie v telefóne
+function postTask(isReel, place, x, pick, title) {
+  const which = isReel
+    ? (pick && pick.k > 1 ? `v galérii prepni album na Videos / Videá a vyber ${pick.k}. najnovšie video (počítaj od prvého vľavo hore, zľava doprava, zhora nadol) – fotku nevyberaj; ťukni Next; `
+      : 'v galérii prepni album na Videos / Videá a vyber NAJNOVŠIE video (prvé vľavo hore) – fotku nevyberaj; ťukni Next; ')
+    : (pick && pick.from > 1 ? `ťukni na pridanie fotiek a vyber fotky č. ${pick.from} až ${pick.from + x.cnt - 1} (počítané od najnovšej fotky vľavo hore, zľava doprava, zhora nadol) v tomto poradí; potvrď výber; `
+      : `ťukni na pridanie fotiek a vyber ${x.cnt} najnovších fotiek v poradí – začni prvou vľavo hore (najnovšia), pokračuj zľava doprava; potvrď výber; `);
+  return { title, files: x.files, maxSteps: isReel ? 110 : 130,
+    meta: { kind: isReel ? 'reel' : 'carousel', when: x.whenISO, whenText: x.when, caption: x.cap, music: x.mus, place }, task:
+    `Otvor aplikáciu Meta Business Suite. Naplánuj 1 ${isReel ? 'reel' : 'carousel'}: ťukni na „+“ / „Create“ a vyber ${isReel ? 'Reel' : 'Post / Príspevok'}; pri účtoch / umiestneniach nastav: ${place}; ` + which +
+    `${MUSIC_RULE} Hudba: „${x.mus}“. Napíš presne tento popis: „${x.cap}“. Ak je možnosť označiť obsah ako vytvorený AI (AI info / AI label), zapni ju. ` +
+    `Otvor „Scheduling options“ / „Možnosti plánovania“, vyber „Schedule for later“, nastav dátum a čas: ${x.when} a ťukni „Schedule“ – NIKDY „Publish now“. ` +
+    'Na konci otvor plánovač (Planner / Content → Scheduled) a over, že príspevok je naplánovaný na správny čas. Ak sa niečo nepodarí, nič nezverejňuj a skonči so správou, kde si sa zasekol.' };
+}
+
+// ---------- hudba: klikacie možnosti namiesto písania ----------
+// '' = prvá pesnička v ponuke, 'nie' = bez hudby, inak názov pesničky (naposledy použité sa ponúknu samé)
+let RECENT_MUSIC = [];
+async function loadRecentMusic() {
+  try {
+    const l = await (await fetch('/api/calendar')).json(), seen = [];
+    for (const x of l.slice().reverse()) { const m = String(x.music || '').trim(); if (m && !/^nie$/i.test(m) && !seen.some((s) => s.toLowerCase() === m.toLowerCase())) seen.push(m); if (seen.length >= 8) break; }
+    RECENT_MUSIC = seen;
+  } catch (_) {}
+}
+loadRecentMusic();
+function musicHtml(extra = 'data-mus') {
+  return `<div class="mus" ${extra}><div class="muschips">
+    <button type="button" class="musc on" data-mv="">🔥 Prvá v ponuke</button><button type="button" class="musc" data-mv="nie">🔇 Bez hudby</button>
+    ${RECENT_MUSIC.map((m) => `<button type="button" class="musc" data-mv="${esc(m)}" title="Naposledy použitá">🎵 ${esc(m)}</button>`).join('')}
+    <button type="button" class="musc" data-mv="__own">✏️ Iná pesnička…</button></div>
+    <input class="musown" placeholder="Názov pesničky – interpret" hidden></div>`;
+}
+const readMusic = (box) => { if (!box) return ''; const on = box.querySelector('.musc.on'), v = on ? on.dataset.mv : ''; return v === '__own' ? box.querySelector('.musown').value.trim() : v; };
+function setMusic(box, val) {
+  if (!box) return; val = String(val || '').trim();
+  let b = [...box.querySelectorAll('.musc')].find((x) => x.dataset.mv !== '__own' && x.dataset.mv.toLowerCase() === val.toLowerCase());
+  if (!b) { b = box.querySelector('[data-mv="__own"]'); box.querySelector('.musown').value = val; }
+  box.querySelectorAll('.musc').forEach((x) => x.classList.toggle('on', x === b));
+  box.querySelector('.musown').hidden = b.dataset.mv !== '__own';
+}
+const musicLabel = (v) => !v ? 'prvá v ponuke' : /^nie$/i.test(v) ? 'bez hudby' : v;
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.musc'); if (!b) return;
+  const box = b.closest('.mus');
+  box.querySelectorAll('.musc').forEach((x) => x.classList.toggle('on', x === b));
+  const own = box.querySelector('.musown'); own.hidden = b.dataset.mv !== '__own'; if (!own.hidden) own.focus();
+});
+
 // ---------- viac reelov / carouselov v jednom kroku (plánovač Meta Business Suite) ----------
 const MUSIC_RULE = 'Ak editor ponúka hudbu (Audio / Music): pri hudbe „nie“ hudbu nepridávaj; pri prázdnej nič nevyhľadávaj a vyber úplne prvú pesničku v ponuke (For you / Trending); inak napíš názov pesničky do vyhľadávania a vyber výsledok so správnym interpretom (ak sa nedá nájsť, prvú v ponuke); ponechaj predvolený úsek a ťukni Done. Ak hudbu neponúka, pokračuj bez nej.';
 function askMulti(t, defUdid) {
@@ -538,7 +648,7 @@ function askMulti(t, defUdid) {
     const bg = document.createElement('div'); bg.className = 'modal-bg';
     bg.innerHTML = `<div class="modal multi"><div class="mhead"><h3>${esc(t.name)}</h3>${clockBox()}</div>
       <div class="mrow2"><label><span>Koľko ${isReel ? 'reelov' : 'carouselov'}</span><select data-n>${[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<option>${n}</option>`).join('')}</select></label>
-        <label><span>Kam zverejniť</span><select data-place><option>Len Instagram</option><option>Instagram aj Facebook</option></select></label></div>
+        </div><div class="fld"><span>Kam zverejniť</span>${placeHtml()}</div>
       <div class="fld" data-allph><span>Telefón pre všetky (alebo vyber pri každom zvlášť nižšie)</span>${chipsHtml([], 'data-allbox')}</div>
       <small class="hint">Ku každému ${isReel ? 'reelu pretiahni jeho video' : 'carouselu pretiahni jeho fotky'} – pred plánovaním každého príspevku sa jeho médiá pošlú do galérie iPhonu ako najnovšie (na 1. miesto), takže AI vyberie presne ${isReel ? 'to video' : 'tie fotky'}. Bez médií: ${isReel ? 'Reel 1 = najnovšie video v iPhone, Reel 2 = druhé najnovšie atď.' : 'Carousel 1 = najnovšie fotky v iPhone, ďalší nasledujúce.'} Čas zadávaš slovenský, najskôr ~20 min dopredu.</small>
       <div class="mitems" data-items></div>
@@ -549,7 +659,7 @@ function askMulti(t, defUdid) {
     const render = () => {
       const n = +bg.querySelector('[data-n]').value, old = [...items.querySelectorAll('.mitem2')].map((el) => ({
         ph: readChips(el.querySelector('[data-ph]')),
-        cap: el.querySelector('[data-cap]').value, mus: el.querySelector('[data-mus]').value, cnt: el.querySelector('[data-cnt]')?.value,
+        cap: el.querySelector('[data-cap]').value, tags: readTags(el.querySelector('[data-capwrap]')), mus: readMusic(el.querySelector('[data-mus]')), cnt: el.querySelector('[data-cnt]')?.value,
         d: el.querySelector('[data-d]').value, h: el.querySelector('[data-h]').value, m: el.querySelector('[data-m]').value }));
       const base = new Date(Date.now() + 30 * 60000);
       items.innerHTML = [...Array(n)].map((_, i) => {
@@ -557,12 +667,12 @@ function askMulti(t, defUdid) {
         return `<div class="mitem2"><div class="mtit">${noun} ${i + 1}</div><div class="fld"><span>Telefón</span>${chipsHtml(defUdid ? [defUdid] : [])}</div>${dropHtml(isReel ? 'reel' : 'carousel')}
           ${isReel ? '' : `<label><span>Počet fotiek</span><select data-cnt>${[2, 3, 4, 5, 6, 7, 8, 9, 10].map((k) => `<option${k === 3 ? ' selected' : ''}>${k}</option>`).join('')}</select></label>`}
           <div class="fld" data-capwrap><span>Popis + #hashtagy</span><textarea data-cap rows="2"></textarea>${capHtml()}</div>
-          <label><span>Pesnička (prázdne = prvá v ponuke, nie = bez hudby)</span><input data-mus></label>
+          <div class="fld"><span>Hudba</span>${musicHtml()}</div>
           <label><span>Dátum a čas</span>${dtPicker(i, def)}<small class="hint us-conv" data-conv></small></label></div>`;
       }).join('');
       old.forEach((o, i) => { const el = items.children[i]; if (!el) return;
         el.querySelectorAll('[data-ph] .phc').forEach((b) => b.classList.toggle('on', o.ph.includes(b.dataset.u)));
-        el.querySelector('[data-cap]').value = o.cap; el.querySelector('[data-mus]').value = o.mus;
+        el.querySelector('[data-cap]').value = o.cap; setMusic(el.querySelector('[data-mus]'), o.mus); setTags(el.querySelector('[data-tags]'), o.tags);
         if (o.cnt && el.querySelector('[data-cnt]')) el.querySelector('[data-cnt]').value = o.cnt;
         el.querySelector('[data-d]').value = o.d; el.querySelector('[data-h]').value = o.h; el.querySelector('[data-m]').value = o.m; });
       paintIcons(items);
@@ -595,22 +705,9 @@ function askMulti(t, defUdid) {
     bg.onclick = (e) => { if (e.target === bg) close(null); };
     bg.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(null); });
     // úloha pre 1 príspevok; pick = null → najnovšie (médiá poslané pred tým), inak k-te najnovšie v telefóne
-    const oneStep = (x, i, pick) => {
-      const place = bg.querySelector('[data-place]').value;
-      const which = isReel
-        ? (pick && pick.k > 1 ? `v galérii prepni album na Videos / Videá a vyber ${pick.k}. najnovšie video (počítaj od prvého vľavo hore, zľava doprava, zhora nadol) – fotku nevyberaj; ťukni Next; `
-          : 'v galérii prepni album na Videos / Videá a vyber NAJNOVŠIE video (prvé vľavo hore) – fotku nevyberaj; ťukni Next; ')
-        : (pick && pick.from > 1 ? `ťukni na pridanie fotiek a vyber fotky č. ${pick.from} až ${pick.from + x.cnt - 1} (počítané od najnovšej fotky vľavo hore, zľava doprava, zhora nadol) v tomto poradí; potvrď výber; `
-          : `ťukni na pridanie fotiek a vyber ${x.cnt} najnovších fotiek v poradí – začni prvou vľavo hore (najnovšia), pokračuj zľava doprava; potvrď výber; `);
-      return { title: `${noun} ${i + 1}`, files: x.files, maxSteps: isReel ? 110 : 130,
-        meta: { kind: isReel ? 'reel' : 'carousel', when: x.whenISO, whenText: x.when, caption: x.cap, music: x.mus, place }, task:
-        `Otvor aplikáciu Meta Business Suite. Naplánuj 1 ${isReel ? 'reel' : 'carousel'}: ťukni na „+“ / „Create“ a vyber ${isReel ? 'Reel' : 'Post / Príspevok'}; pri účtoch / umiestneniach nastav: ${place}; ` + which +
-        `${MUSIC_RULE} Hudba: „${x.mus}“. Napíš presne tento popis: „${x.cap}“. Ak je možnosť označiť obsah ako vytvorený AI (AI info / AI label), zapni ju. ` +
-        `Otvor „Scheduling options“ / „Možnosti plánovania“, vyber „Schedule for later“, nastav dátum a čas: ${x.when} a ťukni „Schedule“ – NIKDY „Publish now“. ` +
-        'Na konci otvor plánovač (Planner / Content → Scheduled) a over, že príspevok je naplánovaný na správny čas. Ak sa niečo nepodarí, nič nezverejňuj a skonči so správou, kde si sa zasekol.' };
-    };
+    const oneStep = (x, i, pick) => postTask(isReel, readPlace(bg.querySelector('[data-place]')), x, pick, `${noun} ${i + 1}`);
     bg.querySelector('[data-ok]').onclick = () => {
-      const place = bg.querySelector('[data-place]').value, list = [];
+      const place = readPlace(bg.querySelector('[data-place]')), list = [];
       let photoStart = 1;
       for (const [i] of [...items.children].entries()) if (!planReady(drops[i], `${noun} ${i + 1}`)) return;
       const withFiles = drops.filter((st) => planFiles(st).length).length;
@@ -624,7 +721,7 @@ function askMulti(t, defUdid) {
         const cnt = isReel ? 1 : (fl.length || +el.querySelector('[data-cnt]').value);
         const ph = readChips(el.querySelector('[data-ph]'));
         if (!ph.length) return alert(`${noun} ${i + 1}: vyber telefón.`);
-        list.push({ whenISO: d.toISOString(), ph, files: fl, cap: el.querySelector('[data-cap]').value.trim(), mus: el.querySelector('[data-mus]').value.trim(), when: fmtSk(d), cnt, from: photoStart });
+        list.push({ whenISO: d.toISOString(), ph, files: fl, cap: applyTags(el.querySelector('[data-cap]').value, readTags(el.querySelector('[data-capwrap]')), fixedTagsOf(ph[0])), mus: readMusic(el.querySelector('[data-mus]')), when: fmtSk(d), cnt, from: photoStart });
         photoStart += cnt;
       }
       if (!dupCheck(list.map((x) => ({ files: x.files, phones: x.ph })))) return;
@@ -743,7 +840,12 @@ async function poll() {
     const pf = d.profile || {}, nm = `${esc(d.label)}${pf.handle ? ` <small>@${esc(pf.handle)}</small>` : ''}`;
     if (c.name.dataset.h !== nm) { c.name.innerHTML = nm; c.name.dataset.h = nm; }
     c.el.style.setProperty('--pc', pf.color || 'transparent');
+    const inf = d.info || {}, bits = [];
+    if (inf.battery != null) bits.push(`<span class="${inf.battery < 15 && !inf.charging ? 'crit' : inf.battery < 30 && !inf.charging ? 'lo' : ''}" title="Batéria">${inf.charging ? '⚡' : '🔋'}${inf.battery}%</span>`);
+    if (inf.freeGB != null) bits.push(`<span class="${inf.freeGB < 1 ? 'crit' : inf.freeGB < 3 ? 'lo' : ''}" title="Voľné miesto v iPhone">💾${inf.freeGB} GB</span>`);
     c.ver.textContent = d.version ? 'iOS ' + d.version : '';
+    const vh = bits.join('');
+    if (c.pstat.dataset.h !== vh) { c.pstat.innerHTML = vh; c.pstat.dataset.h = vh; c.pstat.hidden = !vh; }
     c.dot.classList.toggle('ok', d.wdaOk);
     c.el.classList.toggle('wda', d.wdaOk);
     if (!d.wdaOk) { c.ph.textContent = 'Čakám na WebDriverAgent… (odomkni telefón)'; if (d.lastLog && !c.t) c.log.textContent = d.lastLog; }

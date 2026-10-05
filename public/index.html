@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="IphoneWall">
-<title>JD - IphoneWall</title>
+<meta name="apple-mobile-web-app-title" content="Phone Studio">
+<title>JD Phone Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -254,7 +254,21 @@
   .lmeta { padding: 8px 10px; display: grid; gap: 2px; position: relative; padding-right: 40px; }
   .lmeta b { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lmeta small { font-size: 11px; color: var(--muted); } .lmeta .lu { color: var(--warn); }
-  .lmeta button { position: absolute; right: 6px; top: 8px; padding: 5px; }
+  .lmeta .lbtns { display: flex; gap: 6px; margin-top: 6px; }
+  .lmeta .lbtns button { padding: 5px 8px; font-size: 11.5px; display: inline-flex; gap: 4px; align-items: center; }
+  .lmeta .lbtns button[data-ldel] { margin-left: auto; padding: 5px; }
+  .lmeta { padding-right: 10px !important; }
+  .lown { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+  .ochip { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; padding: 2px 7px; border-radius: 99px; background: color-mix(in srgb, var(--pc) 18%, transparent); border: 1px solid color-mix(in srgb, var(--pc) 45%, transparent); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ochip .pcd, .libphones .pcd { width: 7px; height: 7px; border-radius: 50%; background: var(--pc); display: inline-block; flex: none; }
+  .libphones { display: flex; gap: 6px; margin: 12px 0 8px; overflow-x: auto; padding-bottom: 4px; }
+  .libphones button { padding: 8px 13px; font-weight: 600; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; border-radius: 12px; }
+  .libphones button em { font-style: normal; font-weight: 500; color: var(--muted); font-size: 12px; }
+  .libphones button.on { border-color: var(--pc, rgba(255,61,104,.6)); background: color-mix(in srgb, var(--pc, #ff3d68) 16%, transparent); color: #fff; }
+  #libDropHint { display: block; color: var(--accent); }
+  .libtabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
+  .libtabs button { padding: 5px 10px; font-size: 12.5px; }
+  .libtabs button.on { border-color: rgba(255,61,104,.6); background: rgba(255,61,104,.14); color: #fff; }
   .pdact { display: flex; justify-content: flex-end; margin-top: 6px; }
   .pdact button { font-size: 12px; padding: 5px 10px; }
   .pf .pused { position: absolute; right: 4px; bottom: 5px; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 7px; background: var(--bad); color: #fff; }
@@ -443,7 +457,7 @@
   .card .tplrow .tplbtn { flex: 1; justify-content: flex-start; }
 
   /* ---------- návod ---------- */
-  .os-win #remPanel, .os-win .gcf, .os-win .only-mac, .os-win .ostabs, .os-win .gwrap[data-os="mac"] { display: none !important; }
+  .os-win #remAdv, .os-win .gcf, .os-win .only-mac, .os-win .ostabs, .os-win .gwrap[data-os="mac"] { display: none !important; }
   .ostabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); }
   .ostabs button { border: 0; background: transparent; box-shadow: none; padding: 6px 14px; color: var(--muted); }
   .ostabs button.on { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
@@ -491,6 +505,127 @@
     .view { overflow-x: hidden; } #grid > * { min-width: 0; }
     body { padding-bottom: env(safe-area-inset-bottom, 0px); }
   }
+
+  /* ---------- menu „Viac“ ---------- */
+  .nav .navmore { cursor: pointer; }
+  .nav .navmore .chev { margin-left: auto; transition: transform .2s; font-size: 11px; opacity: .7; }
+  .nav .navmore.open .chev { transform: rotate(180deg); }
+  .navsub { padding-left: 12px; border-left: 1px solid var(--line); margin: 0 0 4px 17px; }
+  .navsub[hidden] { display: none; }
+  /* ---------- Prehľad: Dnes + Stav systému ---------- */
+  .btn-new { background: linear-gradient(180deg,#ff4f76,#e8285a); color: #fff !important; border: 0 !important; font-weight: 700; box-shadow: 0 6px 20px rgba(255,61,104,.3); }
+  .row2c { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-top: 14px; }
+  .row2c > *, .today > *, .hlist > *, .titem > * { min-width: 0; }
+  @media (max-width: 1100px) { .row2c { grid-template-columns: 1fr; } }
+  .today { display: grid; gap: 10px; }
+  .tday { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: rgba(255,255,255,.02); }
+  .tday h4 { margin: 0 0 6px; display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+  .tday h4 small { color: var(--muted); font-weight: 500; margin-left: auto; font-size: 11.5px; max-width: 55%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tday .pcd { width: 9px; height: 9px; border-radius: 50%; background: var(--pc, var(--faint)); flex: none; }
+  .titem { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px dashed var(--line); font-size: 12.5px; }
+  .titem:first-of-type { border-top: 0; }
+  .titem .tt { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 86px; }
+  .titem .tc { flex: 1; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .st { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+  .st.s-ok { background: rgba(61,220,151,.15); color: var(--ok); } .st.s-wait { background: rgba(255,181,71,.15); color: var(--warn); }
+  .st.s-bad { background: rgba(255,84,104,.15); color: var(--bad); } .st.s-off { background: rgba(255,255,255,.07); color: var(--muted); }
+  .titem button { padding: 4px 10px; font-size: 12px; }
+  .tempty { color: var(--faint); font-size: 12.5px; padding: 2px 0; }
+  .hlist { display: grid; gap: 6px; }
+  .hrow { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.025); }
+  .hrow .hd { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .hrow.ok .hd { background: var(--ok); box-shadow: 0 0 8px rgba(61,220,151,.5); } .hrow.warn .hd { background: var(--warn); } .hrow.bad .hd { background: var(--bad); box-shadow: 0 0 8px rgba(255,84,104,.5); }
+  .hrow .hx { flex: 1; min-width: 0; } .hrow .hx b { display: block; font-size: 13px; } .hrow .hx small { color: var(--muted); font-size: 11.5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hrow button, .hrow a.btn { padding: 5px 10px; font-size: 12px; white-space: nowrap; }
+  .hsum { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-weight: 700; }
+  .hsum.ok { color: var(--ok); } .hsum.warn { color: var(--warn); } .hsum.bad { color: var(--bad); }
+  .hmore { font-size: 12px; color: var(--muted); cursor: pointer; margin-top: 6px; display: inline-block; }
+  /* ---------- karta telefónu: batéria / pamäť ---------- */
+  .pstat { position: absolute; left: 8px; bottom: 8px; z-index: 3; display: flex; gap: 8px; font-size: 11px; font-weight: 600; color: #e9ecf2; padding: 4px 8px; border-radius: 8px; background: rgba(0,0,0,.6); backdrop-filter: blur(6px); pointer-events: none; }
+  .pstat[hidden] { display: none; } .pstat .lo { color: var(--warn); } .pstat .crit { color: #ff7d8f; }
+  /* ---------- sprievodca Nový príspevok ---------- */
+  .modal.wiz { width: min(760px, 100%); }
+  .wsteps { display: flex; gap: 4px; }
+  .wsteps span { flex: 1; text-align: center; font-size: 11.5px; padding: 7px 4px; border-radius: 9px; background: rgba(255,255,255,.04); color: var(--faint); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wsteps span.on { background: rgba(255,61,104,.16); color: #fff; } .wsteps span.done { color: var(--ok); }
+  .wpane { display: none; flex-direction: column; gap: 12px; } .wpane.on { display: flex; }
+  .wkinds { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .wkind { padding: 16px; border-radius: 14px; border: 1px solid var(--line-2); background: rgba(255,255,255,.03); text-align: left; display: grid; gap: 4px; }
+  .wkind b { font-size: 15px; } .wkind small { color: var(--muted); font-weight: 400; }
+  .wkind.on { border-color: #ff5b80; background: rgba(255,61,104,.12); }
+  .wlib { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; max-height: 260px; overflow: auto; padding: 2px; }
+  .wlib .lit { aspect-ratio: 4/5; }
+  .wsum { display: grid; gap: 8px; }
+  .wsum .kv { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+  .wthumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .wthumbs img, .wthumbs video { width: 54px; height: 68px; object-fit: cover; border-radius: 8px; background: #000; }
+  .wquick { display: flex; gap: 6px; flex-wrap: wrap; } .wquick button { padding: 5px 10px; font-size: 12px; }
+  .wres { display: grid; gap: 6px; } .wres div { font-size: 13px; }
+  .modal .whash input[type=checkbox] { width: 18px !important; min-width: 18px; height: 18px; padding: 0; margin: 1px 0 0; }
+  .modal .whash > span { flex: 1; min-width: 0; display: block; }
+  .modal label.whash, .whash { display: flex; flex-direction: row; align-items: flex-start; gap: 8px; font-size: 12.5px; color: var(--muted); } .whash input { margin-top: 2px; width: auto; flex: none; accent-color: #ff3d68; }
+  @media (max-width: 760px) { .wsteps span { font-size: 0; padding: 5px; } .wsteps span::before { content: attr(data-n); font-size: 12px; } .wkinds { grid-template-columns: 1fr; } }
+  /* ---------- kam zverejniť: karty ---------- */
+  .plc { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modal .plcb, .plcb { display: flex; align-items: center; gap: 10px; text-align: left; padding: 11px 13px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.14); box-shadow: none; color: var(--muted); }
+  .plcb .pic { font-size: 20px; line-height: 1; flex: none; }
+  .modal .plcb, .plcb { justify-content: flex-start !important; min-width: 0; white-space: normal; } .plcb > span:last-child { min-width: 0; flex: 1; }
+  .plcb b { display: block; font-size: 13.5px; color: var(--text); } .plcb small { display: block; font-size: 11.5px; font-weight: 400; color: var(--faint); margin-top: 2px; }
+  .modal .plcb.on, .plcb.on { border-color: #ff5b80 !important; background: rgba(255,61,104,.13) !important; box-shadow: 0 0 0 1px #ff5b80 inset, 0 6px 18px rgba(255,61,104,.18) !important; }
+  .plcb.on b { color: #fff; }
+  @media (max-width: 560px) { .plc { grid-template-columns: 1fr; } }
+  /* ---------- prístup z mobilu ---------- */
+  .remtog { display: flex !important; align-items: center; gap: 10px; margin: 6px 0 4px; font-weight: 600; cursor: pointer; }
+  .remtog input { width: 18px; height: 18px; accent-color: #ff3d68; }
+  .remadv { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; } .remadv summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  .remadv p { margin-top: 8px; }
+  .qrbox { background: #fff; border-radius: 18px; padding: 14px; width: min(300px, 100%); margin: 0 auto; } .qrbox svg { display: block; width: 100%; height: auto; }
+  .qrsteps { margin: 0; padding-left: 20px; font-size: 13.5px; } .qrsteps li { margin: 4px 0; }
+  .qrtime { text-align: center; color: var(--muted); font-size: 12.5px; }
+  /* ---------- Telegram + dôkaz ---------- */
+  .tgsteps { margin: 0 0 8px; padding-left: 18px; font-size: 13px; color: var(--muted); } .tgsteps li { margin: 3px 0; }
+  .tgev { display: grid; grid-template-columns: 1fr; gap: 7px; }
+  .tgev label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); cursor: pointer; } .tgev input { width: 16px; height: 16px; accent-color: #ff3d68; }
+  @media (max-width: 760px) { .tgev { grid-template-columns: 1fr; } }
+  .prf { text-decoration: none; font-size: 15px; }
+  .proofimg { display: block; max-height: 360px; max-width: 100%; margin: 0 auto; border-radius: 14px; border: 1px solid var(--line); }
+  /* ---------- hudba: klikacie možnosti ---------- */
+  .tagsel { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+  .modal .tgc, .tgc { padding: 6px 12px; border-radius: 99px; font-size: 12.5px; font-weight: 600; color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); box-shadow: none; }
+  .modal .tgc.on, .tgc.on { color: #fff !important; border-color: #ff5b80 !important; background: linear-gradient(180deg, #ff4f76, #e8285a) !important; box-shadow: 0 4px 14px rgba(255,61,104,.3) !important; }
+  .muschips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .modal .musc, .musc { padding: 7px 12px; border-radius: 99px; font-size: 12.5px; font-weight: 600; color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); box-shadow: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .modal .musc.on, .musc.on { color: #fff !important; border-color: #ff5b80 !important; background: linear-gradient(180deg, #ff4f76, #e8285a) !important; box-shadow: 0 4px 14px rgba(255,61,104,.3) !important; }
+  .mus .musown { margin-top: 8px; }
+  /* ---------- knižnica: výber viacerých ---------- */
+  .lsel { position: absolute; left: 8px; bottom: 8px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255,255,255,.85); background: rgba(0,0,0,.35); padding: 0; display: grid; place-items: center; color: #fff; font-size: 14px; font-weight: 800; z-index: 2; }
+  .lcard.sel { outline: 2px solid #ff5b80; outline-offset: -2px; } .lcard.sel .lsel { background: #ff3d68; border-color: #ff3d68; }
+  .libbar { position: sticky; bottom: 12px; z-index: 5; margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 14px; background: rgba(20,22,28,.92); border: 1px solid var(--line-2); backdrop-filter: blur(14px); box-shadow: 0 12px 30px rgba(0,0,0,.4); }
+  .libbar[hidden] { display: none; } .libbar b { margin-right: auto; }
+  .libbar button { padding: 7px 12px; font-size: 12.5px; }
+  .libtools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  /* ---------- kalendár: pás knižnice na ťahanie ---------- */
+  .calstrip { margin-bottom: 12px; }
+  .calstrip .cs-h { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; color: var(--muted); }
+  .calstrip .cs-h b { color: var(--text); }
+  .cs-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+  .cs-it { flex: none; width: 66px; height: 82px; border-radius: 10px; overflow: hidden; position: relative; background: #000; cursor: grab; border: 1px solid var(--line); }
+  .cs-it img, .cs-it video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+  .cs-it .pcd { position: absolute; left: 5px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); box-shadow: 0 0 0 1.5px rgba(0,0,0,.6); }
+  .cs-it .lused { position: absolute; right: 4px; bottom: 4px; font-size: 9.5px; padding: 1px 5px; border-radius: 6px; }
+  .cg-c.dropover { outline: 2px dashed #ff5b80; outline-offset: -3px; background: rgba(255,61,104,.08); }
+  .cg-add { display: none; width: 100%; padding: 4px; font-size: 11.5px; border-style: dashed; color: var(--faint); background: transparent; }
+  .cg-c:not(.past):hover .cg-add { display: block; } .cg-c:not(.past):hover .cg-free { display: none; }
+  /* ---------- nastavenia: AI náklady ---------- */
+  .ubars { display: flex; align-items: flex-end; gap: 3px; height: 90px; margin: 10px 0 4px; }
+  .ubars i { flex: 1; background: var(--s1); border-radius: 3px 3px 0 0; min-height: 2px; opacity: .85; }
+  .ubars i:last-child { background: var(--accent); opacity: 1; }
+  .ukv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
+  .ukv div { background: rgba(255,255,255,.03); border-radius: 10px; padding: 8px 10px; } .ukv small { color: var(--muted); display: block; font-size: 11px; } .ukv b { font-size: 17px; }
+  @media (max-width: 760px) {
+    .navmore { display: none !important; } .nav .badge.soon { display: none; } .navsub, .navsub[hidden] { display: contents !important; }
+    .titem { flex-wrap: wrap; } .titem .tc { flex-basis: 100%; order: 5; white-space: normal; } .tday h4 small { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -504,7 +639,7 @@
 <aside class="side">
   <div class="brand">
     <div class="logo" id="logo"></div>
-    <div><b>JD - IphoneWall</b><small id="brandSub">Instagram · 0 telefónov</small></div>
+    <div><b>JD Phone Studio</b><small id="brandSub">Instagram · 0 telefónov</small></div>
   </div>
   <nav class="nav" id="nav">
     <a href="#prehlad" data-v="prehlad"><span data-icon="grid"></span><span class="t">Prehľad</span></a>
@@ -513,9 +648,12 @@
     <a href="#kniznica" data-v="kniznica"><span data-icon="folder"></span><span class="t">Knižnica</span></a>
     <a href="#statistiky" data-v="statistiky"><span data-icon="chart"></span><span class="t">Štatistiky</span></a>
     <a href="#prieskumy" data-v="prieskumy"><span data-icon="search"></span><span class="t">Prieskumy</span></a>
-    <a href="#magnific" data-v="magnific"><span data-icon="wand"></span><span class="t">Magnific</span><span class="badge soon">čoskoro</span></a>
-    <a href="#realism" data-v="realism"><span data-icon="image"></span><span class="t">Tait - Realism filter</span></a>
-    <a href="#aktivita" data-v="aktivita"><span data-icon="pulse"></span><span class="t">Aktivita</span></a>
+    <a class="navmore" id="navMore" role="button" tabindex="0"><span data-icon="grid"></span><span class="t">Viac</span><span class="chev">▾</span></a>
+    <div class="navsub" id="navSub" hidden>
+      <a href="#aktivita" data-v="aktivita"><span data-icon="pulse"></span><span class="t">Aktivita</span></a>
+      <a href="#realism" data-v="realism"><span data-icon="image"></span><span class="t">Tait - Realism filter</span></a>
+      <a href="#magnific" data-v="magnific"><span data-icon="wand"></span><span class="t">Magnific</span><span class="badge soon">čoskoro</span></a>
+    </div>
   </nav>
   <div class="grow"></div>
   <div class="sbox"><b><span class="dot" id="sDot"></span><span id="sTitle">Načítavam…</span></b><span id="sSub"></span></div>
@@ -529,7 +667,8 @@
       <div><h2>Prehľad</h2><div class="sub" id="ovDate"></div></div>
       <div class="sp"></div>
       <span class="chip" id="ovNet"></span>
-      <a class="btn go" href="#telefony"><span data-icon="phone"></span>Otvoriť telefóny</a>
+      <a class="btn" href="#telefony"><span data-icon="phone"></span>Telefóny</a>
+      <button class="btn-new" data-newpost><span data-icon="plus"></span>Nový príspevok</button>
     </div>
     <div class="panel banner">
       <div class="ic" id="bIc"><span data-icon="clock"></span></div>
@@ -537,6 +676,10 @@
       <div class="sp"></div>
     </div>
     <div class="tiles" id="tiles"></div>
+    <div class="row2c">
+      <div class="panel"><h3>Dnes<span class="sp"></span><a href="#kalendar">Kalendár</a></h3><div class="today" id="ovToday"></div></div>
+      <div class="panel"><h3>Stav systému<span class="sp"></span><span class="lnk" id="ovHealthRe">Skontrolovať</span></h3><div id="ovHealth"></div></div>
+    </div>
     <div class="row2">
       <div class="panel">
         <h3>Posledných 7 dní<span class="sp"></span>
@@ -562,6 +705,7 @@
     </div>
     <div id="msg"></div>
     <div class="toolbar panel">
+      <button class="btn-new" data-newpost><span data-icon="plus"></span>Nový príspevok</button>
       <button class="tplbtn" id="gtpl"><span data-icon="list"></span><span>Šablóny</span></button>
       <input id="gtask" placeholder="Úloha pre AI na všetkých telefónoch…">
       <button class="go" id="gbtn"><span data-icon="play"></span>Spustiť všade</button>
@@ -593,19 +737,25 @@
 
   <!-- KALENDÁR -->
   <section class="view" id="v-kalendar">
-    <div class="vhead"><div><h2>Kalendár</h2><div class="sub" id="calSum">Príspevky naplánované cez stránku</div></div><div class="sp"></div>
+    <div class="vhead"><div><h2>Kalendár</h2><div class="sub" id="calSum">Príspevky naplánované cez stránku</div></div><div class="sp"></div><button class="btn-new" data-newpost><span data-icon="plus"></span>Nový príspevok</button>
       <button id="calPrev" title="Predošlý týždeň">‹</button><span class="chip" id="calRange">—</span><button id="calNext" title="Ďalší týždeň">›</button><button id="calToday">Tento týždeň</button></div>
     <div class="callegend"><span class="s-wait">čaká</span><span class="s-ok">naplánované</span><span class="s-bad">chyba</span><span class="s-off">nespustené</span><span class="sub">· „voľno“ = účet nemá v ten deň nič naplánované</span></div>
+    <div class="panel calstrip"><div class="cs-h"><b>Knižnica</b> · pretiahni video alebo fotku na deň a telefón – otvorí sa plánovanie. Klik na prázdny deň = nový príspevok.<span class="sp"></span><select id="csFilter"><option value="unused">Nepoužité</option><option value="all">Všetko</option></select></div><div class="cs-list" id="calStripList"></div></div>
     <div class="panel calwrap"><div id="calGrid"></div></div>
   </section>
 
   <!-- KNIŽNICA -->
   <section class="view" id="v-kniznica">
-    <div class="vhead"><div><h2>Knižnica médií</h2><div class="sub" id="libCount">Videá a fotky pripravené na plánovanie</div></div></div>
+    <div class="vhead"><div><h2>Knižnica médií</h2><div class="sub" id="libCount">Videá a fotky pripravené na plánovanie</div></div><div class="sp"></div>
+      <div class="libtools"><span class="chip" id="libSize">—</span><button id="libClean">Upratať staré</button><button id="libSelAll">Vybrať všetky</button><button class="btn-new" data-newpost><span data-icon="plus"></span>Nový príspevok</button></div></div>
     <label class="drop libdrop" id="libDrop"><input type="file" id="libInput" multiple accept="image/*,video/*,.heic,.mov,.mp4">
-      <div><span data-icon="plus"></span><b>Pretiahni sem videá a fotky</b><br>alebo klikni · v plánovači ich vyberieš cez „Z knižnice“ <small id="libMsg"></small></div></label>
+      <div><span data-icon="plus"></span><b>Pretiahni sem videá a fotky</b><br>alebo klikni · v plánovači ich vyberieš cez „Z knižnice“ <small id="libDropHint"></small> <small id="libMsg"></small></div></label>
+    <div class="libphones" id="libPhones"></div>
     <div class="filters" id="libFilters"><button data-f="all" class="on">Všetko</button><button data-f="video">Videá</button><button data-f="photo">Fotky</button><button data-f="unused">Nepoužité</button></div>
     <div class="libgrid" id="libGrid"></div>
+    <div class="libbar" id="libBar" hidden><b id="libBarN">0 vybraných</b>
+      <button class="go" data-bulk="plan">Naplánovať</button><button data-bulk="assign">Priradiť k telefónu</button><button data-bulk="unassign">Odobrať z telefónu</button>
+      <button data-bulk="delete">Zmazať</button><button class="ghost" data-bulk="clear">Zrušiť výber</button></div>
   </section>
 
   <!-- ŠTATISTIKY -->
@@ -667,7 +817,7 @@
           <li><b>Mac</b> (MacBook alebo iMac) s macOS a aspoň ~40 GB voľného miesta (Xcode je veľký)</li>
           <li><b>Apple ID</b> – stačí bežné, zadarmo</li>
           <li><b>iPhone</b> + <b>USB kábel</b> (pri viacerých iPhonoch USB hub s napájaním)</li>
-          <li>Balík <b>JD-IphoneWall-Mac.zip</b></li>
+          <li>Balík <b>JD-PhoneStudio-Mac.zip</b></li>
           <li><b>Claude API kľúč</b> z console.anthropic.com (na AI ovládanie)</li>
         </ul>
         <p class="gnote">Odškrtnuté kroky si stránka pamätá v tomto prehliadači.</p>
@@ -684,8 +834,8 @@
             </ul></li>
           <li><b>Stiahni a rozbaľ balík</b>
             <ul class="gsub">
-              <li>Ulož <b>JD-IphoneWall-Mac.zip</b> (z chatu, AirDropu alebo Disku) – zvyčajne skončí v priečinku <code>Stiahnuté</code>.</li>
-              <li>Dvojklik na zip → vznikne priečinok <b>JD-IphoneWall</b> (bez „-Mac“). Zip potom môžeš zmazať.</li>
+              <li>Ulož <b>JD-PhoneStudio-Mac.zip</b> (z chatu, AirDropu alebo Disku) – zvyčajne skončí v priečinku <code>Stiahnuté</code>.</li>
+              <li>Dvojklik na zip → vznikne priečinok <b>JD-PhoneStudio</b> (bez „-Mac“). Zip potom môžeš zmazať.</li>
               <li>Presuň ho na <b>Plochu</b>. Súbory vnútri nepremenúvaj ani nepresúvaj.</li>
               <li>Vnútri uvidíš <code>NAVOD.html</code>, <code>install.command</code>, <code>START_STRANKY.command</code> a súbory stránky.</li>
             </ul></li>
@@ -721,12 +871,12 @@
           <li><b>Nechaj Xcode pripraviť iPhone</b>
             <ul class="gsub">
               <li>V Xcode stlač <code>⇧ ⌘ 2</code> (menu <code>Window → Devices and Simulators</code>) a vľavo klikni na svoj iPhone.</li>
-              <li>Ak tam táto ponuka nie je: otvor priečinok <code>JD-IphoneWall → WebDriverAgent</code> → dvojklik na <code>WebDriverAgent.xcodeproj</code> (objaví sa po prvom spustení install.command) → hore v strede klikni na výber zariadenia a vyber <b>svoj iPhone</b> – nie „Any iOS Device“.</li>
+              <li>Ak tam táto ponuka nie je: otvor priečinok <code>JD-PhoneStudio → WebDriverAgent</code> → dvojklik na <code>WebDriverAgent.xcodeproj</code> (objaví sa po prvom spustení install.command) → hore v strede klikni na výber zariadenia a vyber <b>svoj iPhone</b> – nie „Any iOS Device“.</li>
               <li>Xcode ukáže <b>„Preparing iPhone / Copying shared cache“</b>. iPhone nechaj odomknutý a počkaj, kým to zmizne (5–15 minút).</li>
             </ul></li>
           <li><b>Spusti install.command</b>
             <ul class="gsub">
-              <li>V priečinku <b>JD-IphoneWall</b> na Ploche <b>pravý klik</b> na <code>install.command</code> → <code>Otvoriť</code> → v okne znova <code>Otvoriť</code>.</li>
+              <li>V priečinku <b>JD-PhoneStudio</b> na Ploche <b>pravý klik</b> na <code>install.command</code> → <code>Otvoriť</code> → v okne znova <code>Otvoriť</code>.</li>
               <li>Ak Mac napíše, že súbor nemôže otvoriť: <code>Nastavenia systému → Súkromie a bezpečnosť</code> → dole <code>Aj tak otvoriť</code>.</li>
               <li>Otvorí sa Terminál. Keď chce <b>heslo</b>, napíš heslo k Macu a Enter (pri písaní sa nič nezobrazuje – to je v poriadku). Ak píše „Press RETURN“, stlač Enter.</li>
               <li>Ak vyskočí okno <b>„codesign chce použiť kľúč…“</b> → zadaj heslo k Macu → <code>Vždy povoliť</code>.</li>
@@ -752,7 +902,7 @@
       <div class="panel gpart">
         <h3><span class="gnum">C</span>Stránka – prvé spustenie</h3>
         <ol class="gsteps" data-part="web">
-          <li>V priečinku <b>JD-IphoneWall</b> na Ploche dvojklik na <b>START_STRANKY.command</b> (prvýkrát pravý klik → Otvoriť). Stránka sa otvorí sama na <code>localhost:3000</code>.</li>
+          <li>V priečinku <b>JD-PhoneStudio</b> na Ploche dvojklik na <b>START_STRANKY.command</b> (prvýkrát pravý klik → Otvoriť). Stránka sa otvorí sama na <code>localhost:3000</code>.</li>
           <li>Okno Terminálu <b>nechaj otvorené</b> – zatvorením sa stránka vypne. Tip: START_STRANKY pretiahni do Docku.</li>
           <li>V <a href="#nastavenia">Nastaveniach</a> vlož <b>Claude API kľúč</b>.</li>
           <li>V <a href="#telefony">Telefónoch</a> by sa do minúty mal objaviť obraz iPhonu. Skús ťuknúť a poslať jednu fotku.</li>
@@ -790,7 +940,7 @@
           <li><b>PC s Windows 10 alebo 11</b> (64-bit) a internet</li>
           <li><b>Apple ID</b> – stačí bežné, zadarmo</li>
           <li><b>iPhone</b> + <b>USB kábel</b> (pri viacerých iPhonoch USB hub s napájaním)</li>
-          <li>Balík <b>JD-IphoneWall-Windows.zip</b></li>
+          <li>Balík <b>JD-PhoneStudio-Windows.zip</b></li>
           <li><b>Claude API kľúč</b> z console.anthropic.com (na AI ovládanie)</li>
         </ul>
         <p class="gnote">Pomocná aplikácia WebDriverAgent sa do iPhonu nahrá cez bezplatný program <b>Sideloadly</b>. S bezplatným Apple ID platí jej podpis 7 dní – potom ju v Sideloadly nahráš znova (1 klik).</p>
@@ -807,9 +957,9 @@
             </ul></li>
           <li><b>Rozbaľ balík</b>
             <ul class="gsub">
-              <li>Ulož <b>JD-IphoneWall-Windows.zip</b> – zvyčajne skončí v priečinku <code>Stiahnuté súbory</code>.</li>
+              <li>Ulož <b>JD-PhoneStudio-Windows.zip</b> – zvyčajne skončí v priečinku <code>Stiahnuté súbory</code>.</li>
               <li><b>Pravý klik</b> na zip → <code>Extrahovať všetko…</code> → <code>Extrahovať</code>. Súbory nespúšťaj priamo zo zipu – nefungovalo by to.</li>
-              <li>Priečinok <b>JD-IphoneWall</b> presuň na <b>Plochu</b>. Vnútri sú <code>NAVOD.html</code>, <code>install-windows.bat</code>, <code>START_STRANKY.bat</code> a súbory stránky.</li>
+              <li>Priečinok <b>JD-PhoneStudio</b> presuň na <b>Plochu</b>. Vnútri sú <code>NAVOD.html</code>, <code>install-windows.bat</code>, <code>START_STRANKY.bat</code> a súbory stránky.</li>
             </ul></li>
           <li><b>Nainštaluj Apple Devices a iTunes</b> (ovládače pre iPhone – treba <b>oboje</b>)
             <ul class="gsub">
@@ -825,11 +975,11 @@
             </ul></li>
           <li><b>Spusti install-windows.bat</b>
             <ul class="gsub">
-              <li>V priečinku JD-IphoneWall dvojklik na <code>install-windows.bat</code>.</li>
+              <li>V priečinku JD-PhoneStudio dvojklik na <code>install-windows.bat</code>.</li>
               <li>Ak sa objaví modré okno <b>„Systém Windows ochránil váš počítač“</b> → <code>Ďalšie informácie</code> → <code>Spustiť aj tak</code>.</li>
               <li>Ak sa pýta na súhlas s podmienkami (winget) alebo zmeny v počítači → <code>Y</code> / <code>Áno</code>.</li>
               <li>Nainštaluje <b>Node.js</b>, <b>go-ios</b>, <b>cloudflared</b> a pripraví súbor <code>WebDriverAgent.ipa</code>. Ak sa práve nainštaloval Node.js a inštalácia skončí chybou, okno zavri a spusti <code>install-windows.bat</code> ešte raz.</li>
-              <li>Na konci sa otvorí stránka Sideloadly a priečinok JD-IphoneWall.</li>
+              <li>Na konci sa otvorí stránka Sideloadly a priečinok JD-PhoneStudio.</li>
             </ul></li>
           <li><b>Nainštaluj Sideloadly</b>
             <ul class="gsub">
@@ -838,7 +988,7 @@
           <li><b>Nahraj WebDriverAgent do iPhonu</b>
             <ul class="gsub">
               <li>Otvor <b>Sideloadly</b>. Hore v poli <b>iDevice</b> musí byť tvoj iPhone.</li>
-              <li>Z priečinka JD-IphoneWall pretiahni súbor <code>WebDriverAgent.ipa</code> do okna Sideloadly (na ikonu IPA).</li>
+              <li>Z priečinka JD-PhoneStudio pretiahni súbor <code>WebDriverAgent.ipa</code> do okna Sideloadly (na ikonu IPA).</li>
               <li>Do poľa <b>Apple account</b> napíš e-mail svojho Apple ID → <code>Start</code>.</li>
               <li>Zadaj heslo k Apple ID a overovací kód, ak príde. Počkaj, kým dole uvidíš <b>Done</b>.</li>
               <li>Ostatné nastavenia v Sideloadly nemeň.</li>
@@ -861,7 +1011,7 @@
       <div class="panel gpart">
         <h3><span class="gnum">C</span>Stránka – prvé spustenie</h3>
         <ol class="gsteps" data-part="wweb">
-          <li>V priečinku <b>JD-IphoneWall</b> na Ploche dvojklik na <b>START_STRANKY.bat</b>. Otvorí sa čierne okno a malé okno <b>go-ios tunel</b> (na lište) – obe nechaj otvorené.</li>
+          <li>V priečinku <b>JD-PhoneStudio</b> na Ploche dvojklik na <b>START_STRANKY.bat</b>. Otvorí sa čierne okno a malé okno <b>go-ios tunel</b> (na lište) – obe nechaj otvorené.</li>
           <li>Ak sa Windows Firewall pýta na <b>Node.js</b> → <code>Povoliť prístup</code> (stačia súkromné siete). Stránka sa otvorí sama na <code>localhost:3000</code>.</li>
           <li>V <b>Nastaveniach</b> (v bočnom menu stránky) vlož <b>Claude API kľúč</b>.</li>
           <li>V sekcii <b>Telefóny</b> by sa do 1–2 minút mal objaviť obraz iPhonu. Skús ťuknúť a poslať jednu fotku.</li>
@@ -945,12 +1095,21 @@
     <div class="vhead"><div><h2>Nastavenia</h2></div></div>
     <div class="sgrid">
       <div class="panel" id="remPanel"><h3><span data-icon="phone"></span>Prístup z mobilu<span class="sp"></span><a class="lnk" href="/logout" id="remLogout" hidden>Odhlásiť</a></h3>
+        <p>Otvor si svoju stránku z mobilu odkiaľkoľvek – doma aj mimo domu, na Wi-Fi aj dátach. Vidíš len svoje telefóny. Počítač s aplikáciou musí byť zapnutý.</p>
+        <label class="remtog"><input type="checkbox" id="remOn"><span>Zapnúť prístup z mobilu</span></label>
+        <div class="kv"><span>Stav</span><b id="remState">—</b></div>
+        <div id="remBody">
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="go" id="remPair"><span data-icon="plus"></span>Pridať mobil (QR kód)</button></div>
+          <div class="remdevs"><div class="sub" style="margin:12px 0 4px">Spárované mobily</div><div class="list" id="remDevs"></div></div>
+        </div>
+        <p class="sub" id="remMsg" style="margin-top:8px"></p>
+        <details class="remadv" id="remAdv"><summary>Vlastná doména cez Cloudflare Access (pokročilé)</summary>
         <p>Stránku otvoríš aj z mobilu mimo domu – cez Cloudflare (návod je v sekcii Návod). Prístup chráni prihlásenie e-mailom v Cloudflare a tento PIN.</p>
         <div class="kv"><span>PIN</span><b id="pinState">—</b></div>
         <div class="kv"><span>Adresa z mobilu</span><b id="remUrlState">—</b></div>
         <div id="pinLocal" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="go" id="pinSet">Nastaviť PIN</button><button id="remUrlBtn">Zadať adresu</button><button id="pinDel" hidden>Vypnúť PIN</button></div>
-        <p class="sub" id="pinMsg" style="margin-top:8px"></p></div>
+        <p class="sub" id="pinMsg" style="margin-top:8px"></p>        </details></div>
       <div class="panel"><h3><span data-icon="key"></span>Claude API kľúč</h3>
         <p>Potrebný pre AI ovládanie telefónov. Ukladá sa iba na tomto počítači.</p>
         <div class="kv"><span>Stav</span><b id="keyState">—</b></div>
@@ -977,6 +1136,44 @@
         <div class="kv"><span>IP počítača v sieti</span><b id="setIp">—</b></div>
         <div style="margin-top:10px"><button id="mediaUrlBtn">Vlastná adresa pre fotky…</button></div>
         <p class="sub" style="margin-top:6px">Voliteľné: stála adresa cez tvoju doménu v Cloudflare (napr. https://media.tvojadomena.com → http://localhost:3001). Spoľahlivejšia ako automatický tunel.</p></div>
+      <div class="panel" id="tgPanel"><h3><span data-icon="alert"></span>Upozornenia na mobil (Telegram)</h3>
+        <p>Správa do Telegramu, keď sa plán dokončí alebo zlyhá (aj so snímkou z iPhonu), keď sa telefón odpojí, má slabú batériu alebo vyprší podpis WebDriverAgenta.</p>
+        <div class="kv"><span>Stav</span><b id="tgState">—</b></div>
+        <div id="tgSetup" style="margin-top:10px">
+          <ol class="tgsteps"><li>V Telegrame otvor <b>@BotFather</b> → <code>/newbot</code> → zadaj názov (napr. JD Phone Studio) a meno bota končiace na <code>bot</code>.</li>
+            <li>BotFather ti pošle <b>token</b> (napr. 123456789:AAH…). Skopíruj ho sem:</li></ol>
+          <div style="display:flex;gap:8px"><input id="tgToken" placeholder="token od BotFathera" style="flex:1"><button class="go" id="tgSave">Uložiť</button></div>
+        </div>
+        <div id="tgLink" hidden style="margin-top:10px"><p class="sub" id="tgLinkTxt"></p><button class="go" id="tgLinkBtn">Prepojiť</button></div>
+        <div id="tgOn" hidden style="margin-top:10px">
+          <div class="tgev">
+            <label><input type="checkbox" data-ev="done"> Plán hotový (so snímkou)</label>
+            <label><input type="checkbox" data-ev="fail"> Plán alebo AI úloha zlyhala</label>
+            <label><input type="checkbox" data-ev="offline"> Telefón sa odpojil</label>
+            <label><input type="checkbox" data-ev="battery"> Slabá batéria (pod 20 %)</label>
+            <label><input type="checkbox" data-ev="wda"> Podpis WebDriverAgenta vyprší</label>
+            <label><input type="checkbox" data-ev="ai"> Každá dokončená AI úloha</label>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button id="tgTest">Poslať test</button><button id="tgOff">Odpojiť</button></div>
+        </div>
+        <p class="sub" id="tgMsg" style="margin-top:8px"></p></div>
+      <div class="panel"><h3><span data-icon="chart"></span>Míňanie na AI</h3>
+        <p>Odhad podľa oficiálneho cenníka (Anthropic / Google) z počtu tokenov. Pri KIE môže byť skutočná suma nižšia – presný stav kreditu vidíš na kie.ai.</p>
+        <div class="ukv"><div><small>Dnes</small><b id="uToday">—</b></div><div><small>Tento mesiac</small><b id="uMonth">—</b></div><div><small>Spolu</small><b id="uTotal">—</b></div></div>
+        <div class="ubars" id="uBars" title="Posledných 30 dní"></div><small class="hint">Posledných 30 dní (dnes vpravo)</small>
+        <div class="list" id="uKinds" style="margin-top:8px"></div></div>
+      <div class="panel"><h3><span data-icon="trash"></span>Upratovanie</h3>
+        <p>Automaticky zmaže z knižnice videá a fotky, ktoré už boli použité a odvtedy prešiel zvolený čas. Nepoužité a tie, čo čakajú v kalendári, nikdy nezmaže.</p>
+        <label class="ctl" style="display:flex"><span style="flex:1">Mazať použité súbory staršie ako</span>
+          <select id="cleanDays"><option value="0">Nikdy (vypnuté)</option><option value="14">14 dní</option><option value="30">30 dní</option><option value="60">60 dní</option><option value="90">90 dní</option></select></label>
+        <div class="kv" style="margin-top:8px"><span>Knižnica zaberá</span><b id="cleanSize">—</b></div>
+        <div class="kv"><span>Voľné miesto na počítači</span><b id="cleanFree">—</b></div>
+        <div style="margin-top:10px"><button id="cleanNow">Upratať teraz…</button></div><p class="sub" id="cleanMsg" style="margin-top:6px"></p></div>
+      <div class="panel"><h3><span data-icon="save"></span>Záloha</h3>
+        <p>Stiahne knižnicu, kalendár, štatistiky, prieskumy, profily telefónov a šablóny do jedného zipu. Kľúče (Claude, KIE) a PIN sa do zálohy nedávajú.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn go" href="/api/backup" download>Záloha bez médií</a><a class="btn" href="/api/backup?media=1" download>Záloha aj s videami a fotkami</a></div>
+        <label class="btn" style="margin-top:10px;display:inline-flex;cursor:pointer">Obnoviť zo zálohy…<input type="file" id="restoreIn" accept=".zip" hidden></label>
+        <p class="sub" id="restoreMsg" style="margin-top:6px"></p></div>
       <div class="panel"><h3><span data-icon="list"></span>Šablóny AI príkazov<span class="sp"></span><span class="lnk" id="tplReset">Obnoviť pôvodné</span></h3>
         <div class="list" id="tplList"></div></div>
     </div>
@@ -1157,6 +1354,7 @@ function route() {
   view = document.getElementById('v-' + v) ? v : 'prehlad';
   document.querySelectorAll('.view').forEach((s) => s.classList.toggle('on', s.id === 'v-' + view));
   document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.v === view));
+  if (document.querySelector(`#navSub a[data-v="${view}"]`)) setNavMore(true);
   if (view === 'prehlad') loadOverview();
   if (view === 'aktivita') loadActivity();
   if (view === 'realism') { const fr = document.getElementById('realismFrame'); if (!fr.src) fr.src = '/tools/realism.html'; }
@@ -1165,6 +1363,13 @@ function route() {
   if (view === 'aktualizacie') checkUpdate(false);
 }
 window.addEventListener('hashchange', route);
+// menu „Viac“ (Aktivita, Tait, Magnific)
+function setNavMore(open) {
+  document.getElementById('navSub').hidden = !open; document.getElementById('navMore').classList.toggle('open', open);
+  try { localStorage.setItem('jd-navmore', open ? '1' : ''); } catch (_) {}
+}
+document.getElementById('navMore').onclick = () => setNavMore(document.getElementById('navSub').hidden);
+try { if (localStorage.getItem('jd-navmore')) setNavMore(true); } catch (_) {}
 
 // ---------- PREHĽAD ----------
 const DAYS = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
@@ -1195,8 +1400,10 @@ async function loadOverview() {
     tile('image', 'Médiá dnes', t.media, 'poslané do galérie'),
     tile('alert', 'Chyby dnes', t.errors, t.errors ? 'pozri Aktivitu' : 'bez chýb'),
     tile('play', 'Reels prezreté dnes', t.reels + (o.reelsLive || 0), o.reelsLive ? `${o.reelsLive} práve pri prieskume` : `za 7 dní: ${o.week.reduce((n, d) => n + (d.reels || 0), 0) + (o.reelsLive || 0)}`),
-    tile('list', 'Šablóny', o.templates, 'AI príkazy'),
+    tile('chart', 'AI dnes', usd(o.usage ? o.usage.today : 0), `mesiac: ${usd(o.usage ? o.usage.month : 0)} · odhad`),
   ].join('');
+  renderToday(o.board || []);
+  renderHealth(o.health);
 
   drawChart(o.week);
 
@@ -1208,6 +1415,49 @@ async function loadOverview() {
 
   document.getElementById('ovAct').innerHTML = o.activity.length ? o.activity.map(actRow).join('') : '<div class="empty-s">Zatiaľ žiadna aktivita</div>';
 }
+
+const usd = (v) => '$' + (v >= 10 ? v.toFixed(0) : v >= 1 ? v.toFixed(2) : v.toFixed(3));
+// „Dnes“: čo sa dnes plánovalo na ktorom telefóne + zopakovanie chyby
+const ST_CLS = { 'čaká': 's-wait', 'naplánované': 's-ok', 'chyba': 's-bad', 'nespustené': 's-off' };
+let BOARD = [];
+function renderToday(board) {
+  BOARD = board;
+  const box = document.getElementById('ovToday');
+  if (!board.length) { box.innerHTML = '<div class="empty-s">Žiadny telefón. Pripoj iPhone a klikni na <b>Nový príspevok</b>.</div>'; return; }
+  box.innerHTML = board.map((p, i) => `<div class="tday" style="--pc:${typeof devColor === 'function' ? devColor(p.udid, i) : ''}">
+    <h4><i class="pcd"></i>${esc(p.label)} ${p.running ? '<span class="st s-wait">AI pracuje</span>' : p.online ? '' : '<span class="st s-off">offline</span>'}<small title="${esc(p.last)}">${esc(p.running ? p.last : '')}</small></h4>
+    ${p.items.map((it) => `<div class="titem"><span class="tt">${new Date(it.when).toLocaleString('sk-SK', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+      <span>${it.kind === 'carousel' ? '🖼️' : '🎬'}</span><span class="tc">${esc(it.caption || (it.files ? it.files + ' médiá' : ''))}</span>
+      ${it.proof ? `<a class="prf" href="/proof/${it.id}" target="_blank" title="Snímka z iPhonu po naplánovaní">📸</a>` : ''}<span class="st ${ST_CLS[it.status] || 's-off'}">${esc(it.status)}</span>${it.retry ? `<button data-retry="${it.id}">Skúsiť znova</button>` : ''}</div>`).join('')
+      || `<div class="tempty">Dnes nič naplánované · <span class="lnk" data-newfor="${p.udid}">naplánovať</span></div>`}</div>`).join('');
+}
+document.getElementById('ovToday').addEventListener('click', (e) => {
+  const r = e.target.closest('[data-retry]'); if (r) return retryPost(r.dataset.retry);
+  const n = e.target.closest('[data-newfor]'); if (n) openWizard({ udid: n.dataset.newfor });
+});
+// stav systému
+let healthAll = false;
+function renderHealth(h) {
+  if (!h) return;
+  const box = document.getElementById('ovHealth');
+  const bad = h.items.filter((x) => x.status !== 'ok');
+  const sum = h.status === 'ok' ? 'Všetko funguje' : `${bad.length} ${bad.length === 1 ? 'vec potrebuje' : bad.length < 5 ? 'veci potrebujú' : 'vecí potrebuje'} pozornosť`;
+  const list = healthAll ? h.items : h.items.filter((x) => x.status !== 'ok').concat(h.status === 'ok' ? h.items : []);
+  box.innerHTML = `<div class="hsum ${h.status}">${icon(h.status === 'ok' ? 'check' : 'alert')}${sum}</div><div class="hlist">${list.map((x, i) => `<div class="hrow ${x.status}"><i class="hd"></i><div class="hx"><b>${esc(x.title)}</b><small title="${esc(x.detail)}">${esc(x.detail)}</small></div>
+    ${x.fix ? (x.fix.href ? `<a class="btn" href="${x.fix.href}">${esc(x.fix.label)}</a>` : `<button data-hfix="${i}">${esc(x.fix.label)}</button>`) : ''}</div>`).join('')}</div>
+    ${h.status !== 'ok' ? `<span class="hmore" id="hMore">${healthAll ? 'Skryť, čo funguje' : `Zobraziť všetko (${h.items.length})`}</span>` : ''}`;
+  box.querySelectorAll('[data-hfix]').forEach((b) => b.onclick = async () => {
+    const f = list[+b.dataset.hfix].fix; b.disabled = true; b.textContent = '…';
+    try {
+      if (f.action === 'tunnel') { const j = await (await fetch('/api/tunnel/restart', { method: 'POST' })).json(); if (j.error) alert(j.error); }
+      else if (f.action === 'wda-renewed') { if (confirm('Podpísal si WebDriverAgent znova v Sideloadly? Odpočet 7 dní začne odznova.')) await fetch('/api/wda/renewed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ udid: f.udid }) }); }
+      else if (f.udid) await post(f.udid, f.action);
+    } catch (_) {}
+    setTimeout(loadOverview, 2500);
+  });
+  const m = document.getElementById('hMore'); if (m) m.onclick = () => { healthAll = !healthAll; renderHealth(h); };
+}
+document.getElementById('ovHealthRe').onclick = loadOverview;
 
 function drawChart(week) {
   const box = document.getElementById('chart'), tip = document.getElementById('tip');
@@ -1275,11 +1525,106 @@ async function loadSettings() {
   document.getElementById('setNet').textContent = n.via === 'internet' ? 'cez internet (iPhony môžu byť na dátach)' : `len Wi-Fi (tunel: ${n.tunnel || '?'})`;
   document.getElementById('setTunnel').textContent = n.url || '—';
   document.getElementById('setIp').textContent = d.lanIp || '—';
+  document.getElementById('cleanDays').value = String(d.cleanupDays || 0);
+  renderTg(d.telegram || {});
+  loadRemote();
+  loadUsage(); loadCleanInfo();
   await loadTemplates();
   document.getElementById('tplList').innerHTML = TEMPLATES.map((t) => `<div class="li"><div class="tx"><b>${esc(t.name)}</b><small>${esc(t.text.slice(0, 90))}…</small></div>
     <button class="ghost" data-tdel="${esc(t.name)}">${icon('trash')}</button></div>`).join('') || '<div class="empty-s">Žiadne šablóny</div>';
   document.querySelectorAll('[data-tdel]').forEach((b) => b.onclick = () => deleteTemplate(b.dataset.tdel));
 }
+const KIND_SK = { agent: 'AI ovládanie telefónov (šablóny, plánovanie)', popisy: 'Návrhy popisov' };
+async function loadUsage() {
+  let u; try { u = await (await fetch('/api/usage')).json(); } catch (_) { return; }
+  document.getElementById('uToday').textContent = usd(u.today); document.getElementById('uMonth').textContent = usd(u.month); document.getElementById('uTotal').textContent = usd(u.total);
+  const mx = Math.max(0.0001, ...u.days.map((d) => d.usd));
+  document.getElementById('uBars').innerHTML = u.days.map((d) => `<i style="height:${Math.max(2, d.usd / mx * 100)}%" title="${new Date(d.date).toLocaleDateString('sk-SK')}: ${usd(d.usd)} (${d.calls} volaní)"></i>`).join('');
+  const rows = [...Object.entries(u.byKind).map(([k, v]) => [KIND_SK[k] || k, v]), ...Object.entries(u.byPhone).map(([k, v]) => ['📱 ' + k, v])];
+  document.getElementById('uKinds').innerHTML = rows.length ? '<small class="hint">Tento mesiac podľa druhu a telefónu</small>' + rows.map(([k, v]) => `<div class="li"><div class="tx"><b>${esc(k)}</b></div><div class="tm">${usd(v)}</div></div>`).join('') : '<div class="empty-s">Zatiaľ žiadne AI volania.</div>';
+}
+const gb = (b) => b == null ? '—' : (b / 1e9 >= 1 ? (b / 1e9).toFixed(1) + ' GB' : Math.round(b / 1e6) + ' MB');
+async function loadCleanInfo() {
+  let c; try { c = await (await fetch('/api/library/cleanup?days=' + (document.getElementById('cleanDays').value || 30))).json(); } catch (_) { return; }
+  document.getElementById('cleanSize').textContent = gb(c.size); document.getElementById('cleanFree').textContent = gb(c.diskFree);
+}
+document.getElementById('cleanDays').onchange = async (e) => {
+  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cleanupDays: +e.target.value }) });
+  document.getElementById('cleanMsg').textContent = +e.target.value ? 'Uložené ✓ – upratuje sa samo každých 6 hodín.' : 'Automatické upratovanie je vypnuté.';
+};
+document.getElementById('cleanNow').onclick = () => openCleanup();
+// ---------- prístup z mobilu (rozcestník + QR párovanie) ----------
+let REM = null;
+async function loadRemote() {
+  try { REM = await (await fetch('/api/remote')).json(); } catch (_) { return; }
+  const $ = (id) => document.getElementById(id);
+  $('remOn').checked = REM.enabled; $('remOn').disabled = REM.remote;
+  $('remBody').hidden = !REM.enabled;
+  $('remState').innerHTML = !REM.enabled ? '<span style="color:var(--faint)">vypnutý</span>'
+    : REM.url && REM.registered ? `<span style="color:var(--ok)">zapnutý ✓</span>`
+    : REM.relayError ? `<span style="color:var(--bad)">${esc(REM.relayError)}</span>` : `<span style="color:var(--warn)">${esc(REM.state)}</span>`;
+  $('remPair').hidden = REM.remote;
+  $('remDevs').innerHTML = REM.devices.length ? REM.devices.slice().reverse().map((d) => `<div class="li"><div class="ic">${icon('phone')}</div><div class="tx"><b>${esc(d.name)}</b><small>spárovaný ${new Date(d.created).toLocaleDateString('sk-SK')} · naposledy ${ago(d.lastSeen)}</small></div>
+    <button class="ghost" data-revoke="${d.id}" title="Odobrať">${icon('trash')}</button></div>`).join('') : '<div class="empty-s">Zatiaľ žiadny – klikni „Pridať mobil“.</div>';
+  $('remDevs').querySelectorAll('[data-revoke]').forEach((b) => b.onclick = async () => {
+    if (!confirm('Odobrať tento mobil? Už sa nebude môcť prihlásiť (napr. pri strate telefónu).')) return;
+    await fetch('/api/remote/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: b.dataset.revoke }) }); loadRemote();
+  });
+}
+document.getElementById('remOn').onchange = async (e) => {
+  const m = document.getElementById('remMsg');
+  const r = await fetch('/api/remote/enable', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: e.target.checked }) });
+  const j = await r.json().catch(() => ({})); m.textContent = j.error || (e.target.checked ? 'Zapínam… o pár sekúnd môžeš pridať mobil.' : 'Vypnuté – z mobilu sa už nedá pripojiť.');
+  loadRemote(); setTimeout(loadRemote, 6000); setTimeout(loadRemote, 15000);
+};
+document.getElementById('remPair').onclick = async () => {
+  let j; try { const r = await fetch('/api/remote/pair', { method: 'POST' }); j = await r.json(); if (!r.ok) throw new Error(j.error); } catch (e) { return alert(e.message); }
+  const bg = document.createElement('div'); bg.className = 'modal-bg';
+  bg.innerHTML = `<div class="modal"><div class="mhead"><h3>Pridať mobil</h3></div>
+    ${j.ready ? '' : '<small class="hint" style="color:var(--warn)">Pripojenie sa ešte len zapína – ak QR kód hneď nepôjde, skús to o pár sekúnd znova.</small>'}
+    <div class="qrbox">${QR.svg(j.link, { ecc: 'M', border: 2 })}</div>
+    <div class="qrtime" data-t></div>
+    <ol class="qrsteps"><li>Naskenuj QR kód <b>fotoaparátom</b> mobilu a otvor odkaz.</li>
+      <li>Keď sa ukáže <b>Mobil je spárovaný ✓</b>, pridaj si ikonu na plochu: <b>iPhone</b> – Zdieľať → Pridať na plochu, <b>Android</b> – ⋮ → Pridať na plochu.</li>
+      <li>Odteraz otváraj stránku vždy cez túto ikonu – funguje aj mimo domu.</li></ol>
+    <small class="hint">QR kód platí 10 minút a len pre 1 mobil. Neposielaj ho nikomu – kto ho naskenuje, môže ovládať tvoje telefóny.</small>
+    <div class="mact"><button class="go" data-x>Hotovo</button></div></div>`;
+  document.body.appendChild(bg);
+  const t = bg.querySelector('[data-t]');
+  const tick = () => { const s = Math.max(0, Math.round((j.expires - Date.now()) / 1000)); t.textContent = s ? `Platí ešte ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : 'QR kód vypršal – zatvor okno a vytvor nový.'; };
+  tick(); const iv = setInterval(tick, 1000);
+  const before = (REM && REM.devices.length) || 0;
+  const poll = setInterval(async () => { await loadRemote(); if (REM && REM.devices.length > before) { t.innerHTML = '<b style="color:var(--ok)">Mobil je spárovaný ✓</b>'; clearInterval(poll); } }, 3000);
+  const close = () => { clearInterval(iv); clearInterval(poll); bg.remove(); loadRemote(); };
+  bg.querySelector('[data-x]').onclick = close; bg.onclick = (e) => { if (e.target === bg) close(); };
+};
+
+// ---------- Telegram ----------
+function renderTg(t) {
+  const $ = (id) => document.getElementById(id);
+  $('tgState').innerHTML = t.linked ? `<span style="color:var(--ok)">zapnuté ✓</span> · @${esc(t.bot)}${t.chatName ? ' → ' + esc(t.chatName) : ''}` : t.bot ? `<span style="color:var(--warn)">čaká na prepojenie</span> · @${esc(t.bot)}` : '<span style="color:var(--faint)">vypnuté</span>';
+  $('tgSetup').hidden = !!t.bot; $('tgLink').hidden = !t.bot || t.linked; $('tgOn').hidden = !t.linked;
+  $('tgLinkTxt').innerHTML = `3. V Telegrame otvor svojho bota <b>@${esc(t.bot || '')}</b>, ťukni <b>Štart</b> (alebo mu napíš hocičo) a potom klikni <b>Prepojiť</b>.`;
+  document.querySelectorAll('#tgOn [data-ev]').forEach((c) => { c.checked = !!(t.events || {})[c.dataset.ev]; });
+}
+const tgPost = async (u, body) => { const r = await fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Chyba'); return j; };
+const tgMsg = (t, bad) => { const m = document.getElementById('tgMsg'); m.textContent = t; m.style.color = bad ? 'var(--bad)' : ''; };
+document.getElementById('tgSave').onclick = async () => { try { const j = await tgPost('/api/telegram', { token: document.getElementById('tgToken').value }); document.getElementById('tgToken').value = ''; tgMsg(`Bot @${j.bot} je uložený.`); loadSettings(); } catch (e) { tgMsg(e.message, true); } };
+document.getElementById('tgLinkBtn').onclick = async () => { try { const j = await tgPost('/api/telegram/link'); tgMsg(`Prepojené${j.chatName ? ' s ' + j.chatName : ''} – v Telegrame ti prišla správa.`); loadSettings(); } catch (e) { tgMsg(e.message, true); } };
+document.getElementById('tgTest').onclick = async () => { try { await tgPost('/api/telegram/test'); tgMsg('Odoslané – pozri Telegram.'); } catch (e) { tgMsg(e.message, true); } };
+document.getElementById('tgOff').onclick = async () => { if (!confirm('Vypnúť upozornenia do Telegramu?')) return; await tgPost('/api/telegram/remove'); tgMsg('Vypnuté.'); loadSettings(); };
+document.getElementById('tgOn').addEventListener('change', async () => {
+  const events = {}; document.querySelectorAll('#tgOn [data-ev]').forEach((c) => (events[c.dataset.ev] = c.checked));
+  try { await tgPost('/api/telegram/events', { events }); tgMsg('Uložené ✓'); } catch (e) { tgMsg(e.message, true); }
+});
+document.getElementById('restoreIn').onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  if (!confirm(`Obnoviť dáta zo zálohy „${f.name}“?\n\nKnižnica, kalendár, štatistiky, profily a šablóny sa nahradia tými zo zálohy. Stránka sa potom reštartuje.`)) return;
+  const m = document.getElementById('restoreMsg'); m.textContent = 'Nahrávam zálohu…';
+  try { const r = await fetch('/api/restore', { method: 'POST', body: f }); const j = await r.json(); if (!r.ok) throw new Error(j.error);
+    m.textContent = `Obnovené (${j.files} súborov). Stránka sa reštartuje…`; setTimeout(() => location.reload(), 6000); }
+  catch (err) { m.textContent = 'Chyba: ' + err.message; }
+};
 document.getElementById('typeSpeed').onchange = async (e) => {
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ typingSpeed: +e.target.value }) });
   const m = document.getElementById('typeSpeedMsg'); m.textContent = 'Uložené ✓'; setTimeout(() => (m.textContent = ''), 2000);
@@ -1311,5 +1656,7 @@ document.getElementById('kieKeyBtn').onclick = async () => {
 </script>
 <script src="/wall.js"></script>
 <script src="/obsah.js"></script>
+<script src="/novy.js"></script>
+<script src="/qr.js"></script>
 </body>
 </html>
