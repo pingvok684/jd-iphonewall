@@ -30,6 +30,9 @@ function load() {
         try { save(list); } catch (_) {}
         return list;
       }
+      // story: staré verzie bez výberu hudby → nahradíme novou (s hudbou)
+      const st = t.find((x) => x.name === '⭕ Pridaj story'), def = DEFAULTS.find((x) => x.name === '⭕ Pridaj story');
+      if (st && def && !/\[Pesnička/.test(st.text)) { st.text = def.text; try { save(t); } catch (_) {} }
       return t;
     }
   } catch (_) {}

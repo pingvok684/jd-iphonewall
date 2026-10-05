@@ -249,9 +249,9 @@ function dtPicker(i, defDate) {
 
 // ---------- štvorček na médiá: video / fotky sa pred plánovaním pošlú do galérie ako najnovšie ----------
 function dropHtml(kind) {
-  const v = kind === 'reel';
-  return `<div class="pdrop" data-drop="${kind}"><label class="drop"><input type="file" ${v ? 'accept="video/*,.mov,.mp4"' : 'accept="image/*,.heic" multiple'}>
-    <div>${icon(v ? 'play' : 'image')}<b>${v ? 'Pretiahni sem video' : 'Pretiahni sem fotky'}</b><small>${v ? 'alebo klikni' : 'v poradí, v akom majú byť v carouseli – alebo klikni'}</small></div></label>
+  const v = kind === 'reel', st = kind === 'story';
+  return `<div class="pdrop" data-drop="${kind}"><label class="drop"><input type="file" ${st ? 'accept="image/*,video/*,.heic,.mov,.mp4"' : v ? 'accept="video/*,.mov,.mp4"' : 'accept="image/*,.heic" multiple'}>
+    <div>${icon(v ? 'play' : 'image')}<b>${st ? 'Pretiahni sem fotku alebo video' : v ? 'Pretiahni sem video' : 'Pretiahni sem fotky'}</b><small>${v || st ? 'alebo klikni' : 'v poradí, v akom majú byť v carouseli – alebo klikni'}</small></div></label>
     <div class="pdact"><button type="button" class="ghost" data-lib>${icon('image')}Z knižnice</button></div>
     <div class="pfiles" data-files></div></div>`;
 }
@@ -271,15 +271,15 @@ function dupCheck(rows) {
 function pickFromLibrary(kind, udid) {
   return new Promise(async (resolve) => {
     await loadLib();
-    const all = LIB.filter((x) => (kind === 'reel' ? x.kind === 'video' : x.kind === 'photo'));
+    const all = LIB.filter((x) => (kind === 'story' ? true : kind === 'reel' ? x.kind === 'video' : x.kind === 'photo'));
     const mine = udid ? all.filter((x) => (x.owners || []).includes(udid)) : [];
     const none = all.filter((x) => !(x.owners || []).length);
     let tab = udid && mine.length ? 'mine' : 'all';
     const bg = document.createElement('div'); bg.className = 'modal-bg';
     const sel = [];
-    bg.innerHTML = `<div class="modal libpick"><div class="mhead"><h3>Knižnica · ${kind === 'reel' ? 'videá' : 'fotky'}</h3></div>
+    bg.innerHTML = `<div class="modal libpick"><div class="mhead"><h3>Knižnica · ${kind === 'story' ? 'fotky a videá' : kind === 'reel' ? 'videá' : 'fotky'}</h3></div>
       ${udid ? `<div class="libtabs"><button type="button" data-t="mine">${esc(phoneLabel(udid))} (${mine.length})</button><button type="button" data-t="none">Nepriradené (${none.length})</button><button type="button" data-t="all">Všetky (${all.length})</button></div>` : ''}
-      <small class="hint">${kind === 'reel' ? 'Vyber 1 video.' : 'Vyber fotky v poradí, v akom majú byť v carouseli.'} Červený štítok = už použité.</small>
+      <small class="hint">${kind === 'story' ? 'Vyber 1 fotku alebo video.' : kind === 'reel' ? 'Vyber 1 video.' : 'Vyber fotky v poradí, v akom majú byť v carouseli.'} Červený štítok = už použité.</small>
       <div class="lgrid"></div>
       <div class="mact"><button data-x>Zrušiť</button><button class="go" data-ok>Pridať</button></div></div>`;
     document.body.appendChild(bg);
@@ -302,7 +302,7 @@ function pickFromLibrary(kind, udid) {
     grid.addEventListener('click', (e) => {
       const b = e.target.closest('.lit'); if (!b) return;
       const id = b.dataset.id, k = sel.indexOf(id);
-      if (k >= 0) sel.splice(k, 1); else { if (kind === 'reel') sel.length = 0; sel.push(id); }
+      if (k >= 0) sel.splice(k, 1); else { if (kind === 'reel' || kind === 'story') sel.length = 0; sel.push(id); }
       mark();
     });
     bg.querySelector('[data-ok]').onclick = () => close(sel.map(libItem).filter(Boolean));
@@ -331,14 +331,14 @@ function attachDrop(box, onChange, prev) {
       el.querySelector('.pst').textContent = f.err ? '!' : f.id ? '✓' : (f.pct || 0) + '%';
       el.querySelector('.pst').title = f.err || '';
     });
-    list.classList.toggle('one', kind === 'reel');
+    list.classList.toggle('one', kind === 'reel' || kind === 'story');
     box.classList.toggle('has', st.files.length > 0);
     onChange && onChange(st);
   };
   st.render = render;
   const add = (fl) => {
     let arr = [...fl]; if (!arr.length) return;
-    if (kind === 'reel') { arr = arr.slice(0, 1); st.files = []; }
+    if (kind === 'reel' || kind === 'story') { arr = arr.slice(0, 1); st.files = []; }
     for (const f of arr) {
       const it = { name: f.name, pct: 0, url: URL.createObjectURL(f), video: /^video\//.test(f.type) || /\.(mov|mp4|m4v)$/i.test(f.name) };
       st.files.push(it);
@@ -359,7 +359,7 @@ function attachDrop(box, onChange, prev) {
   list.addEventListener('click', (e) => { const b = e.target.closest('[data-rm]'); if (b) { st.files.splice(+b.dataset.rm, 1); render(); } });
   box.querySelector('[data-lib]').onclick = async () => {
     const got = await pickFromLibrary(kind, boxPhone()); if (!got || !got.length) return;
-    if (kind === 'reel') st.files = [];
+    if (kind === 'reel' || kind === 'story') st.files = [];
     for (const it of got) st.files.push({ id: it.id, name: it.name, url: `/lib/${it.id}`, video: it.kind === 'video', pct: 100 });
     list.dataset.sig = ''; render();
   };
@@ -503,7 +503,8 @@ function askVars(title, vars, kind, defUdid) {
       return `<${tag} class="${tag === 'div' ? 'fld' : ''}"${tag === 'div' && !isMus && !isPlace ? ' data-capwrap' : ''}><span>${esc(isMus ? 'Hudba' : isPlace ? 'Kam zverejniť' : label.replace(/\s*\(napr\..*\)$/, ''))}</span>${ctl}${hint}</${tag}>`;
     }).join('');
     const phones = kind ? `<div class="fld"><span>Na ktorý telefón (môžeš vybrať viac)</span>${chipsHtml(defUdid ? [defUdid] : [])}</div>` : '';
-    const drop = kind ? phones + `<div class="fld"><span>${kind === 'reel' ? 'Video' : 'Fotky'} (voliteľné)</span>${dropHtml(kind)}<small class="hint">${kind === 'reel' ? 'Ak ho sem pretiahneš, pred plánovaním sa pošle' : 'Ak ich sem pretiahneš, pred plánovaním sa pošlú'} do galérie iPhonu ako najnovšie – AI tak vyberie presne ${kind === 'reel' ? 'toto video' : 'tieto fotky'}. Inak použije ${kind === 'reel' ? 'najnovšie video' : 'najnovšie fotky'}, ktoré už v iPhone sú.</small></div>` : '';
+    const drop = kind === 'story' ? phones + `<div class="fld"><span>Fotka alebo video (voliteľné)</span>${dropHtml(kind)}<small class="hint">Ak ju sem pretiahneš, najprv sa cez kábel pošle do galérie iPhonu ako najnovšia – AI ju tak dá do story. Inak použije najnovšiu fotku/video, ktoré už v iPhone sú.</small></div>`
+      : kind ? phones + `<div class="fld"><span>${kind === 'reel' ? 'Video' : 'Fotky'} (voliteľné)</span>${dropHtml(kind)}<small class="hint">${kind === 'reel' ? 'Ak ho sem pretiahneš, pred plánovaním sa pošle' : 'Ak ich sem pretiahneš, pred plánovaním sa pošlú'} do galérie iPhonu ako najnovšie – AI tak vyberie presne ${kind === 'reel' ? 'toto video' : 'tieto fotky'}. Inak použije ${kind === 'reel' ? 'najnovšie video' : 'najnovšie fotky'}, ktoré už v iPhone sú.</small></div>` : '';
     bg.innerHTML = `<div class="modal"><div class="mhead"><h3>${esc(title)}</h3>${clockBox()}</div>${drop}${fields}<div class="mact"><button data-x>Zrušiť</button><button class="go" data-ok>Vložiť príkaz</button></div></div>`;
     const stopClock = startClock(bg);
     document.body.appendChild(bg);
@@ -543,7 +544,7 @@ function askVars(title, vars, kind, defUdid) {
         if (!out.phones.length) return alert('Vyber aspoň jeden telefón.');
       }
       if (dst) {
-        if (!planReady(dst, kind === 'reel' ? 'Video' : 'Fotky')) return;
+        if (!planReady(dst, kind === 'story' ? 'Story' : kind === 'reel' ? 'Video' : 'Fotky')) return;
         out.files = planFiles(dst);
         if (out.files.length > 20) return alert('Carousel môže mať najviac 20 fotiek.');
         if (!dupCheck([{ files: out.files, phones: out.phones }])) return;
@@ -569,9 +570,9 @@ async function applyTemplateByName(name, target) {
   }
   delete target.dataset.maxSteps; delete target.dataset.plan;
   let text = t.text, files = [], phones = [], meta = null;
-  const kind = /Meta Business Suite/.test(t.text) && /naplánuj/i.test(t.name) ? (/reel/i.test(t.name) ? 'reel' : /carousel/i.test(t.name) ? 'carousel' : null) : null;
+  const kind = /story/i.test(t.name) ? 'story' : /Meta Business Suite/.test(t.text) && /naplánuj/i.test(t.name) ? (/reel/i.test(t.name) ? 'reel' : /carousel/i.test(t.name) ? 'carousel' : null) : null;
   const vars = [...new Set(text.match(/\[[^\]]+\]/g) || [])];
-  if (vars.length) {
+  if (vars.length || kind) {
     const vals = await askVars(t.name, vars, kind, defUdid);
     if (!vals) return false;
     vars.forEach((v, i) => { text = text.split(v).join(vals[i]); });
@@ -580,7 +581,7 @@ async function applyTemplateByName(name, target) {
   if (kind) {
     const title = splitName(t.name)[1];
     target.dataset.plan = JSON.stringify(phones.map((u) => ({ udid: u, title, task: text, files, maxSteps: 120, meta })));
-    target.value = `📦 ${title} → ${phones.map(phoneLabel).join(', ')}` + (files.length ? `: najprv pošlem ${files.length === 1 ? files[0].name : files.length + ' fotiek'} do galérie (bude na 1. mieste), potom to AI naplánuje.` : '') + `\n(Tento text neupravuj – stlač Spustiť.)\n\n${text}`;
+    target.value = `📦 ${title} → ${phones.map(phoneLabel).join(', ')}` + (files.length ? `: najprv pošlem ${files.length === 1 ? files[0].name : files.length + ' fotiek'} do galérie (bude na 1. mieste), potom to AI ${kind === 'story' ? 'pridá do story' : 'naplánuje'}.` : '') + `\n(Tento text neupravuj – stlač Spustiť.)\n\n${text}`;
     target.focus();
     return true;
   }

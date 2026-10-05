@@ -6,6 +6,7 @@
   .in{display:grid;justify-items:center;gap:16px;text-align:center;padding:24px}
   img{width:110px;height:110px;border-radius:28px;box-shadow:0 20px 60px rgba(255,61,104,.35)}
   h1{margin:0;font-size:30px;letter-spacing:.01em}
+  .tx{display:grid;justify-items:center;gap:4px}.by{font-size:16px;font-weight:600;color:rgba(255,255,255,.88)}.role{font-size:12.5px;color:#ff8aa5;letter-spacing:.04em}
   .bar{width:220px;height:4px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden}
   .bar i{display:block;height:100%;width:40%;border-radius:4px;background:linear-gradient(90deg,#ff4f76,#e8285a);animation:m 1.2s ease-in-out infinite}
   @keyframes m{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
@@ -18,7 +19,7 @@
 </style></head>
 <body><div class="in">
   <img src="tray@2x.png" alt="">
-  <h1>Juraj Dvorščák</h1>
+  <div class="tx"><h1>Phone Studio</h1><div class="by">Juraj Dvorščák</div><div class="role">Tvorca editorov: Tait</div></div>
   <div class="bar" id="bar"><i></i></div>
   <div class="sub" id="msg">Spúšťam JD Phone Studio…</div>
   <div class="err" id="err" hidden></div>

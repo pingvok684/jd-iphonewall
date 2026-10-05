@@ -325,12 +325,15 @@
   .sp-logo { width: min(34vw, 220px); height: auto; filter: drop-shadow(0 18px 40px rgba(255,61,104,.35)); animation: spPop .9s cubic-bezier(.2,.9,.25,1.2) both; }
   .sp-name { font: 700 clamp(30px, 6vw, 64px)/1.1 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: -.02em; color: #fff; text-align: center;
     animation: spUp .9s .25s ease both; }
+  .sp-txt { display: grid; justify-items: center; gap: 6px; }
+  .sp-by { font: 600 clamp(16px, 2.6vw, 24px)/1.2 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: rgba(255,255,255,.88); text-align: center; animation: spUp .6s .3s ease both; }
+  .sp-role { font: 500 clamp(12px, 1.6vw, 15px)/1.3 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #ff8aa5; letter-spacing: .04em; text-align: center; animation: spUp .6s .4s ease both; }
   .sp-bar { width: min(240px, 50vw); height: 3px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; animation: spUp .6s .4s ease both; }
   .sp-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff6a8b, #ff3d68); animation: spLoad 2.6s .3s linear forwards; }
   @keyframes spPop { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
   @keyframes spUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
   @keyframes spLoad { to { width: 100%; } }
-  @media (prefers-reduced-motion: reduce) { .sp-logo, .sp-name, .sp-bar, .sp-bar i { animation: none; } .sp-bar i { width: 100%; } }
+  @media (prefers-reduced-motion: reduce) { .sp-logo, .sp-name, .sp-by, .sp-role, .sp-bar, .sp-bar i { animation: none; } .sp-bar i { width: 100%; } }
   /* ---------- posuvník (scrollbar) – ladí so stránkou, dobre viditeľný ---------- */
   /* Firefox (Chrome/Safari používajú štýl nižšie) */
   @supports (-moz-appearance: none) { * { scrollbar-width: auto; scrollbar-color: #ff4f76 rgba(255,255,255,.06); } }
@@ -649,7 +652,9 @@
 <div id="splash" aria-hidden="true">
   <div class="sp-in">
     <img src="/ikona.png" alt="" class="sp-logo">
-    <div class="sp-name">Juraj Dvorščák</div>
+    <div class="sp-txt"><div class="sp-name">Phone Studio</div>
+    <div class="sp-by">Juraj Dvorščák</div>
+    <div class="sp-role">Tvorca editorov: Tait</div></div>
     <div class="sp-bar"><i></i></div>
   </div>
 </div>
@@ -663,13 +668,16 @@
     <a href="#telefony" data-v="telefony"><span data-icon="phone"></span><span class="t">Telefóny</span><span class="badge" id="navCount">0</span></a>
     <a href="#kalendar" data-v="kalendar"><span data-icon="calendar"></span><span class="t">Kalendár</span></a>
     <a href="#kniznica" data-v="kniznica"><span data-icon="folder"></span><span class="t">Knižnica</span></a>
-    <a href="#statistiky" data-v="statistiky"><span data-icon="chart"></span><span class="t">Štatistiky</span></a>
-    <a href="#prieskumy" data-v="prieskumy"><span data-icon="search"></span><span class="t">Prieskumy</span></a>
-    <a class="navmore" id="navMore" role="button" tabindex="0"><span data-icon="grid"></span><span class="t">Viac</span><span class="chev">▾</span></a>
-    <div class="navsub" id="navSub" hidden>
-      <a href="#aktivita" data-v="aktivita"><span data-icon="pulse"></span><span class="t">Aktivita</span></a>
+    <a class="navmore" id="navTools" data-sub="navToolsSub" data-key="jd-navtools" role="button" tabindex="0"><span data-icon="wand"></span><span class="t">Nástroje</span><span class="chev">▾</span></a>
+    <div class="navsub" id="navToolsSub" hidden>
       <a href="#realism" data-v="realism"><span data-icon="image"></span><span class="t">Tait - Realism filter</span></a>
       <a href="#magnific" data-v="magnific"><span data-icon="wand"></span><span class="t">Magnific</span><span class="badge soon">čoskoro</span></a>
+    </div>
+    <a href="#statistiky" data-v="statistiky"><span data-icon="chart"></span><span class="t">Štatistiky</span></a>
+    <a href="#prieskumy" data-v="prieskumy"><span data-icon="search"></span><span class="t">Prieskumy</span></a>
+    <a class="navmore" id="navMore" data-sub="navSub" data-key="jd-navmore" role="button" tabindex="0"><span data-icon="grid"></span><span class="t">Viac</span><span class="chev">▾</span></a>
+    <div class="navsub" id="navSub" hidden>
+      <a href="#aktivita" data-v="aktivita"><span data-icon="pulse"></span><span class="t">Aktivita</span></a>
     </div>
   </nav>
   <div class="grow"></div>
@@ -1388,7 +1396,7 @@ function route() {
   view = document.getElementById('v-' + v) ? v : 'prehlad';
   document.querySelectorAll('.view').forEach((s) => s.classList.toggle('on', s.id === 'v-' + view));
   document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.v === view));
-  if (document.querySelector(`#navSub a[data-v="${view}"]`)) setNavMore(true);
+  const grp = document.querySelector(`.navsub a[data-v="${view}"]`); if (grp) setNavGroup(document.querySelector(`.navmore[data-sub="${grp.parentElement.id}"]`), true);
   if (view === 'prehlad') loadOverview();
   if (view === 'aktivita') loadActivity();
   if (view === 'realism') { const fr = document.getElementById('realismFrame'); if (!fr.src) fr.src = '/tools/realism.html'; }
@@ -1397,13 +1405,17 @@ function route() {
   if (view === 'aktualizacie') checkUpdate(false);
 }
 window.addEventListener('hashchange', route);
-// menu „Viac“ (Aktivita, Tait, Magnific)
-function setNavMore(open) {
-  document.getElementById('navSub').hidden = !open; document.getElementById('navMore').classList.toggle('open', open);
-  try { localStorage.setItem('jd-navmore', open ? '1' : ''); } catch (_) {}
+// rozbaľovacie skupiny v menu: „Nástroje“ (Tait, Magnific) a „Viac“ (Aktivita)
+function setNavGroup(btn, open) {
+  if (!btn) return;
+  document.getElementById(btn.dataset.sub).hidden = !open; btn.classList.toggle('open', open);
+  try { localStorage.setItem(btn.dataset.key, open ? '1' : ''); } catch (_) {}
 }
-document.getElementById('navMore').onclick = () => setNavMore(document.getElementById('navSub').hidden);
-try { if (localStorage.getItem('jd-navmore')) setNavMore(true); } catch (_) {}
+document.querySelectorAll('.navmore[data-sub]').forEach((b) => {
+  b.onclick = () => setNavGroup(b, document.getElementById(b.dataset.sub).hidden);
+  b.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); b.click(); } };
+  try { if (localStorage.getItem(b.dataset.key)) setNavGroup(b, true); } catch (_) {}
+});
 
 // ---------- PREHĽAD ----------
 const DAYS = ['ne', 'po', 'ut', 'st', 'št', 'pi', 'so'];
