@@ -1,5 +1,5 @@
 {
-  "version": "2026.10.05-0054",
-  "date": "2026-10-04",
-  "notes": "Kalendár, Knižnica médií, Štatistiky, Archív prieskumov, profily telefónov, plánovanie s pretiahnutím médií, AI návrhy popisov (Claude/KIE), Windows verzia a opravy."
+  "version": "2026.10.05-0808",
+  "date": "2026-10-05",
+  "notes": "Nové sekcie Novinky a Aktualizácie; Oprava aktualizácií (nové súbory sa už stiahnu); Návrhy popisov cez KIE vidia fotky"
 }

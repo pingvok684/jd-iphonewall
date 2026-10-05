@@ -290,6 +290,20 @@
   .modal .lgrid .lit.on { border-color: var(--accent) !important; }
   .modal .capsug .capopt { background: rgba(255,61,104,.07) !important; border: 1px solid rgba(255,61,104,.3) !important; text-align: left; justify-content: flex-start; white-space: pre-wrap; }
   .modal .capsug .capopt:hover { background: rgba(255,61,104,.14) !important; }
+  /* ---------- aktualizácie / novinky ---------- */
+  .updbox { max-width: 640px; }
+  .updnew { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: rgba(255,61,104,.07); border: 1px solid rgba(255,61,104,.3); font-size: 13px; }
+  .updnew b { display: block; margin-bottom: 6px; }
+  .updnew ul, .nitem ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+  .news { display: grid; gap: 12px; max-width: 760px; }
+  .nitem { position: relative; padding: 16px 18px 16px 22px; border-radius: var(--r); background: var(--panel); border: 1px solid var(--line); }
+  .nitem::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 3px; background: var(--line-2); }
+  .nitem.cur::before { background: var(--ok); } .nitem.pending::before { background: var(--accent); }
+  .nitem h3 { margin: 0 0 8px; font-size: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .nitem h3 small { color: var(--muted); font-weight: 500; }
+  .nitem .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .nitem.cur .tag { background: rgba(61,220,151,.15); color: var(--ok); } .nitem.pending .tag { background: rgba(255,61,104,.15); color: var(--accent-2); }
+  .nitem ul { color: var(--text); font-size: 13.5px; }
   /* ---------- Magnific ---------- */
   .mgform { display: grid; grid-template-columns: 170px 1fr; gap: 14px; }
   .mgform .fields { display: flex; flex-direction: column; gap: 8px; }
@@ -473,7 +487,7 @@
   </nav>
   <div class="grow"></div>
   <div class="sbox"><b><span class="dot" id="sDot"></span><span id="sTitle">Načítavam…</span></b><span id="sSub"></span></div>
-  <nav class="nav"><a href="#navod" data-v="navod"><span data-icon="book"></span><span class="t">Návod</span></a><a href="#nastavenia" data-v="nastavenia"><span data-icon="gear"></span><span class="t">Nastavenia</span><span class="badge upd" id="navUpd" hidden>nové</span></a></nav>
+  <nav class="nav"><a href="#novinky" data-v="novinky"><span data-icon="spark"></span><span class="t">Novinky</span><span class="badge upd" id="navNews" hidden>nové</span></a><a href="#aktualizacie" data-v="aktualizacie"><span data-icon="refresh"></span><span class="t">Aktualizácie</span><span class="badge upd" id="navUpd" hidden>1</span></a><a href="#navod" data-v="navod"><span data-icon="book"></span><span class="t">Návod</span></a><a href="#nastavenia" data-v="nastavenia"><span data-icon="gear"></span><span class="t">Nastavenia</span></a></nav>
 </aside>
 
 <main>
@@ -575,6 +589,23 @@
     <div class="vhead"><div><h2>Archív prieskumov</h2><div class="sub">Výsledky šablóny „🔎 Prieskum reels“ – hooky, trendy, hudba</div></div><div class="sp"></div>
       <input id="resQ" class="resq" placeholder="Hľadať (napr. hook, gym, pesnička…)"></div>
     <div class="reslist" id="resList"></div>
+  </section>
+
+  <!-- AKTUALIZÁCIE -->
+  <section class="view" id="v-aktualizacie">
+    <div class="vhead"><div><h2>Aktualizácie</h2><div class="sub">Nové verzie stránky – inštalujú sa jedným klikom, tvoje nastavenia, kľúče a šablóny ostanú</div></div></div>
+      <div class="panel updbox" id="updPanel"><h3><span data-icon="refresh"></span>Stav</h3>
+        <div class="kv"><span>Tvoja verzia</span><b id="updCur">—</b></div>
+        <div class="kv"><span>Najnovšia</span><b id="updLatest">—</b></div>
+        <div class="updnew" id="updNotes" hidden></div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button id="updCheck">Skontrolovať</button><button class="go" id="updApply" hidden>Aktualizovať teraz</button></div>
+        <p class="sub" id="updMsg" style="margin-top:8px"></p></div>
+  </section>
+
+  <!-- NOVINKY -->
+  <section class="view" id="v-novinky">
+    <div class="vhead"><div><h2>Novinky</h2><div class="sub">Čo pribudlo v jednotlivých verziách</div></div><div class="sp"></div><span class="chip" id="newsCur"></span></div>
+    <div class="news" id="newsList"></div>
   </section>
 
   <!-- AKTIVITA -->
@@ -881,12 +912,6 @@
   <section class="view" id="v-nastavenia">
     <div class="vhead"><div><h2>Nastavenia</h2></div></div>
     <div class="sgrid">
-      <div class="panel" id="updPanel"><h3><span data-icon="refresh"></span>Aktualizácie</h3>
-        <div class="kv"><span>Tvoja verzia</span><b id="updCur">—</b></div>
-        <div class="kv"><span>Najnovšia</span><b id="updLatest">—</b></div>
-        <p class="sub" id="updNotes" style="margin:10px 0 0;white-space:pre-line"></p>
-        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button id="updCheck">Skontrolovať</button><button class="go" id="updApply" hidden>Aktualizovať teraz</button></div>
-        <p class="sub" id="updMsg" style="margin-top:8px"></p></div>
       <div class="panel" id="remPanel"><h3><span data-icon="phone"></span>Prístup z mobilu<span class="sp"></span><a class="lnk" href="/logout" id="remLogout" hidden>Odhlásiť</a></h3>
         <p>Stránku otvoríš aj z mobilu mimo domu – cez Cloudflare (návod je v sekcii Návod). Prístup chráni prihlásenie e-mailom v Cloudflare a tento PIN.</p>
         <div class="kv"><span>PIN</span><b id="pinState">—</b></div>
@@ -1022,7 +1047,8 @@ async function checkUpdate(force) {
   $('navUpd').hidden = !u.available;
   $('updCur').textContent = u.current || '—';
   $('updLatest').textContent = !u.configured ? 'aktualizácie nie sú nastavené' : u.error ? 'nedá sa zistiť' : (u.latest || '—') + (u.available ? '' : ' ✓');
-  $('updNotes').textContent = u.available && u.notes ? 'Čo je nové:\n' + u.notes : '';
+  $('updNotes').hidden = !(u.available && u.notes);
+  $('updNotes').innerHTML = u.available && u.notes ? `<b>Čo prinesie verzia ${esc(u.latest)}:</b>${notesHtml(u.notes)}` : '';
   $('updApply').hidden = !u.available;
   $('updMsg').textContent = u.error ? u.error : u.available ? '' : u.configured ? 'Máš najnovšiu verziu.' : '';
 }
@@ -1070,6 +1096,24 @@ document.getElementById('remUrlBtn').onclick = () => {
   if (u != null) pinApi({ remoteUrl: u });
 };
 
+// ---------- novinky ----------
+const notesHtml = (t) => `<ul>${String(t || '').split(/\s*[;\n]\s*/).filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+const fmtVer = (v, d) => { const m = String(v).match(/^(\d{4})\.(\d{2})\.(\d{2})-(\d{2})(\d{2})$/); return m ? `${+m[3]}. ${+m[2]}. ${m[1]} · ${m[4]}:${m[5]}` : (d || v); };
+async function loadNews() {
+  let c; try { c = await (await fetch('/api/changelog')).json(); } catch (_) { return; }
+  document.getElementById('newsCur').textContent = 'Tvoja verzia: ' + (c.current || '—');
+  document.getElementById('newsList').innerHTML = (c.items || []).map((x) => {
+    const cls = x.version === c.current ? 'cur' : !x.installed ? 'pending' : '';
+    const tag = x.version === c.current ? '<span class="tag">nainštalovaná</span>' : !x.installed ? '<span class="tag">nová – <a href="#aktualizacie">aktualizovať</a></span>' : '';
+    return `<div class="nitem ${cls}"><h3>${esc(fmtVer(x.version, x.date))}${tag}<small>${esc(x.version)}</small></h3>${notesHtml(x.notes)}</div>`;
+  }).join('') || '<div class="empty">Zatiaľ žiadne novinky.</div>';
+  try { if (c.current) localStorage.setItem('jd-news-seen', c.current); } catch (_) {}
+  document.getElementById('navNews').hidden = true;
+}
+// odznak „nové“ pri Novinkách po nainštalovaní novej verzie
+fetch('/api/changelog').then((r) => r.json()).then((c) => { let seen = ''; try { seen = localStorage.getItem('jd-news-seen') || ''; } catch (_) {}
+  document.getElementById('navNews').hidden = !c.current || seen === c.current || !(c.items || []).length; }).catch(() => {});
+
 // ---------- navigácia ----------
 let view = '';
 function route() {
@@ -1081,6 +1125,8 @@ function route() {
   if (view === 'aktivita') loadActivity();
   if (view === 'realism') { const fr = document.getElementById('realismFrame'); if (!fr.src) fr.src = '/tools/realism.html'; }
   if (view === 'nastavenia') { loadSettings(); loadPin(); }
+  if (view === 'novinky') loadNews();
+  if (view === 'aktualizacie') checkUpdate(false);
 }
 window.addEventListener('hashchange', route);
 

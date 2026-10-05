@@ -1,0 +1,17 @@
+[
+  {
+    "version": "2026.10.05-0808",
+    "date": "2026-10-05",
+    "notes": "Nové sekcie Novinky a Aktualizácie; Oprava aktualizácií (nové súbory sa už stiahnu); Návrhy popisov cez KIE vidia fotky"
+  },
+  {
+    "version": "2026.10.05-0054",
+    "date": "2026-10-04",
+    "notes": "Kalendár príspevkov; Knižnica médií; Štatistiky účtov; Archív prieskumov; Profily telefónov (@účet, farba); Plánovanie s pretiahnutím videa/fotiek; ✨ AI návrhy popisov (Claude/KIE); Windows verzia; Opravy"
+  },
+  {
+    "version": "2026.10.04-0217",
+    "date": "2026-10-04",
+    "notes": "Prvá verzia s automatickými aktualizáciami"
+  }
+]

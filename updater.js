@@ -13,8 +13,11 @@ const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(path.join(R
 // čo smie aktualizácia prepísať (nič iné sa nikdy nemení)
 const ALLOWED_FILES = new Set(['server.js', 'agent.js', 'media.js', 'store.js', 'magnific.js', 'templates.js', 'updater.js',
   'install.command', 'START_STRANKY.command', 'NAVOD.html', 'README.md', 'version.json', 'update.json',
-  'START_STRANKY.bat', 'install-windows.bat', 'install-windows.ps1', 'WebDriverAgent.ipa', 'auth.js', 'content.js']);
+  'START_STRANKY.bat', 'install-windows.bat', 'install-windows.ps1', 'WebDriverAgent.ipa', 'auth.js', 'content.js', 'changelog.json']);
 const ALLOWED_DIRS = ['public/'];
+// aby budúce verzie mohli pridať nové súbory: povolené sú aj ďalšie súbory v hlavnom priečinku s týmito príponami
+const ALLOWED_EXT = /^[\w.-]+\.(js|command|bat|ps1|html|md|txt|ipa)$/i;
+const PROTECTED = new Set(['config.json', 'templates.json', 'labels.json']); // tvoje nastavenia sa nikdy neprepíšu
 
 const local = () => readJson('version.json', { version: '0' });
 const source = () => readJson('update.json', {}).repo || '';
@@ -68,7 +71,7 @@ async function apply() {
     const src = path.join(tmp, top.name);
     if (!fs.existsSync(path.join(src, 'server.js')) || !fs.existsSync(path.join(src, 'version.json'))) throw new Error('V repozitári chýba server.js alebo version.json');
 
-    const files = walk(src).filter((f) => ALLOWED_FILES.has(f) || ALLOWED_DIRS.some((d) => f.startsWith(d)));
+    const files = walk(src).filter((f) => !PROTECTED.has(f) && (ALLOWED_FILES.has(f) || ALLOWED_DIRS.some((d) => f.startsWith(d)) || (!f.includes('/') && ALLOWED_EXT.test(f))));
     // najprv záloha, aby sa dalo vrátiť
     const backup = path.join(ROOT, 'data', 'backup-' + local().version.replace(/[^\w.-]/g, '_'));
     for (const f of files) {
@@ -90,4 +93,19 @@ async function apply() {
   }
 }
 
-module.exports = { check, apply, local };
+// novinky: zoznam verzií s popisom (najnovšie prvé); berie sa z GitHubu, inak z lokálneho súboru
+async function changelog() {
+  const loc = readJson('changelog.json', []);
+  const repo = source();
+  let list = loc;
+  if (repo) {
+    try {
+      const r = await fetch(`${RAW}/${repo}/main/changelog.json?t=${Date.now()}`, { headers: { 'cache-control': 'no-cache' } });
+      if (r.ok) { const j = await r.json(); if (Array.isArray(j) && j.length) list = j; }
+    } catch (_) {}
+  }
+  const cur = local().version;
+  return { current: cur, items: list.map((x) => ({ ...x, installed: String(x.version) <= String(cur) })) };
+}
+
+module.exports = { check, apply, local, changelog };

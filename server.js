@@ -803,6 +803,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ---------- aktualizácie ----------
+  if (url.pathname === '/api/changelog' && req.method === 'GET') return json(res, 200, await updater.changelog());
   if (url.pathname === '/api/update' && req.method === 'GET') {
     try { return json(res, 200, await updater.check(url.searchParams.get('force') === '1')); }
     catch (e) { return json(res, 200, { configured: true, current: updater.local().version, error: e.message }); }
