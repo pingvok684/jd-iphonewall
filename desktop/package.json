@@ -18,6 +18,7 @@
   },
   "build": {
     "appId": "sk.jd.phonestudio",
+    "publish": null,
     "productName": "JD Phone Studio",
     "artifactName": "JD-PhoneStudio-${os}-${arch}.${ext}",
     "directories": { "output": "dist", "buildResources": "build" },
