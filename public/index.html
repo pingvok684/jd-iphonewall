@@ -397,6 +397,10 @@
   .mitem2 { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px;
     background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); }
   .mtit { font-weight: 600; font-size: 13px; color: var(--accent-2); }
+  .mkinds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modal .mkind { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(255,255,255,.03) !important; color: var(--text); text-align: left; display: grid; gap: 2px; font-weight: 600; font-size: 14px; min-width: 0; }
+  .modal .mkind small { color: var(--muted); font-weight: 400; font-size: 11.5px; }
+  .modal .mkind.on { border-color: #ff5b80 !important; background: rgba(255,61,104,.12) !important; }
   .modal .fld { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); }
   .pdrop .drop { margin: 0; display: grid; place-items: center; min-height: 92px; padding: 12px; border-radius: 14px; border: 1.5px dashed rgba(255,255,255,.22); background: rgba(0,0,0,.18); }
   .pdrop .drop > div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -632,6 +636,13 @@
   .usbdevs div{display:flex;gap:8px;min-width:0}.usbdevs span{color:var(--faint,#6b7080);flex:none}.usbdevs b{font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .usbhow{margin:6px 0 10px;font-size:13px}.usbhow summary{cursor:pointer;color:var(--acc,#ff3d68);font-weight:600}
   .usbhow ol{padding-left:20px;margin:8px 0;display:grid;gap:6px}.usbhow ol ol{margin:6px 0 0}
+  .schow { margin: 8px 0 12px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); font-size: 13px; }
+  .schow h4 { margin: 4px 0 8px; font-size: 13.5px; } .schow h4 + p { margin-top: 0; }
+  .scrow { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: start; margin-bottom: 10px; }
+  .scrow ol { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+  .scqr { width: 150px; padding: 8px; border-radius: 12px; margin: 0; }
+  .schow .btn { display: inline-block; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line-2); text-decoration: none; color: var(--text); font-weight: 600; margin-bottom: 6px; }
+  @media (max-width: 600px) { .scrow { grid-template-columns: 1fr; } .scqr { width: 170px; } }
 </style>
 </head>
 <body>
@@ -900,7 +911,7 @@
           <li><b>Dôveruj aplikácii</b>: <code>Nastavenia → Všeobecné → VPN a správa zariadení → Apple Development: tvoj e-mail → Dôverovať</code> → a ťukni <b>Verify App / Overiť aplikáciu</b> (iPhone musí mať internet).</li>
           <li><b>UI Automation</b>: <code>Nastavenia → Vývojár → Enable UI Automation → Zapnúť</code>.</li>
           <li><b>Nezamykanie</b>: <code>Nastavenia → Displej a jas → Automatické zamknutie → Nikdy</code>. iPhone nechaj na nabíjačke.</li>
-          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): aplikácia <b>Skratky</b> → <code>+</code> → názov <b>JD Save</b> (presne takto) → pridaj akciu <code>Získať obsah URL</code> (URL = <i>Vstup skratky</i>) → pridaj akciu <code>Uložiť do fotoalbumu</code> (album Nedávne). Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>. Pre rýchlejšie posielanie <b>cez kábel</b> pozri Nastavenia → Fotky a videá.</li>
+          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): stiahni hotovú – <b>Nastavenia → Fotky a videá</b> → naskenuj QR kód iPhonom → <b>Pridať skratku</b> → vyber priečinok <b>Na mojom iPhone → WebDriverAgentRunner-Runner</b>. Potom v iPhone <b>Nastavenia → Aplikácie → Skratky → Rozšírené</b> → zapni <b>Povoliť mazanie bez potvrdenia</b>. Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>.</li>
           <li>Prihlás sa do <b>Instagramu</b> a do aplikácie <b>Meta Business Suite</b> (na plánovanie príspevkov).</li>
         </ol>
       </div>
@@ -933,7 +944,7 @@
           <dt>install.command: „CodeSign failed / resource fork“</dt><dd>Spusti install.command znova (opravené). Ak to pretrváva, presuň priečinok mimo Plochy, napr. do domovského priečinka.</dd>
           <dt>Xcode: „Any iOS Device“ / iPhone nie je v zozname</dt><dd>Vyber konkrétny iPhone hore v Xcode, odomkni ho a počkaj, kým ho Xcode pripraví.</dd>
           <dt>Po ~7 dňoch prestal obraz (bezplatné Apple ID)</dt><dd>Podpis aplikácie vyprší. Spusti install.command znova a potom START_STRANKY.</dd>
-          <dt>Fotka/video sa neobjaví v galérii</dt><dd>Skontroluj, či sa skratka volá presne <b>JD Save</b> a má akciu <i>Uložiť do fotoalbumu</i>, a či si povolil prístup.</dd>
+          <dt>Fotka/video sa neobjaví v galérii</dt><dd>Skontroluj, či sa skratka volá presne <b>JD Save</b> (stiahni ju znova cez QR kód v Nastaveniach → Fotky a videá) a či si povolil prístup.</dd>
           <dt>AI hlási chybu modelu / kľúča</dt><dd>Skontroluj Claude API kľúč v Nastaveniach a kredit na console.anthropic.com.</dd>
         </dl>
         <p class="gnote">Pri AI obsahu zapínaj na Instagrame označenie <b>AI info</b>. API kľúče nikomu neposielaj – každý kamarát si dá vlastný.</p>
@@ -1009,7 +1020,7 @@
           <li><b>Dôveruj aplikácii</b>: <code>Nastavenia → Všeobecné → VPN a správa zariadení → tvoj Apple ID e-mail → Dôverovať</code>.</li>
           <li><b>UI Automation</b>: <code>Nastavenia → Vývojár → Enable UI Automation → Zapnúť</code>.</li>
           <li><b>Nezamykanie</b>: <code>Nastavenia → Displej a jas → Automatické zamknutie → Nikdy</code>. iPhone nechaj na nabíjačke.</li>
-          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): aplikácia <b>Skratky</b> → <code>+</code> → názov <b>JD Save</b> (presne takto) → pridaj akciu <code>Získať obsah URL</code> (URL = <i>Vstup skratky</i>) → pridaj akciu <code>Uložiť do fotoalbumu</code> (album Nedávne). Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>. Pre rýchlejšie posielanie <b>cez kábel</b> pozri Nastavenia → Fotky a videá.</li>
+          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): stiahni hotovú – <b>Nastavenia → Fotky a videá</b> → naskenuj QR kód iPhonom → <b>Pridať skratku</b> → vyber priečinok <b>Na mojom iPhone → WebDriverAgentRunner-Runner</b>. Potom v iPhone <b>Nastavenia → Aplikácie → Skratky → Rozšírené</b> → zapni <b>Povoliť mazanie bez potvrdenia</b>. Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>.</li>
           <li>Prihlás sa do <b>Instagramu</b> a do aplikácie <b>Meta Business Suite</b> (na plánovanie príspevkov).</li>
         </ol>
       </div>
@@ -1045,7 +1056,7 @@
           <dt>Po ~7 dňoch prestal obraz</dt><dd>Podpis z bezplatného Apple ID vypršal. V Sideloadly znova pretiahni WebDriverAgent.ipa → Start, potom reštartuj START_STRANKY.bat.</dd>
           <dt>Nevidím obraz (iOS 17 a novší)</dt><dd>Musí bežať malé okno „go-ios tunel“. Zavri všetky okná stránky a spusti START_STRANKY.bat znova.</dd>
           <dt>Sideloadly: „maximum number of apps“</dt><dd>Bezplatné Apple ID dovolí len 3 vlastné aplikácie na iPhone. Zmaž z iPhonu iné aplikácie nahraté cez Sideloadly a skús znova.</dd>
-          <dt>Fotka/video sa neobjaví v galérii</dt><dd>Skontroluj, či sa skratka volá presne <b>JD Save</b> a má akciu <i>Uložiť do fotoalbumu</i>, a či si povolil prístup.</dd>
+          <dt>Fotka/video sa neobjaví v galérii</dt><dd>Skontroluj, či sa skratka volá presne <b>JD Save</b> (stiahni ju znova cez QR kód v Nastaveniach → Fotky a videá) a či si povolil prístup.</dd>
           <dt>AI hlási chybu modelu / kľúča</dt><dd>Skontroluj Claude API kľúč v Nastaveniach a kredit na console.anthropic.com.</dd>
         </dl>
         <p class="gnote">Pri AI obsahu zapínaj na Instagrame označenie <b>AI info</b>. API kľúče nikomu neposielaj – každý kamarát si dá vlastný.</p>
@@ -1140,23 +1151,19 @@
         <label class="ctl usbtog"><input type="checkbox" id="mediaUsb"> <span><b>Najprv cez kábel (USB)</b> – rýchlejšie, bez internetu. Keď to nejde, automaticky sa použije internet.</span></label>
         <div id="usbDevs" class="usbdevs"></div>
         <button id="usbRetry" style="margin:0 0 8px">Skúsiť kábel znova</button>
-        <details class="usbhow"><summary>Ako nastaviť posielanie cez kábel (raz na každom iPhone)</summary>
-          <ol>
-            <li><b>Sideloadly:</b> nahraj do iPhonu <b>nový WebDriverAgent.ipa</b> (rovnako ako pri obnove podpisu). <b>Xcode režim (Mac):</b> netreba nič – stačí reštartovať stránku, WebDriverAgent sa prestavia sám.</li>
-            <li>Pošli do iPhonu jednu fotku – vytvorí sa priečinok. Over: aplikácia <b>Súbory</b> → <b>Na mojom iPhone</b> → <b>WebDriverAgentRunner-Runner</b>.</li>
-            <li>Uprav skratku <b>JD Save</b> v aplikácii Skratky takto:
-              <ol type="a">
-                <li>Na začiatok pridaj <code>Ak</code> (If): <i>Vstup skratky</i> <b>má akúkoľvek hodnotu</b> (has any value).</li>
-                <li>Do vetvy <b>Ak</b> presuň doterajšie akcie <code>Získať obsah URL</code> a <code>Uložiť do fotoalbumu</code>.</li>
-                <li>Do vetvy <b>Inak</b> (Otherwise) pridaj <code>Získať obsah priečinka</code> (Get Contents of Folder) → priečinok <b>WebDriverAgentRunner-Runner</b>.</li>
-                <li>Pod to <code>Filtrovať súbory</code> (Filter Files) → <b>Názov</b> (Name) <b>začína na</b> (begins with) <code>JD-</code>.</li>
-                <li>Pod to <code>Uložiť do fotoalbumu</code> (Save to Photo Album).</li>
-                <li>Pod to <code>Vymazať súbory</code> (Delete Files) a vypni <b>Potvrdiť pred vymazaním</b>. Vstupy sa prepoja samé – netreba nič vyberať.</li>
-              </ol></li>
-            <li>Klikni tu <b>Skúsiť kábel znova</b> a pošli fotku. Pri prvom spustení povoľ prístup (<b>Vždy povoliť</b>). Pri telefóne sa tu zobrazí <b>kábel: funguje ✓</b>.</li>
-          </ol>
-          <p class="sub">Telefón musí byť pripojený káblom k tomuto počítaču. Telefóny bez upravenej skratky budú posielať cez internet ako doteraz.</p>
-        </details>
+        <div class="schow">
+          <h4>Skratka JD Save do iPhonu</h4>
+          <div class="scrow"><div class="qrbox scqr" id="scQr"></div>
+            <ol>
+              <li>Na iPhone otvor <b>Fotoaparát</b>, namier ho na QR kód a ťukni na odkaz → <b>Stiahnuť</b>.</li>
+              <li>Otvor stiahnutý súbor (Safari → ⬇ <b>Stiahnuté</b>, alebo <b>Súbory → Stiahnuté</b>) → <b>Pridať skratku</b>. Ak už skratku <b>JD Save</b> máš, najprv starú zmaž.</li>
+              <li>Pri pridaní vyber priečinok <b>Na mojom iPhone → WebDriverAgentRunner-Runner</b>. Objaví sa, keď je iPhone pripojený k tejto stránke (pri Sideloadly musí byť v iPhone najnovší <b>WebDriverAgent.ipa</b>).</li>
+            </ol></div>
+          <a class="btn ghost" href="/skratka" download="JD Save.shortcut">⬇ Stiahnuť skratku do počítača</a> <span class="sub">– na Macu ju potom pošli do iPhonu cez AirDrop.</span>
+          <h4>Vypni potvrdzovanie mazania</h4>
+          <p>V iPhone: <b>Nastavenia → Aplikácie → Skratky → Rozšírené</b> → zapni <b>Povoliť mazanie bez potvrdenia</b> (Allow Deleting Without Confirmation) aj <b>Povoliť mazanie veľkého množstva dát</b>. Inak sa iPhone pri každej fotke pýta. Pri prvej fotke ešte daj <b>Vždy povoliť</b> (prístup k priečinku a Fotkám).</p>
+          <p class="sub">Telefón musí byť pripojený káblom k tomuto počítaču. Keď kábel nejde, fotky idú cez internet ako doteraz.</p>
+        </div>
         <div class="kv"><span>Cesta</span><b id="setNet">—</b></div>
         <div class="kv"><span>Adresa tunela</span><b id="setTunnel">—</b></div>
         <div class="kv"><span>IP počítača v sieti</span><b id="setIp">—</b></div>
@@ -1553,6 +1560,7 @@ async function loadSettings() {
   document.getElementById('setIp').textContent = d.lanIp || '—';
   document.getElementById('cleanDays').value = String(d.cleanupDays || 0);
   document.getElementById('mediaUsb').checked = d.mediaUsb !== false;
+  { const q = document.getElementById('scQr'); if (q && d.shortcutUrl && q.dataset.u !== d.shortcutUrl && window.QR) { q.dataset.u = d.shortcutUrl; q.innerHTML = QR.svg(d.shortcutUrl, { ecc: 'M', border: 2 }); } }
   document.getElementById('usbDevs').innerHTML = d.mediaUsb === false ? '' : (d.devices || []).map((x) => `<div><span>${esc(x.label || x.name || x.udid)} · kábel:</span><b style="color:${/funguje/.test(x.usb) ? 'var(--ok)' : x.usb ? 'var(--warn)' : 'var(--faint)'}" title="${esc(x.usb || '')}">${esc(x.usb || 'zatiaľ neskúšané')}</b></div>`).join('');
   renderTg(d.telegram || {});
   loadRemote();

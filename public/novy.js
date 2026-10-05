@@ -17,7 +17,7 @@ async function openWizard(opts = {}) {
   await Promise.all([loadLib(), loadRecentMusic()]);
   const pre = (opts.files || []).map(libItem).filter(Boolean);
   let kind = pre.length ? (pre[0].kind === 'video' ? 'reel' : 'carousel') : (opts.kind || 'reel');
-  const startFiles = pre.filter((x) => (kind === 'reel' ? x.kind === 'video' : x.kind === 'photo')).slice(0, kind === 'reel' ? 1 : 10)
+  const startFiles = pre.filter((x) => (kind === 'reel' ? x.kind === 'video' : x.kind === 'photo')).slice(0, kind === 'reel' ? 1 : 20)
     .map((it) => ({ id: it.id, name: it.name, url: `/lib/${it.id}`, video: it.kind === 'video', pct: 100 }));
   const all = phoneList();
   const selPhones = opts.udid && all.some((p) => p.udid === opts.udid) ? [opts.udid] : all.length === 1 ? [all[0].udid] : [];
@@ -29,7 +29,7 @@ async function openWizard(opts = {}) {
 
     <div class="wpane" data-p="0">
       <div class="wkinds"><button type="button" class="wkind" data-kind="reel"><b>🎬 Reel</b><small>1 video</small></button>
-        <button type="button" class="wkind" data-kind="carousel"><b>🖼️ Carousel</b><small>2 až 10 fotiek</small></button></div>
+        <button type="button" class="wkind" data-kind="carousel"><b>🖼️ Carousel</b><small>1 až 20 fotiek</small></button></div>
       <div class="fld"><span>Na ktorý účet (telefón) – môžeš vybrať viac</span>${chipsHtml(selPhones)}</div>
       <small class="hint" data-profhint></small>
     </div>
@@ -46,7 +46,7 @@ async function openWizard(opts = {}) {
       <small class="hint" data-hashtxt></small>
       <div class="fld"><span>Hudba</span>${musicHtml()}</div>
       <div class="fld"><span>Kam zverejniť</span>${placeHtml()}</div>
-      <label data-cntrow hidden><span>Počet fotiek (berú sa najnovšie v iPhone)</span><select data-cnt>${[2, 3, 4, 5, 6, 7, 8, 9, 10].map((k) => `<option${k === 3 ? ' selected' : ''}>${k}</option>`).join('')}</select></label>
+      <label data-cntrow hidden><span>Počet fotiek (berú sa najnovšie v iPhone)</span><select data-cnt>${Array.from({ length: 20 }, (_, k) => k + 1).map((k) => `<option${k === 3 ? ' selected' : ''}>${k}</option>`).join('')}</select></label>
     </div>
 
     <div class="wpane" data-p="3">
@@ -123,7 +123,7 @@ async function openWizard(opts = {}) {
     const b = e.target.closest('.lit'); if (!b) return;
     const it = libItem(b.dataset.id), k = st.files.findIndex((f) => f.id === it.id);
     if (k >= 0) st.files.splice(k, 1);
-    else { if (kind === 'reel') st.files = []; if (st.files.length >= 10) return alert('Carousel môže mať najviac 10 fotiek.'); st.files.push({ id: it.id, name: it.name, url: `/lib/${it.id}`, video: it.kind === 'video', pct: 100 }); }
+    else { if (kind === 'reel') st.files = []; if (st.files.length >= 20) return alert('Carousel môže mať najviac 20 fotiek.'); st.files.push({ id: it.id, name: it.name, url: `/lib/${it.id}`, video: it.kind === 'video', pct: 100 }); }
     st.render();
   };
 
@@ -178,8 +178,7 @@ async function openWizard(opts = {}) {
     if (i === 0) { if (!phones().length) { alert('Vyber aspoň jeden účet (telefón).'); return false; } }
     if (i === 1) {
       if (!planReady(st, kind === 'reel' ? 'Video' : 'Fotky')) return false;
-      if (kind === 'carousel' && st.files.length === 1) { alert('Carousel potrebuje aspoň 2 fotky.'); return false; }
-      if (st.files.length > 10) { alert('Carousel môže mať najviac 10 fotiek.'); return false; }
+      if (st.files.length > 20) { alert('Carousel môže mať najviac 20 fotiek.'); return false; }
     }
     if (i === 3) {
       const d = dtpValue($('.dtp'));

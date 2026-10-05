@@ -288,7 +288,7 @@ async function refresh() {
       const s = await wda(dev, 'GET', '/status', null, 3000);
       const was = dev.wdaOk;
       dev.wdaOk = !!(s && (s.value || s.status === 0));
-      if (dev.wdaOk && !was) wdaCameUp(dev);
+      if (dev.wdaOk && !was) { wdaCameUp(dev); if (config.mediaUsb !== false) setTimeout(() => mediaCtx.usb.ensureFolder(dev).catch(() => {}), 5000); }
       if (dev.wdaOk) dev.locked = await isLocked(dev).catch(() => dev.locked);
       if (s && s.sessionId && !dev.sessionId) dev.sessionId = s.sessionId;
     } catch (_) { dev.wdaOk = false; dev.sessionId = null; }
@@ -643,14 +643,7 @@ const mediaCtx = {
       const b = dev.wdaBundle || WDA_BUNDLE || await findWdaBundle(dev, 40);
       if (!b) return { ok: false, err: 'v telefóne som nenašiel WebDriverAgent' };
       let err = '';
-      // malý stály súbor, aby priečinok v aplikácii Súbory nezmizol (iOS ukazuje len neprázdne priečinky)
-      if (!dev.usbReadme) {
-        const t = path.join(require('os').tmpdir(), '_Nemazat-JD-Phone-Studio.txt');
-        try { fs.writeFileSync(t, 'Priečinok pre JD Phone Studio – sem chodia fotky a videá cez kábel. Nemaž ho.\n'); } catch (_) {}
-        // starý názov začínal na JD- → skratka by ho brala ako fotku; zmažeme ho
-        for (const d of ['Documents/JD-Phone-Studio.txt', 'JD-Phone-Studio.txt']) await afc(dev, b, ['rm', `--path=${d}`]);
-        for (const d of ['Documents/_Nemazat-JD-Phone-Studio.txt', '_Nemazat-JD-Phone-Studio.txt']) if ((await afc(dev, b, ['push', `--srcPath=${t}`, `--dstPath=${d}`])).ok) { dev.usbReadme = true; break; }
-      }
+      await mediaCtx.usb.ensureFolder(dev, b);
       for (const dst of [`Documents/${name}`, name]) {
         const r = await afc(dev, b, ['push', `--srcPath=${src}`, `--dstPath=${dst}`], Math.round(60000 + size / 5e3));
         if (!r.ok) { err = r.err; continue; }
@@ -659,6 +652,18 @@ const mediaCtx = {
         err = 'súbor sa po nahratí v telefóne nenašiel';
       }
       return { ok: false, err: err || 'neznáma chyba' };
+    },
+    // malý stály súbor, aby priečinok v aplikácii Súbory existoval a nezmizol (iOS ukazuje len neprázdne priečinky)
+    async ensureFolder(dev, bundle) {
+      if (dev.usbReadme) return true;
+      const b = bundle || dev.wdaBundle || WDA_BUNDLE || await findWdaBundle(dev, 40);
+      if (!b) return false;
+      // starý názov začínal na JD- → skratka by ho brala ako fotku; zmažeme ho
+      for (const d of ['Documents/JD-Phone-Studio.txt', 'JD-Phone-Studio.txt']) await afc(dev, b, ['rm', `--path=${d}`]);
+      const t = path.join(require('os').tmpdir(), '_Nemazat-JD-Phone-Studio.txt');
+      try { fs.writeFileSync(t, 'Priečinok pre JD Phone Studio – sem chodia fotky a videá cez kábel. Nemaž ho.\n'); } catch (_) {}
+      for (const d of ['Documents/_Nemazat-JD-Phone-Studio.txt', '_Nemazat-JD-Phone-Studio.txt']) if ((await afc(dev, b, ['push', `--srcPath=${t}`, `--dstPath=${d}`])).ok) { dev.usbReadme = true; return true; }
+      return false;
     },
     async exists(dev, f) {
       const dir = path.posix.dirname(f.dst);
@@ -1094,6 +1099,13 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
     return fs.createReadStream(f).pipe(res);
   }
+  // podpísaná skratka JD Save (stiahnutie do počítača; do iPhonu ide cez QR kód z GitHubu)
+  if (url.pathname === '/skratka' || url.pathname === '/JD%20Save.shortcut') {
+    const f = path.join(PUBLIC_DIR, 'JD Save.shortcut');
+    if (!fs.existsSync(f)) { res.writeHead(404); return res.end('Skratka chýba – aktualizuj stránku.'); }
+    res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Disposition': 'attachment; filename="JD Save.shortcut"' });
+    return fs.createReadStream(f).pipe(res);
+  }
   if (url.pathname === '/qr.js') {
     res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
     return fs.createReadStream(path.join(PUBLIC_DIR, 'qr.js')).pipe(res);
@@ -1131,6 +1143,7 @@ const server = http.createServer(async (req, res) => {
       lanIp: media.lanIp(),
       mediaNet: media.mediaInfo(),
       shortcut: media.SHORTCUT_NAME,
+      shortcutUrl: (() => { try { const r = JSON.parse(fs.readFileSync(path.join(__dirname, 'update.json'), 'utf8')).repo; return r ? `https://raw.githubusercontent.com/${r}/main/public/JD%20Save.shortcut` : ''; } catch (_) { return ''; } })(),
       devices: [...devices.values()].map((d) => ({
         udid: d.udid, name: d.name, label: d.label, version: d.version,
         wdaOk: d.wdaOk, size: d.size, lastLog: d.wdaOk ? '' : d.lastLog,
@@ -1514,7 +1527,7 @@ const server = http.createServer(async (req, res) => {
             title: String(x.title || '').slice(0, 60), task: String(x.task || '').trim(), maxSteps: x.maxSteps,
             meta: x.meta && typeof x.meta === 'object' ? { kind: String(x.meta.kind || '').slice(0, 20), when: String(x.meta.when || '').slice(0, 40), whenText: String(x.meta.whenText || '').slice(0, 80),
               caption: String(x.meta.caption || '').slice(0, 2200), music: String(x.meta.music || '').slice(0, 120), place: String(x.meta.place || '').slice(0, 60) } : null,
-            files: (Array.isArray(x.files) ? x.files : []).slice(0, 10).map((f) => ({ id: String(f.id || ''), name: String(f.name || '') })) }));
+            files: (Array.isArray(x.files) ? x.files : []).slice(0, 20).map((f) => ({ id: String(f.id || ''), name: String(f.name || '') })) }));
           if (!steps.length || steps.some((x) => !x.task)) return json(res, 400, { error: 'Prázdny plán' });
           for (const st of steps) for (const f of st.files) if (!planFile(f.id)) return json(res, 400, { error: `Súbor ${f.name} sa nenašiel – nahraj ho znova` });
           runPlan(dev, steps);

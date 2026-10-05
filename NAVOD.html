@@ -154,7 +154,7 @@
           <li><b>Dôveruj aplikácii</b>: <code>Nastavenia → Všeobecné → VPN a správa zariadení → Apple Development: tvoj e-mail → Dôverovať</code> → a ťukni <b>Verify App / Overiť aplikáciu</b> (iPhone musí mať internet).</li>
           <li><b>UI Automation</b>: <code>Nastavenia → Vývojár → Enable UI Automation → Zapnúť</code>.</li>
           <li><b>Nezamykanie</b>: <code>Nastavenia → Displej a jas → Automatické zamknutie → Nikdy</code>. iPhone nechaj na nabíjačke.</li>
-          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): aplikácia <b>Skratky</b> → <code>+</code> → názov <b>JD Save</b> (presne takto) → pridaj akciu <code>Získať obsah URL</code> (URL = <i>Vstup skratky</i>) → pridaj akciu <code>Uložiť do fotoalbumu</code> (album Nedávne). Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>.</li>
+          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): stiahni hotovú – na stránke <b>Nastavenia → Fotky a videá</b> naskenuj QR kód iPhonom (alebo otvor v iPhone <a href="https://raw.githubusercontent.com/pingvok684/jd-iphonewall/main/public/JD%20Save.shortcut">tento odkaz</a>) → <b>Pridať skratku</b> → vyber priečinok <b>Na mojom iPhone → WebDriverAgentRunner-Runner</b>. Potom v iPhone <b>Nastavenia → Aplikácie → Skratky → Rozšírené</b> → zapni <b>Povoliť mazanie bez potvrdenia</b>. Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>.</li>
           <li>Prihlás sa do <b>Instagramu</b> a do aplikácie <b>Meta Business Suite</b> (na plánovanie príspevkov).</li>
         </ol>
       </div>
@@ -187,7 +187,7 @@
           <dt>install.command: „CodeSign failed / resource fork“</dt><dd>Spusti install.command znova (opravené). Ak to pretrváva, presuň priečinok mimo Plochy, napr. do domovského priečinka.</dd>
           <dt>Xcode: „Any iOS Device“ / iPhone nie je v zozname</dt><dd>Vyber konkrétny iPhone hore v Xcode, odomkni ho a počkaj, kým ho Xcode pripraví.</dd>
           <dt>Po ~7 dňoch prestal obraz (bezplatné Apple ID)</dt><dd>Podpis aplikácie vyprší. Spusti install.command znova a potom START_STRANKY.</dd>
-          <dt>Fotka/video sa neobjaví v galérii</dt><dd>Skontroluj, či sa skratka volá presne <b>JD Save</b> a má akciu <i>Uložiť do fotoalbumu</i>, a či si povolil prístup.</dd>
+          <dt>Fotka/video sa neobjaví v galérii</dt><dd>Skontroluj, či sa skratka volá presne <b>JD Save</b> (stiahni ju znova cez QR kód v Nastaveniach → Fotky a videá) a či si povolil prístup.</dd>
           <dt>AI hlási chybu modelu / kľúča</dt><dd>Skontroluj Claude API kľúč v Nastaveniach a kredit na console.anthropic.com.</dd>
         </dl>
         <p class="gnote">Pri AI obsahu zapínaj na Instagrame označenie <b>AI info</b>. API kľúče nikomu neposielaj – každý kamarát si dá vlastný.</p>
@@ -262,7 +262,7 @@
           <li><b>Dôveruj aplikácii</b>: <code>Nastavenia → Všeobecné → VPN a správa zariadení → tvoj Apple ID e-mail → Dôverovať</code>.</li>
           <li><b>UI Automation</b>: <code>Nastavenia → Vývojár → Enable UI Automation → Zapnúť</code>.</li>
           <li><b>Nezamykanie</b>: <code>Nastavenia → Displej a jas → Automatické zamknutie → Nikdy</code>. iPhone nechaj na nabíjačke.</li>
-          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): aplikácia <b>Skratky</b> → <code>+</code> → názov <b>JD Save</b> (presne takto) → pridaj akciu <code>Získať obsah URL</code> (URL = <i>Vstup skratky</i>) → pridaj akciu <code>Uložiť do fotoalbumu</code> (album Nedávne). Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>.</li>
+          <li><b>Skratka JD Save</b> (posielanie fotiek a videí do galérie): stiahni hotovú – na stránke <b>Nastavenia → Fotky a videá</b> naskenuj QR kód iPhonom (alebo otvor v iPhone <a href="https://raw.githubusercontent.com/pingvok684/jd-iphonewall/main/public/JD%20Save.shortcut">tento odkaz</a>) → <b>Pridať skratku</b> → vyber priečinok <b>Na mojom iPhone → WebDriverAgentRunner-Runner</b>. Potom v iPhone <b>Nastavenia → Aplikácie → Skratky → Rozšírené</b> → zapni <b>Povoliť mazanie bez potvrdenia</b>. Pri prvom poslaní fotky povoľ prístup <b>Vždy povoliť</b>.</li>
           <li>Prihlás sa do <b>Instagramu</b> a do aplikácie <b>Meta Business Suite</b> (na plánovanie príspevkov).</li>
         </ol>
       </div>
@@ -298,7 +298,7 @@
           <dt>Po ~7 dňoch prestal obraz</dt><dd>Podpis z bezplatného Apple ID vypršal. V Sideloadly znova pretiahni WebDriverAgent.ipa → Start, potom reštartuj START_STRANKY.bat.</dd>
           <dt>Nevidím obraz (iOS 17 a novší)</dt><dd>Musí bežať malé okno „go-ios tunel“. Zavri všetky okná stránky a spusti START_STRANKY.bat znova.</dd>
           <dt>Sideloadly: „maximum number of apps“</dt><dd>Bezplatné Apple ID dovolí len 3 vlastné aplikácie na iPhone. Zmaž z iPhonu iné aplikácie nahraté cez Sideloadly a skús znova.</dd>
-          <dt>Fotka/video sa neobjaví v galérii</dt><dd>Skontroluj, či sa skratka volá presne <b>JD Save</b> a má akciu <i>Uložiť do fotoalbumu</i>, a či si povolil prístup.</dd>
+          <dt>Fotka/video sa neobjaví v galérii</dt><dd>Skontroluj, či sa skratka volá presne <b>JD Save</b> (stiahni ju znova cez QR kód v Nastaveniach → Fotky a videá) a či si povolil prístup.</dd>
           <dt>AI hlási chybu modelu / kľúča</dt><dd>Skontroluj Claude API kľúč v Nastaveniach a kredit na console.anthropic.com.</dd>
         </dl>
         <p class="gnote">Pri AI obsahu zapínaj na Instagrame označenie <b>AI info</b>. API kľúče nikomu neposielaj – každý kamarát si dá vlastný.</p>
