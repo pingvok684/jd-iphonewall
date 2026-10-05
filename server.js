@@ -643,6 +643,12 @@ const mediaCtx = {
       const b = dev.wdaBundle || WDA_BUNDLE || await findWdaBundle(dev, 40);
       if (!b) return { ok: false, err: 'v telefóne som nenašiel WebDriverAgent' };
       let err = '';
+      // malý stály súbor, aby priečinok v aplikácii Súbory nezmizol (iOS ukazuje len neprázdne priečinky)
+      if (!dev.usbReadme) {
+        const t = path.join(require('os').tmpdir(), 'JD-Phone-Studio.txt');
+        try { fs.writeFileSync(t, 'Priečinok pre JD Phone Studio – sem chodia fotky a videá cez kábel. Nemaž ho.\n'); } catch (_) {}
+        for (const d of ['Documents/JD-Phone-Studio.txt', 'JD-Phone-Studio.txt']) if ((await afc(dev, b, ['push', `--srcPath=${t}`, `--dstPath=${d}`])).ok) { dev.usbReadme = true; break; }
+      }
       for (const dst of [`Documents/${name}`, name]) {
         const r = await afc(dev, b, ['push', `--srcPath=${src}`, `--dstPath=${dst}`], Math.round(60000 + size / 5e3));
         if (!r.ok) { err = r.err; continue; }
