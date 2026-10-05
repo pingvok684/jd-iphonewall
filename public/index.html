@@ -1147,10 +1147,8 @@
             <option value="10">Normálne (10 znakov/s)</option><option value="5">Pomaly (5 znakov/s)</option><option value="3">Veľmi pomaly (3 znaky/s)</option></select></label>
         <p class="sub" id="typeSpeedMsg" style="margin-top:8px"></p></div>
       <div class="panel"><h3><span data-icon="image"></span>Fotky a videá do galérie</h3>
-        <p>Súbory idú do iPhonu cez skratku <b id="scName">JD Save</b> v aplikácii Skratky.</p>
-        <label class="ctl usbtog"><input type="checkbox" id="mediaUsb"> <span><b>Najprv cez kábel (USB)</b> – rýchlejšie, bez internetu. Keď to nejde, automaticky sa použije internet.</span></label>
+        <p>Fotky a videá idú do iPhonu <b>len cez kábel (USB)</b> – iPhone musí byť pripojený káblom k tomuto počítaču. V iPhone ich uloží skratka <b id="scName">JD Save</b>.</p>
         <div id="usbDevs" class="usbdevs"></div>
-        <button id="usbRetry" style="margin:0 0 8px">Skúsiť kábel znova</button>
         <div class="schow">
           <h4>Skratka JD Save do iPhonu</h4>
           <div class="scrow"><div class="qrbox scqr" id="scQr"></div>
@@ -1162,13 +1160,16 @@
           <a class="btn ghost" href="/skratka" download="JD Save.shortcut">⬇ Stiahnuť skratku do počítača</a> <span class="sub">– na Macu ju potom pošli do iPhonu cez AirDrop.</span>
           <h4>Vypni potvrdzovanie mazania</h4>
           <p>V iPhone: <b>Nastavenia → Aplikácie → Skratky → Rozšírené</b> → zapni <b>Povoliť mazanie bez potvrdenia</b> (Allow Deleting Without Confirmation) aj <b>Povoliť mazanie veľkého množstva dát</b>. Inak sa iPhone pri každej fotke pýta. Pri prvej fotke ešte daj <b>Vždy povoliť</b> (prístup k priečinku a Fotkám).</p>
-          <p class="sub">Telefón musí byť pripojený káblom k tomuto počítaču. Keď kábel nejde, fotky idú cez internet ako doteraz.</p>
+          
         </div>
-        <div class="kv"><span>Cesta</span><b id="setNet">—</b></div>
+        <details class="usbhow"><summary>Tunel pre Magnific (pokročilé)</summary>
+        <p class="sub">Verejná adresa, cez ktorú si Magnific stiahne tvoju fotku. Na posielanie do iPhonu sa nepoužíva.</p>
+        <div class="kv"><span>Tunel</span><b id="setNet">—</b></div>
         <div class="kv"><span>Adresa tunela</span><b id="setTunnel">—</b></div>
         <div class="kv"><span>IP počítača v sieti</span><b id="setIp">—</b></div>
         <div style="margin-top:10px"><button id="mediaUrlBtn">Vlastná adresa pre fotky…</button></div>
-        <p class="sub" style="margin-top:6px">Voliteľné: stála adresa cez tvoju doménu v Cloudflare (napr. https://media.tvojadomena.com → http://localhost:3001). Spoľahlivejšia ako automatický tunel.</p></div>
+        <p class="sub" style="margin-top:6px">Voliteľné: stála adresa cez tvoju doménu v Cloudflare (napr. https://media.tvojadomena.com → http://localhost:3001). Spoľahlivejšia ako automatický tunel.</p>
+        </details></div>
       <div class="panel" id="tgPanel"><h3><span data-icon="alert"></span>Upozornenia na mobil (Telegram)</h3>
         <p>Správa do Telegramu, keď sa plán dokončí alebo zlyhá (aj so snímkou z iPhonu), keď sa telefón odpojí, má slabú batériu alebo vyprší podpis WebDriverAgenta.</p>
         <div class="kv"><span>Stav</span><b id="tgState">—</b></div>
@@ -1411,8 +1412,8 @@ async function loadOverview() {
   const now = new Date(o.now);
   document.getElementById('ovDate').textContent = now.toLocaleDateString('sk-SK', { weekday: 'long', day: 'numeric', month: 'numeric' }) + ' · ' + now.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' });
   const net = document.getElementById('ovNet');
-  net.className = 'chip ' + (o.mediaNet.via === 'internet' ? 'ok' : 'warn');
-  net.innerHTML = icon('wifi') + (o.mediaNet.via === 'internet' ? 'Médiá cez internet' : 'Médiá len cez Wi-Fi');
+  net.className = 'chip ok';
+  net.innerHTML = icon('image') + 'Médiá cez kábel';
 
   const total = o.phones.length;
   const bIc = document.getElementById('bIc');
@@ -1555,13 +1556,12 @@ async function loadSettings() {
   ts.value = String(d.typingSpeed || 60);
   document.getElementById('scName').textContent = d.shortcut || 'JD Save';
   const n = d.mediaNet || {};
-  document.getElementById('setNet').textContent = n.via === 'internet' ? 'cez internet (iPhony môžu byť na dátach)' : `len Wi-Fi (tunel: ${n.tunnel || '?'})`;
+  document.getElementById('setNet').textContent = n.via === 'internet' ? 'beží' : `nebeží (${n.tunnel || '?'})`;
   document.getElementById('setTunnel').textContent = n.url || '—';
   document.getElementById('setIp').textContent = d.lanIp || '—';
   document.getElementById('cleanDays').value = String(d.cleanupDays || 0);
-  document.getElementById('mediaUsb').checked = d.mediaUsb !== false;
   { const q = document.getElementById('scQr'); if (q && d.shortcutUrl && q.dataset.u !== d.shortcutUrl && window.QR) { q.dataset.u = d.shortcutUrl; q.innerHTML = QR.svg(d.shortcutUrl, { ecc: 'M', border: 2 }); } }
-  document.getElementById('usbDevs').innerHTML = d.mediaUsb === false ? '' : (d.devices || []).map((x) => `<div><span>${esc(x.label || x.name || x.udid)} · kábel:</span><b style="color:${/funguje/.test(x.usb) ? 'var(--ok)' : x.usb ? 'var(--warn)' : 'var(--faint)'}" title="${esc(x.usb || '')}">${esc(x.usb || 'zatiaľ neskúšané')}</b></div>`).join('');
+  document.getElementById('usbDevs').innerHTML = (d.devices || []).map((x) => `<div><span>${esc(x.label || x.name || x.udid)} · kábel:</span><b style="color:${/funguje/.test(x.usb) ? 'var(--ok)' : x.usb ? 'var(--warn)' : 'var(--faint)'}" title="${esc(x.usb || '')}">${esc(x.usb || 'zatiaľ neskúšané')}</b></div>`).join('');
   renderTg(d.telegram || {});
   loadRemote();
   loadUsage(); loadCleanInfo();
@@ -1589,14 +1589,6 @@ document.getElementById('cleanDays').onchange = async (e) => {
   document.getElementById('cleanMsg').textContent = +e.target.value ? 'Uložené ✓ – upratuje sa samo každých 6 hodín.' : 'Automatické upratovanie je vypnuté.';
 };
 document.getElementById('cleanNow').onclick = () => openCleanup();
-document.getElementById('usbRetry').onclick = async () => {
-  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mediaUsb: true }) });
-  document.getElementById('mediaUsb').checked = true; toast ? toast('Pri ďalšom poslaní sa znova skúsi kábel') : null;
-  document.querySelectorAll('#usbDevs b').forEach((b) => { b.textContent = 'zatiaľ neskúšané'; b.style.color = 'var(--faint)'; });
-};
-document.getElementById('mediaUsb').addEventListener('change', async (e) => {
-  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mediaUsb: e.target.checked }) });
-});
 // ---------- prístup z mobilu (rozcestník + QR párovanie) ----------
 let REM = null;
 async function loadRemote() {
@@ -1631,7 +1623,7 @@ document.getElementById('remPair').onclick = async () => {
     <ol class="qrsteps"><li>Naskenuj QR kód <b>fotoaparátom</b> mobilu a otvor odkaz.</li>
       <li>Keď sa ukáže <b>Mobil je spárovaný ✓</b>, pridaj si ikonu na plochu: <b>iPhone</b> – Zdieľať → Pridať na plochu, <b>Android</b> – ⋮ → Pridať na plochu.</li>
       <li>Odteraz otváraj stránku vždy cez túto ikonu – funguje aj mimo domu.</li></ol>
-    <small class="hint">QR kód platí 10 minút a len pre 1 mobil. Neposielaj ho nikomu – kto ho naskenuje, môže ovládať tvoje telefóny.</small>
+    <small class="hint">Tento QR kód treba naskenovať do 10 minút – je len na spárovanie. <b>Spárovaný mobil potom funguje natrvalo</b> (doma aj mimo domu), kým ho tu neodstrániš. QR je pre 1 mobil – neposielaj ho nikomu, kto ho naskenuje, môže ovládať tvoje telefóny.</small>
     <div class="mact"><button class="go" data-x>Hotovo</button></div></div>`;
   document.body.appendChild(bg);
   const t = bg.querySelector('[data-t]');

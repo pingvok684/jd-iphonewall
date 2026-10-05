@@ -288,7 +288,7 @@ async function refresh() {
       const s = await wda(dev, 'GET', '/status', null, 3000);
       const was = dev.wdaOk;
       dev.wdaOk = !!(s && (s.value || s.status === 0));
-      if (dev.wdaOk && !was) { wdaCameUp(dev); if (config.mediaUsb !== false) setTimeout(() => mediaCtx.usb.ensureFolder(dev).catch(() => {}), 5000); }
+      if (dev.wdaOk && !was) { wdaCameUp(dev); setTimeout(() => mediaCtx.usb.ensureFolder(dev).catch(() => {}), 5000); }
       if (dev.wdaOk) dev.locked = await isLocked(dev).catch(() => dev.locked);
       if (s && s.sessionId && !dev.sessionId) dev.sessionId = s.sessionId;
     } catch (_) { dev.wdaOk = false; dev.sessionId = null; }
@@ -363,14 +363,15 @@ function remoteIds() {
 }
 const remoteLink = () => `${RELAY}/${remoteIds().id}`;
 function cloudflaredBin() { const local = path.join(__dirname, 'bin', IS_WIN ? 'cloudflared.exe' : 'cloudflared'); return process.env.CLOUDFLARED || (fs.existsSync(local) ? local : 'cloudflared'); }
-async function pingUrl(u) { try { const r = await fetch(`${u}/pair/ping?t=${Date.now()}`, { signal: AbortSignal.timeout(8000) }); return r.ok; } catch (_) { return false; } }
+const pingUrl = (u) => media.pingHttps(`${u}/pair/ping?t=${Date.now()}`);
 function startWebTunnel() {
   if (web.proc || !remoteOn()) return;
   web.state = 'spúšťam…'; web.verified = false;
   const p = web.proc = spawn(cloudflaredBin(), ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${PORT}`], { stdio: ['ignore', 'pipe', 'pipe'] });
   const onData = (d) => {
+    if (/Registered tunnel connection/i.test(String(d))) web.edgeOk = true; // cloudflared je pripojený ku Cloudflare
     const m = String(d).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
-    if (m && m[0] !== web.url) { web.url = m[0]; web.verified = false; web.state = 'overujem…'; log('Tunel pre mobil:', web.url); verifyWeb(m[0]); }
+    if (m && m[0] !== web.url) { web.url = m[0]; web.verified = false; web.edgeOk = false; web.state = 'overujem…'; log('Tunel pre mobil:', web.url); verifyWeb(m[0]); }
   };
   p.stdout.on('data', onData); p.stderr.on('data', onData);
   p.on('error', (e) => { web.state = e.code === 'ENOENT' ? 'chýba program cloudflared' : e.message; });
@@ -379,7 +380,12 @@ function startWebTunnel() {
 }
 function stopWebTunnel() { const p = web.proc; web.proc = null; web.url = null; web.verified = false; web.state = 'vypnuté'; try { p && p.kill(); } catch (_) {} }
 async function verifyWeb(u) {
-  for (let i = 0; i < 25 && web.url === u; i++) { if (await pingUrl(u)) { web.verified = true; web.fails = 0; web.state = 'beží'; registerRelay(); return; } await pause(3000); }
+  for (let i = 0; i < 25 && web.url === u; i++) {
+    if (await pingUrl(u)) { web.verified = true; web.noPing = false; web.fails = 0; web.state = 'beží'; registerRelay(); return; }
+    // počítač adresu ešte nevidí (napr. DNS v sieti), ale cloudflared je pripojený → tunel funguje, mobil sa dostane
+    if (i >= 6 && web.edgeOk) { web.verified = true; web.noPing = true; web.fails = 0; web.state = 'beží'; log('Tunel pre mobil: pripojený (z počítača sa nedá overiť)'); registerRelay(); return; }
+    await pause(3000);
+  }
   if (web.url === u) { web.state = 'nedostupný – reštartujem'; try { web.proc && web.proc.kill(); } catch (_) {} }
 }
 async function registerRelay() {
@@ -394,7 +400,8 @@ async function registerRelay() {
 }
 setInterval(async () => {
   if (!remoteOn() || !web.url || !web.verified) return;
-  if (await pingUrl(web.url)) { web.fails = 0; if (Date.now() - web.registeredAt > 30 * 60000 || web.relayError) registerRelay(); }
+  if (await pingUrl(web.url)) { web.fails = 0; web.noPing = false; if (Date.now() - web.registeredAt > 30 * 60000 || web.relayError) registerRelay(); }
+  else if (web.noPing) { if (Date.now() - web.registeredAt > 30 * 60000 || web.relayError) registerRelay(); } // neoveriteľný z počítača – reštart rieši cloudflared sám
   else if (++web.fails >= 2) { log('Tunel pre mobil neodpovedá – reštartujem'); web.state = 'reštartujem…'; try { web.proc && web.proc.kill(); } catch (_) {} }
 }, 60000);
 process.on('exit', () => { try { web.proc && web.proc.kill(); } catch (_) {} });

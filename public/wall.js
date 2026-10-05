@@ -830,9 +830,10 @@ async function poll() {
   }
   lastDevices = data;
   showMsg(data.error);
-  const n = data.mediaNet || {}, net = document.getElementById('net');
-  net.className = 'chip ' + (n.via === 'internet' ? 'ok' : 'warn');
-  net.innerHTML = icon('wifi') + (n.via === 'internet' ? 'Médiá cez internet' : `Médiá len cez Wi-Fi (tunel: ${esc(n.tunnel || '?')})`);
+  const net = document.getElementById('net'), bad = (data.devices || []).filter((d) => d.usb && !/funguje/.test(d.usb));
+  net.className = 'chip ' + (bad.length ? 'warn' : 'ok');
+  net.innerHTML = icon('image') + (bad.length ? `Médiá cez kábel – problém: ${esc(bad.map((d) => d.label).join(', '))}` : 'Médiá cez kábel');
+  net.title = bad.map((d) => `${d.label}: ${d.usb}`).join('\n');
 
   const seen = new Set();
   for (const d of data.devices) {

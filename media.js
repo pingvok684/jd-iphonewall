@@ -1,9 +1,6 @@
 // Fotky a videá do galérie iPhonu.
-// Ako to funguje: súbor sa nahrá na Mac → server cez WebDriverAgent otvorí v iPhone skratku
-// „JD Save“ (aplikácia Skratky) s odkazom na súbor → skratka si ho stiahne a uloží do Fotiek.
-// Odkaz ide cez internet (Cloudflare tunel), takže iPhone môže byť na mobilných dátach / hotspote.
-// Cez kábel (USB): súbor sa najprv nahrá priamo do priečinka WebDriverAgenta v iPhone (go-ios, bez internetu)
-// a skratka si ho vezme odtiaľ (Súbory → Na mojom iPhone). Ak to nejde, automaticky sa použije internet.
+// Posiela sa LEN cez kábel (USB): súbor sa nahrá priamo do priečinka WebDriverAgenta v iPhone (go-ios)
+// a skratka si ho vezme odtiaľ (Súbory → Na mojom iPhone). Tunel nižšie slúži už len na Magnific (verejná adresa obrázka).
 // Cez tunel je dostupné IBA sťahovanie súborov s jednorazovým tajným kľúčom – nič iné zo stránky.
 
 const fs = require('fs');
@@ -43,9 +40,30 @@ function startMediaServer(config) {
 // ---------- kontrola, či je tunel naozaj dostupný z internetu ----------
 // quick tunel občas „zamrzne“ (adresa prestane existovať) – vtedy ho spustíme znova s novou adresou
 let tunnelProc = null, verified = false, fails = 0;
-async function ping(url) {
-  try { const r = await fetch(`${url}/media/ping?t=${Date.now()}`, { signal: AbortSignal.timeout(8000) }); return r.ok; } catch (_) { return false; }
+// Overenie tunela z počítača. Nová adresa …trycloudflare.com sa v DNS objaví až o chvíľu – Mac/Windows si medzitým
+// zapamätajú „neexistuje“ (aj na dlhé minúty) a overenie by stále zlyhávalo. Preto adresu zisťujeme cez verejné DNS
+// (1.1.1.1 / 8.8.8.8), ktoré tú pamäť nemajú; až keď to nejde, cez DNS počítača.
+const dns = require('dns');
+const https = require('https');
+const pubDns = new dns.Resolver({ timeout: 3000, tries: 1 });
+try { pubDns.setServers(['1.1.1.1', '8.8.8.8', '1.0.0.1']); } catch (_) {}
+function lookupPub(host, opts, cb) {
+  if (typeof opts === 'function') { cb = opts; opts = {}; }
+  pubDns.resolve4(host, (e, a) => {
+    if (!e && a && a.length) return opts && opts.all ? cb(null, [{ address: a[0], family: 4 }]) : cb(null, a[0], 4);
+    dns.lookup(host, opts, cb);
+  });
 }
+function pingHttps(url, timeout = 8000) {
+  return new Promise((ok) => {
+    let done = false; const fin = (v) => { if (!done) { done = true; ok(v); } };
+    try {
+      const r = https.get(url, { lookup: lookupPub, timeout, headers: { 'cache-control': 'no-cache' } }, (res) => { res.resume(); fin(res.statusCode < 400); });
+      r.on('error', () => fin(false)); r.on('timeout', () => { r.destroy(); fin(false); });
+    } catch (_) { fin(false); }
+  });
+}
+const ping = (url) => pingHttps(`${url}/media/ping?t=${Date.now()}`);
 async function verifyNew(url) {
   verified = false; fails = 0;
   for (let i = 0; i < 20 && publicUrl === url; i++) { // nová adresa sa v DNS objaví až o pár sekúnd
@@ -156,46 +174,14 @@ async function runQueue(dev, ctx) {
       if (dev.gone) break;
       if (!dev.wdaOk) { item.status = 'čaká'; await sleep(3000); continue; }
 
-      // 1) najprv cez kábel – rýchlejšie a bez internetu
+      // fotky a videá idú do iPhonu LEN cez kábel (USB)
       if (await sendUsb(dev, item, ctx)) {
         item.status = '✓ uložené cez kábel – skontroluj Fotky'; item.via = 'kábel';
         done(ctx, dev, item, true); fs.unlink(item.file, () => {});
         continue;
       }
-
-      // 2) cez internet / Wi-Fi
-      if (publicUrl && !verified) { item.status = 'čakám na tunel…'; for (let i = 0; i < 30 && publicUrl && !verified; i++) await sleep(1000); }
-      const base = baseUrl(ctx.port);
-      if (!base) { item.status = 'chyba: kábel nevyšiel, tunel nebeží a počítač nie je na sieti'; done(ctx, dev, item, false); continue; }
-      tokens.set(item.token, item);
-      const fileUrl = `${base}/media/${item.token}/${encodeURIComponent(item.name)}`;
-      const open = `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}&input=text&text=${encodeURIComponent(fileUrl)}`;
-      const via = publicUrl ? 'internet' : 'Wi-Fi';
-      item.status = `otváram skratku ${SHORTCUT_NAME}…`;
-      console.log(`[médiá] ${dev.label}: ${item.name} → otváram skratku (cez ${via}: ${base})`);
-      item.downloaded = false;
-      try {
-        await ctx.openUrl(dev, open);
-        item.status = `skratka spustená – čakám, kým si iPhone stiahne súbor (cez ${via})…`;
-        console.log(`[médiá] ${dev.label}: skratka otvorená, čakám na stiahnutie`);
-      } catch (e) {
-        item.status = `chyba: ${e.message}`; tokens.delete(item.token); done(ctx, dev, item, false); continue;
-      }
-      // čakáme, kým si iPhone súbor stiahne (max ~3 min + podľa veľkosti)
-      const limit = Date.now() + 180000 + item.size / 1e5;
-      while (!item.downloaded && Date.now() < limit && !dev.gone) await sleep(500);
-      if (!item.downloaded) {
-        item.status = `chyba: iPhone si súbor nestiahol – je skratka „${SHORTCUT_NAME}“ nastavená a povolil si jej pripojenie (Allow)?`;
-        tokens.delete(item.token);
-        done(ctx, dev, item, false);
-        continue;
-      }
-      item.status = 'ukladám do galérie…';
-      await sleep(3000 + Math.min(20000, item.size / 5e6 * 1000)); // čas na uloženie do Fotiek
-      item.status = '✓ iPhone stiahol – skontroluj Fotky';
-      done(ctx, dev, item, true);
-      tokens.delete(item.token);
-      fs.unlink(item.file, () => {});
+      if (!item.status.startsWith('chyba')) item.status = 'chyba: súbor sa nepodarilo poslať cez kábel';
+      done(ctx, dev, item, false); fs.unlink(item.file, () => {});
     }
     if (!dev.gone && dev.wdaOk) { try { await ctx.home(dev); } catch (_) {} }
   } finally {
@@ -207,15 +193,14 @@ async function runQueue(dev, ctx) {
 // Súbor sa nahrá do Documents WebDriverAgenta (go-ios fsync --app). Skratka dostane ako vstup len meno súboru,
 // vezme ho zo Súborov (Na mojom iPhone → WebDriverAgentRunner), uloží do Fotiek a zmaže → podľa zmazania vieme, že je hotovo.
 async function sendUsb(dev, item, ctx) {
-  if (!ctx.usb || !ctx.usb.enabled()) return false;
-  if (dev.usbSkipUntil && Date.now() < dev.usbSkipUntil) return false;
+  if (!ctx.usb) { item.status = 'chyba: posielanie cez kábel nie je dostupné'; return false; }
   const name = `JD-${item.id}${item.ext}`;
   item.status = 'posielam cez kábel…';
   const up = await ctx.usb.push(dev, item.file, name, item.size);
   if (!up.ok) {
-    console.log(`[médiá] ${dev.label}: kábel nevyšiel (${up.err}) → internet`);
+    console.log(`[médiá] ${dev.label}: kábel nevyšiel (${up.err})`);
     dev.usbInfo = `nedá sa nahrať: ${up.err}`;
-    dev.usbSkipUntil = Date.now() + 10 * 60000; item.status = 'čaká';
+    item.status = `chyba: cez kábel sa nedá nahrať – je iPhone pripojený káblom k tomuto počítaču? (${up.err})`;
     return false;
   }
   console.log(`[médiá] ${dev.label}: ${item.name} nahraté cez kábel → otváram skratku`);
@@ -223,28 +208,25 @@ async function sendUsb(dev, item, ctx) {
   try {
     // bez vstupu → skratka ide do vetvy „Inak/Otherwise“ (vezme súbory JD-… z priečinka)
     await ctx.openUrl(dev, `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}`);
-  } catch (e) { await ctx.usb.remove(dev, up); item.status = 'čaká'; return false; }
+  } catch (e) { await ctx.usb.remove(dev, up); item.status = `chyba: skratku ${SHORTCUT_NAME} sa nepodarilo spustiť (${e.message})`; return false; }
   item.status = 'skratka ukladá súbor z kábla do Fotiek…';
   const limit = Date.now() + 60000 + item.size / 2e4;
   await sleep(4000);
   while (Date.now() < limit && !dev.gone) {
     const ex = await ctx.usb.exists(dev, up);
-    item.status = `skratka ukladá súbor z kábla do Fotiek… (súbor v priečinku: ${ex === null ? 'neviem zistiť' : ex ? 'ešte je' : 'zmazaný'}${before == null ? ', galéria: neviem zistiť' : ''})`;
-    if (ex === false) { dev.usbInfo = 'funguje ✓'; dev.usbSkipUntil = 0; await sleep(2000); return true; }
+    if (ex === false) { dev.usbInfo = 'funguje ✓'; await sleep(2000); return true; }
     // súbor ešte je, ale v galérii pribudla fotka/video → uložené; súbor z priečinka zmažeme sami
     if (before != null) {
       const now = await ctx.usb.mediaCount(dev);
-      item.status += ` · galéria ${before}→${now == null ? '?' : now}`;
-      if (now != null && now > before) { await sleep(3000); await ctx.usb.remove(dev, up); dev.usbInfo = 'funguje ✓'; dev.usbSkipUntil = 0; return true; }
+      if (now != null && now > before) { await sleep(3000); await ctx.usb.remove(dev, up); dev.usbInfo = 'funguje ✓'; return true; }
     }
     await sleep(2500);
   }
-  // skratka si súbor nevzala (stará verzia skratky / chýba prístup k priečinku) → upraceme a skúsime internet
+  // skratka si súbor nevzala (stará verzia skratky / chýba prístup k priečinku / čaká na povolenie v iPhone)
   await ctx.usb.remove(dev, up);
-  dev.usbInfo = `skratka „${SHORTCUT_NAME}“ si súbor z kábla nevzala – uprav ju podľa návodu (Nastavenia → Fotky a videá)`;
-  dev.usbSkipUntil = Date.now() + 30 * 60000;
-  console.log(`[médiá] ${dev.label}: ${dev.usbInfo} → internet`);
-  item.status = 'čaká';
+  dev.usbInfo = `skratka „${SHORTCUT_NAME}“ si súbor nevzala – stiahni ju cez QR kód (Nastavenia → Fotky a videá)`;
+  console.log(`[médiá] ${dev.label}: ${dev.usbInfo}`);
+  item.status = `chyba: ${dev.usbInfo}, alebo v iPhone čaká povolenie`;
   return false;
 }
 
@@ -277,4 +259,4 @@ function publishTemp(file, name, minutes = 60) {
   return `${publicUrl}/media/${token}/${encodeURIComponent(safeName(name))}`;
 }
 
-module.exports = { publishTemp, TYPES, safeName, enqueueCopy, handleUpload, serveMedia, mediaState, lanIp, SHORTCUT_NAME, startMediaServer, mediaInfo, restartTunnel };
+module.exports = { pingHttps, publishTemp, TYPES, safeName, enqueueCopy, handleUpload, serveMedia, mediaState, lanIp, SHORTCUT_NAME, startMediaServer, mediaInfo, restartTunnel };
