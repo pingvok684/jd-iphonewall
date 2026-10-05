@@ -220,7 +220,8 @@ async function sendUsb(dev, item, ctx) {
   }
   console.log(`[médiá] ${dev.label}: ${item.name} nahraté cez kábel → otváram skratku`);
   try {
-    await ctx.openUrl(dev, `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}&input=text&text=${encodeURIComponent(name)}`);
+    // bez vstupu → skratka ide do vetvy „Inak/Otherwise“ (vezme súbory JD-… z priečinka)
+    await ctx.openUrl(dev, `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT_NAME)}`);
   } catch (e) { await ctx.usb.remove(dev, up); item.status = 'čaká'; return false; }
   item.status = 'skratka ukladá súbor z kábla do Fotiek…';
   const limit = Date.now() + 60000 + item.size / 2e4;

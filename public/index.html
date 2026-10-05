@@ -1146,11 +1146,12 @@
             <li>Pošli do iPhonu jednu fotku – vytvorí sa priečinok. Over: aplikácia <b>Súbory</b> → <b>Na mojom iPhone</b> → <b>WebDriverAgentRunner-Runner</b>.</li>
             <li>Uprav skratku <b>JD Save</b> v aplikácii Skratky takto:
               <ol type="a">
-                <li>Na začiatok pridaj <code>Ak</code> (If): <i>Vstup skratky</i> <b>začína na</b> <code>http</code>.</li>
+                <li>Na začiatok pridaj <code>Ak</code> (If): <i>Vstup skratky</i> <b>má akúkoľvek hodnotu</b> (has any value).</li>
                 <li>Do vetvy <b>Ak</b> presuň doterajšie akcie <code>Získať obsah URL</code> a <code>Uložiť do fotoalbumu</code>.</li>
-                <li>Do vetvy <b>Inak</b> pridaj <code>Získať súbor z priečinka</code> → priečinok <b>WebDriverAgentRunner-Runner</b>, cesta = <i>Vstup skratky</i>, vypni „Chyba, ak nenájdené“.</li>
-                <li>Pod to <code>Uložiť do fotoalbumu</code> (vstup = <i>Súbor</i>).</li>
-                <li>Pod to <code>Vymazať súbory</code> (vstup = <i>Súbor</i>) a vypni <b>Potvrdiť pred vymazaním</b>.</li>
+                <li>Do vetvy <b>Inak</b> (Otherwise) pridaj <code>Získať obsah priečinka</code> (Get Contents of Folder) → priečinok <b>WebDriverAgentRunner-Runner</b>.</li>
+                <li>Pod to <code>Filtrovať súbory</code> (Filter Files) → <b>Názov</b> (Name) <b>začína na</b> (begins with) <code>JD-</code>.</li>
+                <li>Pod to <code>Uložiť do fotoalbumu</code> (Save to Photo Album).</li>
+                <li>Pod to <code>Vymazať súbory</code> (Delete Files) a vypni <b>Potvrdiť pred vymazaním</b>. Vstupy sa prepoja samé – netreba nič vyberať.</li>
               </ol></li>
             <li>Klikni tu <b>Skúsiť kábel znova</b> a pošli fotku. Pri prvom spustení povoľ prístup (<b>Vždy povoliť</b>). Pri telefóne sa tu zobrazí <b>kábel: funguje ✓</b>.</li>
           </ol>
