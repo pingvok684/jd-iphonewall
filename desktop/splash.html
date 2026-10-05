@@ -9,21 +9,38 @@
   .bar{width:220px;height:4px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden}
   .bar i{display:block;height:100%;width:40%;border-radius:4px;background:linear-gradient(90deg,#ff4f76,#e8285a);animation:m 1.2s ease-in-out infinite}
   @keyframes m{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
-  .sub{color:#8d92a0;font-size:13px}.err{color:#ff7d8f;max-width:440px}
-  button{font:600 14px inherit;padding:10px 16px;border-radius:12px;border:0;color:#fff;background:linear-gradient(180deg,#ff4f76,#e8285a);cursor:pointer}
+  .sub{color:#8d92a0;font-size:13px}.err{color:#ff7d8f;max-width:520px;font-size:13.5px}
+  [hidden]{display:none!important}
+  pre{max-width:min(680px,90vw);max-height:30vh;overflow:auto;text-align:left;font:11.5px/1.45 ui-monospace,Consolas,monospace;color:#b9bdc8;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;white-space:pre-wrap;word-break:break-word;user-select:text;margin:0}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{font:600 14px "Segoe UI",sans-serif;padding:10px 16px;border-radius:12px;border:0;color:#fff;background:linear-gradient(180deg,#ff4f76,#e8285a);cursor:pointer}
+  button.ghost{background:rgba(255,255,255,.08)}
 </style></head>
 <body><div class="in">
   <img src="tray@2x.png" alt="">
   <h1>Juraj Dvorščák</h1>
   <div class="bar" id="bar"><i></i></div>
   <div class="sub" id="msg">Spúšťam JD Phone Studio…</div>
+  <div class="err" id="err" hidden></div>
+  <pre id="log" hidden></pre>
+  <div class="btns" id="btns" hidden><button id="r">Skúsiť znova</button><button class="ghost" id="o">Otvoriť záznamy</button></div>
 </div>
 <script>
-  const q = new URLSearchParams(location.search);
-  if (q.get('err')) {
-    document.getElementById('bar').style.display = 'none';
-    const m = document.getElementById('msg'); m.className = 'err';
-    m.innerHTML = 'Stránka sa nespustila do 90 sekúnd.<br><small>Záznam: ' + (q.get('log') || '') + '</small><br><br><button id="r">Skúsiť znova</button>';
-    document.getElementById('r').onclick = () => { window.jdApp && window.jdApp.restart(); location.href = 'splash.html'; };
+  const t0 = Date.now(), $ = (id) => document.getElementById(id);
+  $('r').onclick = () => { window.jdApp && window.jdApp.restart(); };
+  $('o').onclick = () => { window.jdApp && window.jdApp.openLogs(); };
+  async function tick() {
+    if (!window.jdApp || !window.jdApp.status) return;
+    let st; try { st = await window.jdApp.status(); } catch (_) { return; }
+    const secs = Math.round((Date.now() - t0) / 1000);
+    $('msg').textContent = st.step + (secs > 5 ? ` (${secs} s)` : '');
+    $('err').hidden = !st.error; $('err').textContent = st.error || '';
+    // po 25 s alebo pri chybe ukáž záznam a tlačidlá – kamarát vie poslať, čo sa deje
+    const show = !!st.error || secs > 25;
+    $('btns').hidden = !show;
+    const txt = [st.appLog, st.log].filter(Boolean).join('\n');
+    $('log').hidden = !show || !txt; $('log').textContent = txt;
+    if (show) $('log').scrollTop = 1e9;
   }
+  setInterval(tick, 1000); tick();
 </script></body></html>

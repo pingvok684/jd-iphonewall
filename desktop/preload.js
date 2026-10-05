@@ -8,4 +8,6 @@ contextBridge.exposeInMainWorld('jdApp', {
   done: () => ipcRenderer.invoke('jd:done'),
   restart: () => ipcRenderer.invoke('jd:restart'),
   info: () => ipcRenderer.invoke('jd:info'),
+  status: () => ipcRenderer.invoke('jd:status'),
+  openLogs: () => ipcRenderer.invoke('jd:openLogs'),
 });

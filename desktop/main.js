@@ -29,7 +29,14 @@ const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8'))
 let state = readJson(STATE_FILE, {});
 const saveState = () => { try { fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2)); } catch (_) {} };
 const cfg = () => readJson(path.join(HOME, 'config.json'), {});
-const log = (...a) => { try { fs.appendFileSync(path.join(LOGS, 'app.log'), `${new Date().toISOString()} ${a.join(' ')}\n`); } catch (_) {} };
+const log = (...a) => { try { fs.mkdirSync(LOGS, { recursive: true }); fs.appendFileSync(path.join(LOGS, 'app.log'), `${new Date().toISOString()} ${a.join(' ')}\n`); } catch (_) {} };
+// stav štartu – zobrazuje ho úvodná obrazovka (splash.html)
+const status = { step: 'Spúšťam…', error: '', ready: false };
+const step = (t) => { status.step = t; log('krok:', t); };
+const fail = (t, e) => { status.error = `${t}: ${(e && e.message) || e}`; log('CHYBA', status.error, (e && e.stack) || ''); };
+process.on('uncaughtException', (e) => fail('Neočakávaná chyba', e));
+process.on('unhandledRejection', (e) => fail('Neočakávaná chyba', e));
+function tail(f, n = 14) { try { return fs.readFileSync(f, 'utf8').split(/\r?\n/).filter(Boolean).slice(-n).join('\n'); } catch (_) { return ''; } }
 
 // ---------- súbory stránky ----------
 // nastavenia, kľúče a dáta (config.json, data/ …) sa nikdy neprepíšu
@@ -40,7 +47,10 @@ function syncApp() {
   const fresh = !fs.existsSync(path.join(HOME, 'server.js'));
   if (fresh || ver(BUNDLED_APP) > ver(HOME)) {
     log('kopírujem stránku', ver(BUNDLED_APP), '→', HOME);
-    for (const e of fs.readdirSync(BUNDLED_APP)) if (!PROTECT.has(e)) fs.cpSync(path.join(BUNDLED_APP, e), path.join(HOME, e), { recursive: true, force: true });
+    for (const e of fs.readdirSync(BUNDLED_APP)) {
+      if (PROTECT.has(e)) continue;
+      try { fs.cpSync(path.join(BUNDLED_APP, e), path.join(HOME, e), { recursive: true, force: true }); } catch (err) { log('kopírovanie', e, err.message); }
+    }
   }
   // go-ios a cloudflared (stránka ich hľadá v bin/)
   if (fs.existsSync(BUNDLED_BIN)) {
@@ -58,8 +68,12 @@ function syncApp() {
 // prenos nastavení a dát zo starého priečinka (START_STRANKY verzia)
 function importFrom(dir) {
   let n = 0;
-  for (const f of ['config.json', 'labels.json', 'templates.json']) if (fs.existsSync(path.join(dir, f))) { fs.copyFileSync(path.join(dir, f), path.join(HOME, f)); n++; }
-  for (const d of ['data', 'WebDriverAgent']) if (fs.existsSync(path.join(dir, d))) { fs.cpSync(path.join(dir, d), path.join(HOME, d), { recursive: true, force: true }); n++; }
+  for (const f of ['config.json', 'labels.json', 'templates.json']) {
+    try { if (fs.existsSync(path.join(dir, f))) { fs.copyFileSync(path.join(dir, f), path.join(HOME, f)); n++; } } catch (e) { log('prenos', f, e.message); }
+  }
+  for (const d of ['data', 'WebDriverAgent']) {
+    try { if (fs.existsSync(path.join(dir, d))) { fs.cpSync(path.join(dir, d), path.join(HOME, d), { recursive: true, force: true }); n++; } } catch (e) { log('prenos', d, e.message); }
+  }
   return n;
 }
 function findOldFolder() {
@@ -84,14 +98,16 @@ function startServer() {
   out.write(`\n===== štart ${new Date().toLocaleString()} (verzia ${ver(HOME)}) =====\n`);
   server = spawn(process.execPath, [path.join(HOME, 'server.js')], { cwd: HOME, env: envFor(), windowsHide: true });
   server.stdout.pipe(out); server.stderr.pipe(out);
+  server.on('error', (e) => fail('Server sa nedá spustiť', e));
   clearTimeout(okTimer); okTimer = setTimeout(() => (restarts = 0), 60000);
   const me = server;
   server.on('exit', (code) => {
     if (server === me) server = null;
     if (quitting || restarting) return;
-    if (code === 75) { log('aktualizácia → reštart'); syncApp(); setTimeout(startServer, 1000); setTimeout(() => win && win.loadURL(URL), 4000); return; }
+    if (code === 75) { log('aktualizácia → reštart'); syncApp(); setTimeout(startServer, 1000); showWhenReady(); return; }
     restarts++;
     log('server skončil', code, 'pokus', restarts);
+    status.error = `Stránka sa zastavila (kód ${code}) – skúšam znova (${restarts}/5)`;
     if (restarts <= 5) return setTimeout(startServer, 2000 * restarts);
     dialog.showMessageBox({ type: 'error', title: 'JD Phone Studio', message: 'Stránka sa nedá spustiť.', detail: `Pozri záznam: ${path.join(LOGS, 'server.log')}`, buttons: ['Otvoriť záznam', 'Zavrieť'] })
       .then((r) => { if (r.response === 0) shell.openPath(path.join(LOGS, 'server.log')); });
@@ -108,7 +124,17 @@ function restartServer() {
   restarts = 0;
   if (server) { restarting = true; server.once('exit', () => { restarting = false; if (!quitting) { syncApp(); startServer(); } }); stopServer(); }
   else startServer();
-  setTimeout(() => win && win.loadURL(URL), 3500);
+  showWhenReady();
+}
+// počas reštartu ukáž úvodnú obrazovku a stránku načítaj, až keď naozaj beží
+let waiting = false;
+async function showWhenReady() {
+  if (win) win.loadFile(path.join(__dirname, 'splash.html'));
+  if (waiting) return; waiting = true;
+  await new Promise((r) => setTimeout(r, 1500));
+  while (!quitting && !(await ping())) await new Promise((r) => setTimeout(r, 800));
+  waiting = false; status.error = '';
+  if (win && !quitting) win.loadURL(URL);
 }
 
 // go-ios tunel (iOS 17+): Windows vždy, Mac len bez Xcode režimu
@@ -125,11 +151,10 @@ function stopTunnel() { if (!tunnel) return; const t = tunnel; tunnel = null; if
 
 function ping(timeout = 1500) {
   return new Promise((ok) => {
-    const r = http.get(`${URL}/api/update`, { timeout }, (res) => { res.resume(); ok(res.statusCode < 500); });
+    const r = http.get({ host: '127.0.0.1', port: PORT, path: '/api/update', timeout }, (res) => { res.resume(); ok(res.statusCode < 500); });
     r.on('error', () => ok(false)); r.on('timeout', () => { r.destroy(); ok(false); });
   });
 }
-async function waitReady(ms = 90000) { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await ping()) return true; await new Promise((r) => setTimeout(r, 700)); } return false; }
 
 // ---------- okno ----------
 function showWin() { if (!win) createWindow(); else { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } }
@@ -248,6 +273,8 @@ ipcMain.handle('jd:xcodeSetup', () => {
 });
 ipcMain.handle('jd:done', () => { state.setupDone = true; saveState(); if (win) win.loadURL(URL); });
 ipcMain.handle('jd:restart', () => restartServer());
+ipcMain.handle('jd:status', () => ({ ...status, log: tail(path.join(LOGS, 'server.log')), appLog: tail(path.join(LOGS, 'app.log'), 6), logs: LOGS }));
+ipcMain.handle('jd:openLogs', () => shell.openPath(LOGS));
 ipcMain.handle('jd:info', () => ({ platform: process.platform, version: ver(HOME), home: HOME, external }));
 
 // ---------- štart ----------
@@ -262,17 +289,20 @@ app.whenReady().then(async () => {
   powerSaveBlocker.start('prevent-app-suspension'); // počítač nezaspí, kým beží aplikácia
 
   // beží už stránka cez START_STRANKY? → len ju zobraz
+  step('Kontrolujem, či stránka už nebeží…');
   if (await ping(1200)) external = true;
   else {
-    const fresh = syncApp();
-    const old = fresh && findOldFolder();
-    if (old) {
-      const r = await dialog.showMessageBox(win, { type: 'question', buttons: ['Áno, preniesť', 'Nie, začať odznova'], defaultId: 0,
-        message: 'Našiel som staršiu verziu JD Phone Studio', detail: `${old}\n\nPreniesť nastavenia, kľúče, názvy telefónov, knižnicu a kalendár do aplikácie?` });
-      if (r.response === 0) importFrom(old);
-    }
-    startTunnel();
-    startServer();
+    try { step('Pripravujem súbory…'); var fresh = syncApp(); } catch (e) { fail('Príprava súborov zlyhala', e); }
+    try {
+      const old = fresh && findOldFolder();
+      if (old) {
+        const r = await dialog.showMessageBox(win, { type: 'question', buttons: ['Áno, preniesť', 'Nie, začať odznova'], defaultId: 0,
+          message: 'Našiel som staršiu verziu JD Phone Studio', detail: `${old}\n\nPreniesť nastavenia, kľúče, názvy telefónov, knižnicu a kalendár do aplikácie?` });
+        if (r.response === 0) { step('Prenášam staré nastavenia…'); importFrom(old); }
+      }
+    } catch (e) { fail('Prenos starých nastavení zlyhal', e); }
+    try { startTunnel(); } catch (e) { log('tunel', e.message); }
+    try { step('Spúšťam stránku…'); startServer(); } catch (e) { fail('Server sa nedá spustiť', e); }
     // keď sa dokončí Xcode nastavenie (pribudne teamId), prepni režim
     let hadTeam = !!cfg().teamId;
     fs.watchFile(path.join(HOME, 'config.json'), { interval: 4000 }, () => {
@@ -280,9 +310,11 @@ app.whenReady().then(async () => {
       if (has !== hadTeam) { hadTeam = has; log('zmena režimu WDA'); if (has) stopTunnel(); else startTunnel(); restartServer(); }
     });
   }
-  const ok = await waitReady();
+  step('Čakám, kým sa stránka spustí…');
+  // čakáme bez limitu – úvodná obrazovka medzitým ukazuje stav a záznam
+  while (!(await ping())) await new Promise((r) => setTimeout(r, 800));
+  status.ready = true; status.error = ''; step('Hotovo');
   if (!win) return;
-  if (!ok) { win.loadFile(path.join(__dirname, 'splash.html'), { query: { err: '1', log: path.join(LOGS, 'server.log') } }); return; }
   if (!state.setupDone && !external) win.loadFile(path.join(__dirname, 'setup.html'));
   else win.loadURL(URL);
 });

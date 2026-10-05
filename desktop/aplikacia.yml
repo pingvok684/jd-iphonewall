@@ -54,7 +54,7 @@ jobs:
         run: npm install --no-audit --no-fund && npm run dist:mac
       - name: Nahranie
         working-directory: desktop
-        run: gh release upload aplikacia dist/*.dmg --clobber -R "$GITHUB_REPOSITORY"
+        run: gh release upload aplikacia dist/*.dmg dist/*.zip --clobber -R "$GITHUB_REPOSITORY"
 
   windows:
     needs: release
