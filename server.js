@@ -52,6 +52,22 @@ const WDA_PROJECT = process.env.WDA_PROJECT || path.join(__dirname, 'WebDriverAg
 const WDA_MODE = process.env.AUTO_WDA === '0' ? 'none'
   : process.env.WDA_MODE || (config.teamId && config.bundleId && fs.existsSync(WDA_PROJECT) ? 'xcode' : 'goios');
 
+// posielanie cez kábel: priečinok WebDriverAgenta musí byť viditeľný v aplikácii Súbory.
+// Xcode kľúče z WebDriverAgentRunner/Info.plist prenesie do aplikácie v iPhone → doplníme ich (raz, pred buildom).
+function ensureFileSharing() {
+  const f = path.join(path.dirname(WDA_PROJECT), 'WebDriverAgentRunner', 'Info.plist');
+  try {
+    let x = fs.readFileSync(f, 'utf8');
+    if (/UIFileSharingEnabled/.test(x)) return;
+    const i = x.lastIndexOf('</dict>');
+    if (i < 0) return;
+    x = x.slice(0, i) + '\t<key>UIFileSharingEnabled</key>\n\t<true/>\n\t<key>LSSupportsOpeningDocumentsInPlace</key>\n\t<true/>\n' + x.slice(i);
+    fs.writeFileSync(f, x);
+    console.log('WebDriverAgent: zapnutý priečinok v aplikácii Súbory (posielanie cez kábel)');
+  } catch (_) {}
+}
+if (WDA_MODE === 'xcode') ensureFileSharing();
+
 let labels = {};
 try { labels = JSON.parse(fs.readFileSync(LABELS_FILE, 'utf8')); } catch (_) {}
 const saveLabels = () => fs.writeFile(LABELS_FILE, JSON.stringify(labels, null, 2), () => {});
