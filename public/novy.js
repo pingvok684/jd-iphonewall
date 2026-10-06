@@ -32,6 +32,7 @@ async function openWizard(opts = {}) {
         <button type="button" class="wkind" data-kind="carousel"><b>🖼️ Carousel</b><small>1 až 20 fotiek</small></button></div>
       <div class="fld"><span>Na ktorý účet (telefón) – môžeš vybrať viac</span>${chipsHtml(selPhones)}</div>
       <small class="hint" data-profhint></small>
+      <div class="mbsnote">📱 Plánuje sa cez aplikáciu <b>Meta Business Suite</b> – samotný Instagram nestačí. Musí byť v iPhone nainštalovaná, prihlásená a prepojená s Instagram účtom (profesionálny účet: Tvorca alebo Firma).</div>
     </div>
 
     <div class="wpane" data-p="1">

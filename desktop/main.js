@@ -295,7 +295,9 @@ async function checkSetup() {
   }
   for (const p of res.phones) {
     const a = await run(IOS, ['apps', `--udid=${p.udid}`], 30000);
-    const app = wdaApp(a.out);
+    const app = wdaApp(a.out), apps = appList(a.out);
+    p.mbs = apps.length ? apps.some((x) => /business suite|pages manager/i.test(String(x.CFBundleDisplayName || x.CFBundleName || '')) || /^com\.facebook\.(PagesManager|Pages)$/i.test(String(x.CFBundleIdentifier || ''))) : null;
+    p.ig = apps.length ? apps.some((x) => x.CFBundleIdentifier === 'com.burbn.instagram') : null;
     p.wda = !!app || /xctrunner|WebDriverAgentRunner/i.test(a.out);
     p.appsError = a.ok ? '' : a.err.slice(0, 200);
     p.bundle = app ? app.CFBundleIdentifier : ((a.out.match(/[A-Za-z0-9._\-]*(?:xctrunner|WebDriverAgentRunner)[A-Za-z0-9._\-]*/i) || [])[0] || '');
@@ -313,9 +315,12 @@ async function checkSetup() {
   }
   return res;
 }
+function appList(out) {
+  for (const chunk of [out, ...out.split('\n')]) { try { const j = JSON.parse(chunk); if (Array.isArray(j)) return j; } catch (_) {} }
+  return [];
+}
 function wdaApp(out) {
-  let list = [];
-  for (const chunk of [out, ...out.split('\n')]) { try { const j = JSON.parse(chunk); if (Array.isArray(j)) { list = j; break; } } catch (_) {} }
+  const list = appList(out);
   return list.find((x) => x && /xctrunner|WebDriverAgentRunner/i.test(String(x.CFBundleIdentifier || '') + ' ' + String(x.CFBundleName || ''))) || null;
 }
 const folderDone = new Map();

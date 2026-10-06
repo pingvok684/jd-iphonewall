@@ -84,8 +84,18 @@
       <div data-sclist></div><span class="hint">Mac: stiahnutý súbor môžeš poslať do iPhonu aj cez AirDrop. Skratku nájdeš aj na stránke v Nastaveniach → Fotky a videá.</span></div>
   </div>
 
+  <div class="step" id="s-mbs">
+    <div class="num" data-n>6</div><h2>Meta Business Suite na plánovanie <span class="st" data-st>—</span></h2>
+    <div class="body"><b>Plánovanie príspevkov ide cez aplikáciu Meta Business Suite</b> – samotná aplikácia Instagram nestačí, AI v nej príspevok na neskorší čas nenaplánuje.
+      <ol><li>Do každého iPhonu nainštaluj <b>Meta Business Suite</b> (zadarmo, App Store) aj <b>Instagram</b>.</li>
+        <li>V Meta Business Suite sa prihlás a prepoj svoj Instagram účet.</li>
+        <li>Instagram účet musí byť <b>profesionálny</b> (Tvorca alebo Firma): Instagram → Nastavenia → Typ účtu a nástroje → Prepnúť na profesionálny účet.</li></ol>
+      <div class="btns"><button data-open="https://apps.apple.com/app/id514643583">Meta Business Suite v App Store</button></div><div data-mbslist></div>
+      <span class="hint">Prieskum reels, story a ďalšie šablóny fungujú aj bez nej – potrebná je len na plánovanie príspevkov.</span></div>
+  </div>
+
   <div class="step" id="s-ai">
-    <div class="num" data-n>6</div><h2>AI kľúč</h2>
+    <div class="num" data-n>7</div><h2>AI kľúč</h2>
     <div class="body">Na stránke otvor <b>Nastavenia</b> a vlož <b>Claude API kľúč</b> (AI ovládanie a plánovanie) a voliteľne <b>KIE kľúč</b> (návrhy popisov). Ukladajú sa len v tomto počítači.</div>
   </div>
 </div>
@@ -145,10 +155,20 @@ async function refresh() {
     scl.innerHTML = old.length ? `<p class="hint" style="color:var(--bad)">${old.map(nm).join(', ')}: v telefóne je starý WebDriverAgent, ktorý priečinok v Súboroch neukáže. Zopakuj krok 3 s novým <b>WebDriverAgent.ipa</b> (tlačidlo Ukázať WebDriverAgent.ipa) – starý najprv z iPhonu vymaž.</p>`
       : r.phones.length > 1 ? r.phones.map((p) => `<div class="ph ${p.folder ? 'y' : 'n'}"><i></i><b>${nm(p)}</b> <span class="hint">· ${p.folder ? 'priečinok ✓' : 'zatiaľ nie'}</span></div>`).join('') : '';
   }
+  // Meta Business Suite
+  const ml = $('[data-mbslist]');
+  if (!r.phones.length) { set('s-mbs', '', '—'); ml.innerHTML = ''; }
+  else {
+    const miss = r.phones.filter((p) => p.mbs === false), unk = r.phones.filter((p) => p.mbs == null);
+    if (!miss.length && !unk.length) set('s-mbs', 'ok', 'nainštalovaná');
+    else if (miss.length) set('s-mbs', 'wait', miss.length === r.phones.length ? 'chýba' : `chýba na ${miss.length}`);
+    else set('s-mbs', 'wait', 'neviem zistiť');
+    ml.innerHTML = r.phones.map((p) => `<div class="ph ${p.mbs ? 'y' : 'n'}"><i></i><b>${esc(p.name || 'iPhone')}</b> <span class="hint">· Meta Business Suite ${p.mbs ? '✓' : p.mbs === false ? 'chýba' : '?'} · Instagram ${p.ig ? '✓' : p.ig === false ? 'chýba' : '?'}</span></div>`).join('');
+  }
   if (!win && r.xcodeMode) $('[data-xcinfo]').textContent = 'Xcode režim je nastavený ✓';
   else if (!win && !r.xcode) $('[data-xcinfo]').textContent = 'Xcode nie je nainštalovaný.';
   const ready = r.phones.length && r.phones.every((p) => p.wda && p.devMode !== false) && (!win || r.drivers);
-  $('#sum').textContent = ready ? 'Všetko pripravené ✓ – ešte pridaj skratku JD Save a AI kľúč.' : 'Dokonči kroky označené oranžovou alebo červenou. Pokračovať môžeš aj neskôr.';
+  $('#sum').textContent = ready ? 'Všetko pripravené ✓ – ešte pridaj skratku JD Save, prihlás sa do Meta Business Suite a vlož AI kľúč.' : 'Dokonči kroky označené oranžovou alebo červenou. Pokračovať môžeš aj neskôr.';
 }
 refresh();
 setInterval(refresh, 6000);
