@@ -1201,8 +1201,9 @@
           <div class="kh"><b>Claude (Anthropic)</b><span class="kst" id="keyState">—</span></div>
           <p class="sub">Potrebný pre AI ovládanie telefónov a šablóny – AI vidí obrazovku a ťuká.</p>
           <div class="kmodels">
-            <label class="ctl"><span>Model pre prieskum reels</span><select id="mdlResearch"><option value="haiku">Haiku – najlacnejší (odporúčané)</option><option value="sonnet">Sonnet – presnejší, drahší</option></select></label>
-            <label class="ctl"><span>Model pre ostatné úlohy (plánovanie, šablóny)</span><select id="mdlTasks"><option value="sonnet">Sonnet (odporúčané)</option><option value="haiku">Haiku – lacnejší, môže sa častejšie pomýliť</option><option value="opus">Opus – najpresnejší, najdrahší</option></select></label>
+            <label class="ctl"><span>Model na čítanie reelov (prieskum)</span><select id="mdlResearch"><option value="haiku">Haiku – najlacnejší (odporúčané)</option><option value="sonnet">Sonnet – presnejší, drahší</option></select></label>
+            <label class="ctl"><span>Model na ťukanie (plánovanie, šablóny, otvorenie profilu)</span><select id="mdlTasks"><option value="sonnet">Sonnet (odporúčané)</option><option value="haiku">Haiku – lacnejší, môže sa častejšie pomýliť</option><option value="opus">Opus – najpresnejší, najdrahší</option></select></label>
+            <label class="ctl"><span>Posúvanie reelov pri prieskume</span><select id="rsScroll"><option value="auto">Auto scroll v Instagrame – reely sa pozrú celé (prirodzenejšie)</option><option value="app">Appka posúva sama – rýchlejšie a najlacnejšie</option></select></label>
             <small class="hint" id="mdlMsg"></small>
           </div>
           <div class="kbtns"><button class="go" id="keybtn">Nastaviť kľúč</button><a class="btn" href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener">💳 Kúpiť kredit</a><a class="btn ghost" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">🔑 Vytvoriť kľúč</a></div>
@@ -1657,6 +1658,7 @@ async function loadSettings() {
   document.getElementById('aiUsing').innerHTML = d.aiUsing === 'kie' ? 'Popisy idú cez <b>KIE</b>.' + (d.hasClaudeKey ? ' AI klikanie ide cez Claude.' : ' <span style=\"color:var(--warn)\">AI klikanie a šablóny nepôjdu, kým nevložíš Claude kľúč.</span>') : d.aiUsing === 'anthropic' ? 'Popisy aj AI klikanie idú cez <b>Claude priamo</b>.' : '<span style="color:var(--bad)">AI nemá kľúč – nastav KIE alebo Claude kľúč.</span>';
   document.getElementById('kieKeyState').innerHTML = d.hasKieKey ? '<span style="color:var(--ok)">nastavený ✓</span>' : '<span style="color:var(--faint)">nenastavený</span>';
   if (d.aiModels) { document.getElementById('mdlResearch').value = d.aiModels.research; document.getElementById('mdlTasks').value = d.aiModels.tasks; }
+  if (d.researchScroll) document.getElementById('rsScroll').value = d.researchScroll;
   const ts = document.getElementById('typeSpeed');
   if (d.typingSpeed && ![...ts.options].some((o) => +o.value === d.typingSpeed)) ts.insertAdjacentHTML('beforeend', `<option value="${d.typingSpeed}">${d.typingSpeed} znakov/s</option>`);
   ts.value = String(d.typingSpeed || 60);
@@ -1816,8 +1818,8 @@ document.getElementById('restoreIn').onchange = async (e) => {
     m.textContent = `Obnovené (${j.files} súborov). Stránka sa reštartuje…`; setTimeout(() => location.reload(), 6000); }
   catch (err) { m.textContent = 'Chyba: ' + err.message; }
 };
-['mdlResearch', 'mdlTasks'].forEach((id) => (document.getElementById(id).onchange = async () => {
-  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aiModels: { research: document.getElementById('mdlResearch').value, tasks: document.getElementById('mdlTasks').value } }) });
+['mdlResearch', 'mdlTasks', 'rsScroll'].forEach((id) => (document.getElementById(id).onchange = async () => {
+  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aiModels: { research: document.getElementById('mdlResearch').value, tasks: document.getElementById('mdlTasks').value }, researchScroll: document.getElementById('rsScroll').value }) });
   const m = document.getElementById('mdlMsg'); m.textContent = 'Uložené ✓ – platí od ďalšej úlohy'; setTimeout(() => (m.textContent = ''), 2500);
 }));
 document.getElementById('typeSpeed').onchange = async (e) => {

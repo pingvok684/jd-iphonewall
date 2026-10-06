@@ -60,7 +60,8 @@ const TOOLS = [
 const NAV_TOOLS = [...TOOLS.filter((t) => !['reel_note', 'skip_ad'].includes(t.name)),
   { name: 'reels_ready', description: 'Prvý reel sa prehráva na celú obrazovku – ďalej to preberie aplikácia.', input_schema: { type: 'object', properties: {} } }];
 const REEL_TOOLS = TOOLS.filter((t) => ['reel_note', 'skip_ad'].includes(t.name));
-const REEL_SYSTEM = 'Pozeráš screenshot reelu na Instagrame a zapisuješ si ho pre prieskum obsahu. Vždy zavolaj presne jeden nástroj: skip_ad pri reklame, inak reel_note. Píš po slovensky, stručne.';
+const SAME_TOOL = { name: 'same_reel', description: 'Na screenshote je stále ten istý reel ako naposledy zapísaný (nový sa ešte nezačal).', input_schema: { type: 'object', properties: {} } };
+const REEL_SYSTEM = 'Pozeráš screenshot reelu na Instagrame a zapisuješ si ho pre prieskum obsahu. Vždy zavolaj presne jeden nástroj: same_reel ak je to ten istý reel ako naposledy (ak ten nástroj máš), skip_ad pri reklame, inak reel_note. Píš po slovensky, stručne.';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -268,36 +269,60 @@ async function runResearch(dev, task, apiKey, actions, opts = {}) {
   const profs = (((task.match(/Profil na prieskum:\s*„([^“”"]*)[“”"]/) || [])[1]) || '').split(/\s*[,;]\s*/).map((x) => x.trim()).filter(Boolean);
   const want = Math.max(1, Math.min(50, parseInt((task.match(/pozri\s+(\d+)\s+reel/i) || [])[1], 10) || 5));
   say(`▶ Úloha: ${task}`);
-  const model = await prepModel(apiKey, opts.family || 'haiku', say, ' · posúvanie robí appka, AI sa pozrie raz na každý reel');
+  // ťukanie (otvoriť profil, reely) robí presnejší model, čítanie reelov lacný model
+  const navModel = await prepModel(apiKey, opts.navFamily || 'sonnet', say, ' · otvára profil');
+  const model = isKie(apiKey) ? null : await modelFor(keyOf(apiKey), opts.family || 'haiku');
+  if (model) say(`🧠 Model: ${model} · číta reely (posúvanie robí appka)`);
   A.reelNotes = []; A.ads = 0; A.swipes = 0;
   const up = () => actions.swipe({ x1: 0.5, y1: 0.75, x2: 0.5, y2: 0.25, ms: 280 });
+  const scroll = opts.scroll === 'app' ? 'app' : 'auto';
+  if (scroll === 'auto') say('🔁 posúvanie: Auto scroll v Instagrame (reely sa pozrú celé)');
+  const autoRule = scroll === 'auto' ? ' Keď sa prvý reel prehráva, zapni v Instagrame automatické posúvanie: na reeli ťukni na ⋯ (tri bodky, More / Viac), otvor Playback / Prehrávanie a zapni Auto scroll / Automatické posúvanie (ak už je zapnuté, nechaj ho tak). Menu zavri, aby sa reel znova prehrával na celú obrazovku.' : '';
+  const rule = autoRule + ' Keď sa reel prehráva na celú obrazovku, zavolaj reels_ready. Nič nelajkuj, nesleduj, nekomentuj ani nezdieľaj. Ak sa profil nedá nájsť, zavolaj done a napíš prečo.';
   for (const [pi, p] of (profs.length ? profs : ['']).entries()) {
     if (A.stop) { say('■ Zastavené'); return; }
     if (pi) say(`→ ďalší profil: ${p}`);
-    const nav = (p
-      ? `Otvor Instagram. Ťukni na Hľadať (lupa), napíš „${p}“ a otvor správny účet (pri mene osobnosti vyber overený účet s modrou fajkou alebo ten s najviac sledovateľmi). Na jeho profile otvor záložku Reels a ťukni na prvý reel.`
-      : 'Otvor Instagram a prejdi do záložky Reels.')
-      + ' Keď sa reel prehráva na celú obrazovku, zavolaj reels_ready. Nič nelajkuj, nesleduj, nekomentuj ani nezdieľaj. Ak sa profil nedá nájsť, zavolaj done a napíš prečo.';
-    const r = await agentLoop(dev, apiKey, actions, { task: nav, model, maxSteps: 35, tools: NAV_TOOLS, kind: 'prieskum', quietDone: true });
+    // Instagram otvorí appka sama (bez AI); používateľské meno rovno ako profil
+    const user = /^@?[a-z0-9._]{2,30}$/i.test(p) ? p.replace(/^@/, '') : '';
+    let opened = '';
+    try {
+      if (user && actions.openUrl) { await actions.openUrl(`instagram://user?username=${encodeURIComponent(user)}`); opened = 'profile'; say(`📲 otváram profil @${user} v Instagrame`); }
+      else if (actions.openApp) { await actions.openApp('com.burbn.instagram'); opened = 'app'; say('📲 otváram Instagram'); }
+    } catch (e) { say(`⚠ Instagram sa nepodarilo otvoriť priamo (${e.message}) – skúsi to AI`); }
+    if (opened) await sleep(3500);
+    const nav = opened === 'profile'
+      ? `Na obrazovke je otvorený Instagram s profilom @${user} (ak sa pýta „Otvoriť v Instagrame?“, ťukni Otvoriť; ak profil nie je otvorený, v Instagrame ťukni na Hľadať, napíš ${user} a otvor ho). Na profile ťukni na záložku Reels (ikona prehrávača pod hlavičkou profilu, v rade s mriežkou príspevkov) a potom ťukni na prvý reel vľavo hore.${rule}`
+      : p
+        ? `${opened ? 'Instagram je otvorený.' : 'Otvor Instagram.'} Ťukni na Hľadať (lupa) dole, ťukni do vyhľadávacieho poľa hore, napíš „${p}“ a otvor správny účet (pri mene osobnosti vyber overený účet s modrou fajkou alebo ten s najviac sledovateľmi). Na profile ťukni na záložku Reels a na prvý reel.${rule}`
+        : `${opened ? 'Instagram je otvorený.' : 'Otvor Instagram.'} Ťukni na ikonu Reels v dolnej lište.${rule}`;
+    const r = await agentLoop(dev, apiKey, actions, { task: nav, model: navModel, maxSteps: 35, tools: NAV_TOOLS, kind: 'prieskum', quietDone: true });
     if (r.status === 'stopped') return;
     if (r.status !== 'ready') { say(`⚠ ${p || 'Reels'}: reely sa nepodarilo otvoriť${r.summary ? ' – ' + r.summary : ''}`); continue; }
-    let seen = 0, ads = 0;
-    while (seen < want && ads < 15) {
+    let seen = 0, ads = 0, last = null, sameSince = Date.now(), checks = 0;
+    const auto = scroll === 'auto';
+    while (seen < want && ads < 15 && checks < want * 40) {
       if (A.stop) { say('■ Zastavené'); return; }
-      await sleep(2500); // nech sa reel načíta a ukáže hook
+      await sleep(auto ? (last ? 6000 : 2500) : 2500); // auto: Instagram posúva sám, len sa pozrieme každých pár sekúnd
+      checks++;
       const jpg = await grabFrame(dev.mjpegPort);
-      const res = await callClaude(apiKey, [{ role: 'user', content: [{ type: 'text', text: `Profil: ${p || 'Reels feed'} – reel ${seen + 1} z ${want}. Ak je to reklama (Sponsored / Sponzorované / Reklama / Ad, tlačidlo Shop now / Learn more / Install / Nakupovať), zavolaj skip_ad. Inak zavolaj reel_note (profil vyplň „${p || 'Reels feed'}“).` }, img(jpg)] }],
-        { model, system: REEL_SYSTEM, tools: REEL_TOOLS, toolChoice: { type: 'any' }, maxTokens: 400 });
+      const prev = auto && last ? ` Naposledy zapísaný reel mal hook „${last.hook}“ (formát: ${last.format || '?'}${last.prostredie ? ', ' + last.prostredie : ''}). Ak je na screenshote stále TEN ISTÝ reel, zavolaj same_reel.` : '';
+      const res = await callClaude(apiKey, [{ role: 'user', content: [{ type: 'text', text: `Profil: ${p || 'Reels feed'} – reel ${seen + 1} z ${want}.${prev} Ak je to reklama (Sponsored / Sponzorované / Reklama / Ad, tlačidlo Shop now / Learn more / Install / Nakupovať), zavolaj skip_ad. Inak zavolaj reel_note (profil vyplň „${p || 'Reels feed'}“).` }, img(jpg)] }],
+        { model, system: REEL_SYSTEM, tools: auto && last ? [...REEL_TOOLS, SAME_TOOL] : REEL_TOOLS, toolChoice: { type: 'any' }, maxTokens: 400 });
       track('prieskum', apiKey, res, dev.label);
       const u = (res.content || []).find((c) => c.type === 'tool_use') || {};
       const i = u.input || {};
-      if (u.name === 'skip_ad') { ads++; A.ads++; say('⏭ reklama – preskakujem'); }
-      else {
-        seen++;
-        const n = { profil: p || 'Reels feed', hook: String(i.hook || '').trim(), format: String(i.format || '').trim(), prostredie: String(i.prostredie || '').trim(), hudba: String(i.hudba || '').trim(), zhliadnutia: String(i.zhliadnutia || '').trim(), jpg };
-        A.reelNotes.push(n); say(`📝 Reel ${A.reelNotes.length}: ${(n.hook || '—').slice(0, 80)}`);
+      if (u.name === 'same_reel') {
+        // Auto scroll neposúva (napr. sa vypol) → po 75 s posunieme sami
+        if (Date.now() - sameSince > 75000) { say('↕ Auto scroll sa nehýbe – posúvam sám'); await up(); A.swipes++; sameSince = Date.now(); }
+        continue;
       }
-      if (seen < want) { await up(); A.swipes++; }
+      sameSince = Date.now();
+      if (u.name === 'skip_ad') { ads++; A.ads++; say('⏭ reklama – preskakujem'); await up(); A.swipes++; continue; }
+      seen++;
+      const n = { profil: p || 'Reels feed', hook: String(i.hook || '').trim(), format: String(i.format || '').trim(), prostredie: String(i.prostredie || '').trim(), hudba: String(i.hudba || '').trim(), zhliadnutia: String(i.zhliadnutia || '').trim(), jpg };
+      A.reelNotes.push(n); last = n; say(`📝 Reel ${A.reelNotes.length}: ${(n.hook || '—').slice(0, 80)}`);
+      if (!auto && seen < want) { await up(); A.swipes++; }
+      else if (auto) A.swipes++;
     }
   }
   // trendy zo všetkých poznámok – jedno krátke textové volanie

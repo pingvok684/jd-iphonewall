@@ -801,7 +801,10 @@ async function runAgentTask(dev, task, maxSteps) {
     swipe: async (sw) => { await wake(dev); return swipe(dev, sw); },
     type: async (t) => { await wake(dev); return typeText(dev, t); },
     home: async () => { await wake(dev); return wda(dev, 'POST', '/wda/homescreen'); },
-  }, { maxSteps, family: isResearch(task) ? aiModel('research') : aiModel('tasks') });
+    // priamo bez AI: spustiť aplikáciu / otvoriť odkaz (napr. profil v Instagrame)
+    openApp: async (bundleId) => { await wake(dev); return withSession(dev, (sid) => wda(dev, 'POST', `/session/${sid}/wda/apps/launch`, { bundleId }, 30000)); },
+    openUrl: async (u) => { await wake(dev); return withSession(dev, (sid) => wda(dev, 'POST', `/session/${sid}/url`, { url: u }, 30000)); },
+  }, { maxSteps, family: isResearch(task) ? aiModel('research') : aiModel('tasks'), navFamily: aiModel('tasks'), scroll: config.researchScroll === 'app' ? 'app' : 'auto' });
   watchAgent(dev, task);
 }
 
@@ -1222,7 +1225,7 @@ const server = http.createServer(async (req, res) => {
       hasMagnificKey: !!(process.env.MAGNIFIC_API_KEY || config.magnificKey),
       hasKieKey: !!config.kieKey,
       keyLooksWrong: !!(config.apiKey && !/^sk-ant-/.test(config.apiKey)),
-      typingSpeed: typingSpeed(), aiModels: { research: aiModel('research'), tasks: aiModel('tasks') },
+      typingSpeed: typingSpeed(), aiModels: { research: aiModel('research'), tasks: aiModel('tasks') }, researchScroll: config.researchScroll === 'app' ? 'app' : 'auto',
       cleanupDays: config.cleanupDays || 0,
       mediaUsb: config.mediaUsb !== false,
       telegram: { bot: tgCfg().bot || '', linked: !!(tgCfg().token && tgCfg().chatId), chatName: tgCfg().chatName || '', events: { ...TG_EVENTS, ...(tgCfg().events || {}) } },
@@ -1576,6 +1579,7 @@ const server = http.createServer(async (req, res) => {
     if (b.mediaUsb !== undefined) { config.mediaUsb = !!b.mediaUsb; for (const d of devices.values()) { d.usbSkipUntil = 0; d.usbInfo = ''; } }
     if (b.cleanupDays !== undefined) config.cleanupDays = [0, 14, 30, 60, 90].includes(+b.cleanupDays) ? +b.cleanupDays : 0;
     if (b.aiModels && typeof b.aiModels === 'object') { config.aiModels = config.aiModels || {}; for (const k of ['research', 'tasks']) if (MODEL_FAMS.includes(b.aiModels[k])) config.aiModels[k] = b.aiModels[k]; }
+    if (b.researchScroll === 'app' || b.researchScroll === 'auto') config.researchScroll = b.researchScroll;
     if (b.typingSpeed !== undefined) config.typingSpeed = Math.max(1, Math.min(60, parseInt(b.typingSpeed, 10) || 60));
     fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), () => {});
     return json(res, 200, { ok: true });
