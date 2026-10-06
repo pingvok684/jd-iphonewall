@@ -1502,6 +1502,10 @@ const server = http.createServer(async (req, res) => {
     if (!dev.wdaOk) return json(res, 400, { error: 'Telefón ešte nie je pripravený (WDA).' });
     if ((dev.agent && dev.agent.running) || (dev.plan && dev.plan.running)) return json(res, 400, { error: 'Na telefóne práve beží iná úloha.' });
     let task = c.task, when = c.when, whenText = c.whenText;
+    // staré záznamy: AI prepínala album na Videos → teraz vždy Recents / Nedávne
+    task = task.replace(/v galérii prepni album na Videos \/ Videá a vyber/g, 'v galérii nechaj / prepni album na Recents / Nedávne (iný album ani priečinok NEPOUŽÍVAJ) a vyber')
+      .replace(/ťukni na pridanie fotiek a vyber/g, 'ťukni na pridanie fotiek; v galérii nechaj album Recents / Nedávne (iný album ani priečinok NEPOUŽÍVAJ); vyber');
+    if (!/±10 minút/.test(task)) task = task.replace('– NIKDY „Publish now“. ', '– NIKDY „Publish now“. Čas NEMUSÍ byť presný na minútu – stačí odchýlka do ±10 minút (dátum a hodina musia sedieť); presné minúty nedolaďuj. ');
     if (b.when && b.whenText) {
       if (new Date(b.when) < Date.now() + 19 * 60000) return json(res, 400, { error: 'Čas musí byť aspoň 20 minút dopredu.' });
       if (c.whenText) task = task.split(c.whenText).join(String(b.whenText));

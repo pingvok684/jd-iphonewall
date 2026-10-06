@@ -55,7 +55,7 @@ async function openWizard(opts = {}) {
     <div class="wpane" data-p="3">
       <label><span>Dátum a čas (slovenský čas)</span>${dtPicker(0, opts.date)}<small class="hint us-conv" data-conv></small></label>
       <div class="wquick" data-quick><button type="button" data-q="today19">Dnes 19:00</button><button type="button" data-q="tom12">Zajtra 12:00</button><button type="button" data-q="tom19">Zajtra 19:00</button></div>
-      <small class="hint">Meta dovolí naplánovať najskôr asi 20 minút dopredu.</small>
+      <small class="hint">Meta dovolí naplánovať najskôr asi 20 minút dopredu.</small><small class="tolnote">⏱️ Čas sa nastaví s odchýlkou do ±10 minút – AI nedolaďuje minúty presne, aby plánovanie bolo rýchlejšie a lacnejšie.</small>
       <div class="fld"><span>V ten deň už je naplánované</span><div data-dayinfo class="hint">…</div></div>
     </div>
 

@@ -575,7 +575,7 @@ function askVars(title, vars, kind, defUdid) {
         : /^odkaz v story/i.test(label) ? `<input data-i="${i}" data-recent="jd-story-links" type="url" placeholder="https://…"><div class="rprofs" data-rp hidden><small>Naposledy použité – klikni a vlož:</small><div class="rpl"></div></div>`
         : /^text na tlačidle/i.test(label) ? `<input data-i="${i}" data-recent="jd-story-linktexts" placeholder="napr. Klikni sem"><div class="rprofs" data-rp hidden><small>Naposledy použité – klikni a vlož:</small><div class="rpl"></div></div>`
         : `<input data-i="${i}">`;
-      const hint = /^odkaz v story/i.test(label) ? '<small class="hint">Prázdne = story bez odkazu. Odkaz sa pridá ako nálepka LINK, na ktorú ľudia ťuknú.</small>' : /^text na tlačidle/i.test(label) ? '<small class="hint">Prázdne = Instagram ukáže samotnú adresu odkazu.</small>' : /dátum a čas/i.test(label) ? '<small class="hint">Čas zadávaš slovenský. Meta dovolí naplánovať najskôr asi 20 minút dopredu.</small><small class="hint us-conv" data-conv></small>' : '';
+      const hint = /^odkaz v story/i.test(label) ? '<small class="hint">Prázdne = story bez odkazu. Odkaz sa pridá ako nálepka LINK, na ktorú ľudia ťuknú.</small>' : /^text na tlačidle/i.test(label) ? '<small class="hint">Prázdne = Instagram ukáže samotnú adresu odkazu.</small>' : /dátum a čas/i.test(label) ? '<small class="hint">Čas zadávaš slovenský. Meta dovolí naplánovať najskôr asi 20 minút dopredu.</small><small class="tolnote">⏱️ Čas sa nastaví s odchýlkou do ±10 minút – AI nedolaďuje minúty presne, aby plánovanie bolo rýchlejšie a lacnejšie.</small><small class="hint us-conv" data-conv></small>' : '';
       const isMus = /pesnič/i.test(label), tag = (kind && /popis/i.test(label)) || isMus || isPlace ? 'div' : 'label';
       return `<${tag} class="${tag === 'div' ? 'fld' : ''}"${tag === 'div' && !isMus && !isPlace ? ' data-capwrap' : ''}><span>${esc(isMus ? 'Hudba' : isPlace ? 'Kam zverejniť' : label.replace(/\s*\(napr\..*\)$/, ''))}</span>${ctl}${hint}</${tag}>`;
     }).join('');
@@ -696,7 +696,8 @@ function postTask(isReel, place, x, pick, title) {
     `Otvor aplikáciu Meta Business Suite. Naplánuj 1 ${isReel ? 'reel' : 'carousel'}: ťukni na „+“ / „Create“ a vyber ${isReel ? 'Reel' : 'Post / Príspevok'}; pri účtoch / umiestneniach nastav: ${place}; ` + which +
     `${MUSIC_RULE} Hudba: „${x.mus}“. Napíš presne tento popis: „${x.cap}“. Ak je možnosť označiť obsah ako vytvorený AI (AI info / AI label), zapni ju. ` +
     `Otvor „Scheduling options“ / „Možnosti plánovania“, vyber „Schedule for later“, nastav dátum a čas: ${x.when} a ťukni „Schedule“ – NIKDY „Publish now“. ` +
-    'Na konci otvor plánovač (Planner / Content → Scheduled) a over, že príspevok je naplánovaný na správny čas. Ak sa niečo nepodarí, nič nezverejňuj a skonči so správou, kde si sa zasekol.' };
+    'Čas NEMUSÍ byť presný na minútu – stačí odchýlka do ±10 minút (dátum a hodina musia sedieť); minúty nastav jedným-dvoma potiahnutiami na najbližšiu hodnotu a nestrácaj čas presným dolaďovaním. ' +
+    'Na konci otvor plánovač (Planner / Content → Scheduled) a over, že príspevok je naplánovaný na správny deň a čas (±10 minút je v poriadku). Ak sa niečo nepodarí, nič nezverejňuj a skonči so správou, kde si sa zasekol.' };
 }
 
 // ---------- hudba: klikacie možnosti namiesto písania ----------
@@ -746,6 +747,7 @@ function askMulti(t, defUdid) {
       <div class="mrow2"><label><span>Koľko príspevkov</span><select data-n>${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<option>${n}</option>`).join('')}</select></label>
         </div><div class="fld"><span>Kam zverejniť</span>${placeHtml()}</div>
       <div class="fld" data-allph><span>Telefón pre všetky (alebo vyber pri každom zvlášť nižšie)</span>${chipsHtml([], 'data-allbox')}</div>
+      <small class="tolnote">⏱️ Čas sa nastaví s odchýlkou do ±10 minút – AI nedolaďuje minúty presne, aby plánovanie bolo rýchlejšie a lacnejšie.</small>
       <small class="hint">Pri každom príspevku vyber, či je to <b>reel</b> alebo <b>carousel</b>, a pretiahni k nemu video / fotky – pred plánovaním sa pošlú do galérie iPhonu ako najnovšie, takže AI vyberie presne ich. Bez médií: použijú sa najnovšie videá / fotky, ktoré už sú v iPhone. Čas zadávaš slovenský, najskôr ~20 min dopredu.</small>
       <div class="mitems" data-items></div>
       <div class="mact"><button data-x>Zrušiť</button><button class="go" data-ok>Kontrola →</button></div></div>`;
@@ -862,10 +864,10 @@ function askMulti(t, defUdid) {
       };
       const musTxt = (m) => (!m ? '🔥 prvá pesnička v ponuke' : /^nie$/i.test(m) ? '🔇 bez hudby' : '🎵 ' + m);
       const rv = document.createElement('div'); rv.className = 'mreview';
-      rv.innerHTML = `<div class="mrv-h"><b>Kontrola</b> – skontroluj časy a nastavenia. Po kliknutí na <b>Publikovať</b> sa plán hneď spustí na telefónoch.</div>
+      rv.innerHTML = `<div class="mrv-h"><b>Kontrola</b> – skontroluj časy a nastavenia. Po kliknutí na <b>Publikovať</b> sa plán hneď spustí na telefónoch. Časy sa nastavia s odchýlkou do ±10 minút.</div>
         <div class="kv"><span>Kam zverejniť</span><b>${esc(place)}</b></div>
         ${list.map((x, i) => `<div class="mrv-it"><div class="mrv-t">${x.isReel ? '🎬 Reel' : `🖼️ Carousel · ${x.cnt} ${x.cnt === 1 ? 'fotka' : x.cnt < 5 ? 'fotky' : 'fotiek'}`}${list.length > 1 ? ` <small>príspevok ${i + 1}</small>` : ''}</div>
-          <div class="kv"><span>📅 Čas (Slovensko)</span><b>${esc(x.when)}</b></div>${convs[i] ? `<div class="mrv-conv">${esc(convs[i])}</div>` : ''}
+          <div class="kv"><span>📅 Čas (Slovensko)</span><b>${esc(x.when)} <small class="tolx">±10 min</small></b></div>${convs[i] ? `<div class="mrv-conv">${esc(convs[i])}</div>` : ''}
           <div class="kv"><span>📱 Telefón</span><b>${x.ph.map((u) => esc(phoneLabel(u))).join(', ')}</b></div>
           <div class="kv"><span>🎵 Hudba</span><b>${esc(musTxt(x.mus))}</b></div>
           <div class="kv"><span>🎞️ Médiá</span><b>${x.files.length ? x.files.map((f) => esc(f.name)).join(', ') : 'najnovšie v galérii iPhonu'}</b></div>
