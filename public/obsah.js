@@ -131,7 +131,7 @@ function openCalEntry(e) {
     ${e.caption ? `<div class="capshow">${esc(e.caption)}</div>` : ''}
     ${e.proof ? `<div class="fld"><span>Snímka z iPhonu po ${e.status === 'chyba' ? 'chybe' : 'naplánovaní'}</span><a href="/proof/${e.id}" target="_blank"><img class="proofimg" src="/proof/${e.id}" alt="Snímka"></a></div>` : ''}
     <small class="hint">Kalendár je prehľad toho, čo naplánovala stránka. Ak príspevok zmažeš alebo presunieš v Meta Business Suite, uprav tu stav alebo ho zmaž.</small>
-    <div class="mact"><button data-del>${icon('trash')}Zmazať z kalendára</button><span class="sp"></span><button data-edit data-tip="Otvorí plánovanie s rovnakými nastaveniami – opravíš, čo treba, a naplánuje sa znova">✏️ Upraviť a naplánovať znova</button>${e.task && ['chyba', 'nespustené'].includes(e.status) ? '<button data-retry>Skúsiť znova</button>' : ''}<button class="go" data-x>Hotovo</button></div></div>`;
+    <div class="mact calact"><button data-del>${icon('trash')}Zmazať z kalendára</button><button data-edit data-tip="Otvorí plánovanie s rovnakými nastaveniami – opravíš, čo treba, a naplánuje sa znova">✏️ Upraviť a naplánovať znova</button>${e.task && ['chyba', 'nespustené'].includes(e.status) ? '<button data-retry>Skúsiť znova</button>' : ''}<button class="go" data-x>Hotovo</button></div></div>`;
   document.body.appendChild(bg);
   const close = () => { bg.remove(); loadCalendar(); };
   bg.onclick = (ev) => { if (ev.target === bg) close(); };

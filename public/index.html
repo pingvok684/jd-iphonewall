@@ -298,6 +298,7 @@
   .keyrow .sub { margin: 4px 0 10px; } .kbtns { display: flex; gap: 8px; flex-wrap: wrap; } .kbtns a.btn { text-decoration: none; }
   .kmodels { display: grid; gap: 8px; margin: 0 0 12px; } .kmodels .ctl { display: flex; align-items: center; gap: 10px; } .kmodels .ctl span { flex: 1; font-size: 13px; } .kmodels select { max-width: 60%; }
   @media (max-width: 600px) { .kmodels .ctl { flex-direction: column; align-items: stretch; } .kmodels select { max-width: none; } }
+  .rtbox { display: inline-flex; align-items: center; gap: 10px; } .rtbox button { padding: 5px 10px; font-size: 12px; }
   .keyadv { margin-top: 10px; font-size: 13px; } .keyadv summary { cursor: pointer; color: var(--muted); }
   .nitem .ntitle { font-size: 22px; font-weight: 800; letter-spacing: -.01em; margin-bottom: 2px; background: linear-gradient(90deg, #ff4f76, #ffb547); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .jdtip { position: fixed; z-index: 100000; max-width: 280px; padding: 8px 11px; border-radius: 10px; background: #1d1f27; color: #eceef3; border: 1px solid rgba(255,255,255,.14); box-shadow: 0 10px 30px rgba(0,0,0,.5); font-size: 12.5px; line-height: 1.45; font-weight: 500; pointer-events: none; animation: jdtipin .12s ease-out; }
@@ -320,6 +321,8 @@
   .mrv-prev.none { font-size: 12px; color: var(--muted); }
   .tolnote { display: block; margin-top: 6px; padding: 7px 10px; border-radius: 10px; background: rgba(255,181,71,.10); border: 1px solid rgba(255,181,71,.35); color: #ffd28a; font-size: 12px; line-height: 1.45; }
   .tolx { color: #ffb547; font-weight: 600; margin-left: 4px; font-size: 11.5px; }
+  .modal .mact.calact { flex-wrap: wrap; justify-content: flex-end; gap: 8px; } .modal .mact.calact > button { flex: 0 1 auto; white-space: nowrap; } .modal .mact.calact [data-del] { margin-right: auto; }
+  @media (max-width: 560px) { .modal .mact.calact > button { flex: 1 1 100%; } }
   .mbsnote { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(66,133,244,.09); border: 1px solid rgba(66,133,244,.35); font-size: 12.5px; line-height: 1.5; color: var(--text); }
   .reshelp { margin-bottom: 12px; font-size: 13.5px; color: var(--muted); } .reshelp summary { cursor: pointer; color: var(--text); font-weight: 600; } .reshelp ol { margin: 10px 0 0; padding-left: 20px; line-height: 1.6; } .reshelp b { color: var(--text); }
   .rreels { display: grid; gap: 8px; margin-top: 12px; } .rreel { display: grid; grid-template-columns: 28px 1fr; gap: 2px 10px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
@@ -1240,6 +1243,8 @@
           <div class="kmodels">
             <label class="ctl"><span>Model na čítanie reelov (prieskum)</span><select id="mdlResearch"><option value="haiku">Haiku – najlacnejší (odporúčané)</option><option value="sonnet">Sonnet – presnejší, drahší</option></select></label>
             <label class="ctl"><span>Model na ťukanie (plánovanie, šablóny, otvorenie profilu)</span><select id="mdlTasks"><option value="sonnet">Sonnet (odporúčané)</option><option value="haiku">Haiku – lacnejší, môže sa častejšie pomýliť</option><option value="opus">Opus – najpresnejší, najdrahší</option></select></label>
+            <label class="ctl"><span>Model pre story</span><select id="mdlStory"><option value="sonnet">Sonnet – presné ťukanie (odporúčané)</option><option value="haiku">Haiku – najlacnejší, môže ťuknúť vedľa</option></select></label>
+            <label class="ctl"><span>Zapamätané postupy <small class="hint" id="rtCount"></small></span><span class="rtbox"><label class="bcheck" style="margin:0"><input type="checkbox" id="rtOn" checked><span>zapnuté</span></label><button type="button" id="rtClear" data-tip="Zabudne všetky zapamätané postupy – nabudúce si ich appka zapamätá znova">Zabudnúť</button></span></label>
             <label class="ctl"><span>Posúvanie reelov pri prieskume</span><select id="rsScroll"><option value="auto">Auto scroll v Instagrame – reely sa pozrú celé (prirodzenejšie)</option><option value="app">Appka posúva sama – rýchlejšie a najlacnejšie</option></select></label>
             <small class="hint" id="mdlMsg"></small>
           </div>
@@ -1328,7 +1333,7 @@
         <p>Ako rýchlo telefón píše text – ručne zo stránky aj keď píše AI (popisy, hashtagy, vyhľadávanie).</p>
         <label class="ctl" style="display:flex"><span style="flex:1">Rýchlosť</span>
           <select id="typeSpeed"><option value="60">Okamžite (60 znakov/s)</option><option value="20">Rýchlo (20 znakov/s)</option>
-            <option value="10">Normálne (10 znakov/s)</option><option value="5">Pomaly (5 znakov/s)</option><option value="3">Veľmi pomaly (3 znaky/s)</option></select></label>
+            <option value="10" selected>Normálne (10 znakov/s) – predvolené</option><option value="5">Pomaly (5 znakov/s)</option><option value="3">Veľmi pomaly (3 znaky/s)</option></select></label>
         <p class="sub" id="typeSpeedMsg" style="margin-top:8px"></p></div>
       <div class="panel"><h3><span data-icon="chart"></span>Míňanie na AI</h3>
         <p>Odhad podľa oficiálneho cenníka (Anthropic / Google) z počtu tokenov. Pri KIE môže byť skutočná suma nižšia – presný stav kreditu vidíš na kie.ai.</p>
@@ -1695,11 +1700,13 @@ async function loadSettings() {
   const km = document.getElementById('kieModel'); if (d.kieModel && ![...km.options].some((o) => o.value === d.kieModel)) km.insertAdjacentHTML('beforeend', `<option value="${esc(d.kieModel)}">${esc(d.kieModel)}</option>`); km.value = d.kieModel || 'claude-sonnet-5';
   document.getElementById('aiUsing').innerHTML = d.aiUsing === 'kie' ? 'Popisy idú cez <b>KIE</b>.' + (d.hasClaudeKey ? ' AI klikanie ide cez Claude.' : ' <span style=\"color:var(--warn)\">AI klikanie a šablóny nepôjdu, kým nevložíš Claude kľúč.</span>') : d.aiUsing === 'anthropic' ? 'Popisy aj AI klikanie idú cez <b>Claude priamo</b>.' : '<span style="color:var(--bad)">AI nemá kľúč – nastav KIE alebo Claude kľúč.</span>';
   document.getElementById('kieKeyState').innerHTML = d.hasKieKey ? '<span style="color:var(--ok)">nastavený ✓</span>' : '<span style="color:var(--faint)">nenastavený</span>';
-  if (d.aiModels) { document.getElementById('mdlResearch').value = d.aiModels.research; document.getElementById('mdlTasks').value = d.aiModels.tasks; }
+  if (d.aiModels) { document.getElementById('mdlResearch').value = d.aiModels.research; document.getElementById('mdlTasks').value = d.aiModels.tasks; if (d.aiModels.story) document.getElementById('mdlStory').value = d.aiModels.story; }
+  if (d.routines !== undefined) document.getElementById('rtOn').checked = d.routines;
+  document.getElementById('rtCount').textContent = d.routineCount ? `· ${d.routineCount} uložené` : '';
   if (d.researchScroll) document.getElementById('rsScroll').value = d.researchScroll;
   const ts = document.getElementById('typeSpeed');
   if (d.typingSpeed && ![...ts.options].some((o) => +o.value === d.typingSpeed)) ts.insertAdjacentHTML('beforeend', `<option value="${d.typingSpeed}">${d.typingSpeed} znakov/s</option>`);
-  ts.value = String(d.typingSpeed || 60);
+  ts.value = String(d.typingSpeed || 10);
   document.getElementById('scName').textContent = d.shortcut || 'JD Save';
   const n = d.mediaNet || {};
   document.getElementById('setNet').textContent = n.via === 'internet' ? 'beží' : `nebeží (${n.tunnel || '?'})`;
@@ -1856,10 +1863,15 @@ document.getElementById('restoreIn').onchange = async (e) => {
     m.textContent = `Obnovené (${j.files} súborov). Stránka sa reštartuje…`; setTimeout(() => location.reload(), 6000); }
   catch (err) { m.textContent = 'Chyba: ' + err.message; }
 };
-['mdlResearch', 'mdlTasks', 'rsScroll'].forEach((id) => (document.getElementById(id).onchange = async () => {
-  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aiModels: { research: document.getElementById('mdlResearch').value, tasks: document.getElementById('mdlTasks').value }, researchScroll: document.getElementById('rsScroll').value }) });
+['mdlResearch', 'mdlTasks', 'mdlStory', 'rsScroll', 'rtOn'].forEach((id) => (document.getElementById(id).onchange = async () => {
+  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aiModels: { research: document.getElementById('mdlResearch').value, tasks: document.getElementById('mdlTasks').value, story: document.getElementById('mdlStory').value }, researchScroll: document.getElementById('rsScroll').value, routines: document.getElementById('rtOn').checked }) });
   const m = document.getElementById('mdlMsg'); m.textContent = 'Uložené ✓ – platí od ďalšej úlohy'; setTimeout(() => (m.textContent = ''), 2500);
 }));
+document.getElementById('rtClear').onclick = async () => {
+  if (!confirm('Zabudnúť všetky zapamätané postupy? Nabudúce si ich appka zapamätá znova.')) return;
+  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clearRoutines: true }) });
+  document.getElementById('rtCount').textContent = ''; const m = document.getElementById('mdlMsg'); m.textContent = 'Postupy zabudnuté ✓'; setTimeout(() => (m.textContent = ''), 2500);
+};
 document.getElementById('typeSpeed').onchange = async (e) => {
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ typingSpeed: +e.target.value }) });
   const m = document.getElementById('typeSpeedMsg'); m.textContent = 'Uložené ✓'; setTimeout(() => (m.textContent = ''), 2000);

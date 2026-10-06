@@ -28,7 +28,7 @@ async function modelFor(apiKey, family = 'sonnet', fresh) {
 }
 const pickModel = (apiKey) => modelFor(apiKey, 'sonnet');
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || '90', 10);
-const KEEP_IMAGES = 3; // koľko posledných screenshotov posielať (šetrí peniaze)
+const KEEP_IMAGES = 2; // koľko posledných screenshotov posielať (šetrí peniaze): aktuálny + predchádzajúci
 // Premýšľanie modelu vypíname: jeho bloky sú viazané na presnú históriu a tú pri skracovaní
 // screenshotov meníme. Ak by model vypnutie nepodporoval, prepneme sa na režim bez skracovania.
 let thinkingOff = true;
@@ -36,7 +36,8 @@ let thinkingOff = true;
 const SYSTEM = `Ovládaš iPhone podľa úlohy od používateľa. Po každej akcii dostaneš nový screenshot.
 Súradnice x a y sú v rozsahu 0–1000 vzhľadom na screenshot (0,0 = ľavý horný roh, 1000,1000 = pravý dolný).
 Pravidlá:
-- Rob vždy JEDNU akciu naraz a pred ňou krátko (1 veta po slovensky) napíš, čo robíš a prečo.
+- Pred akciami napíš len veľmi krátku poznámku po slovensky (najviac 6 slov), nič viac.
+- Ak si istý, ako bude obrazovka po akcii vyzerať, pošli aj viac akcií naraz (najviac 4) – napr. ťuknúť do poľa, napísať text a ťuknúť Next. Keď si nie si istý (načítavanie, nové okno, výber v zozname), pošli len jednu akciu. Nový screenshot dostaneš po celej sérii.
 - Ak treba niečo napísať, najprv ťukni do textového poľa, potom použi type_text.
 - Na scrollovanie použi swipe (napr. nahor: y1=750 → y2=300).
 - Keď je úloha hotová alebo sa nedá dokončiť, zavolaj done so stručným zhrnutím.
@@ -196,10 +197,88 @@ async function prepModel(apiKey, family, say, extra = '') {
 }
 
 async function runAgent(dev, task, apiKey, actions, opts = {}) {
-  const say = sayFor(dev.agent);
+  const A = dev.agent, say = sayFor(A);
   say(`▶ Úloha: ${task}`);
   const model = await prepModel(apiKey, opts.family, say);
-  await agentLoop(dev, apiKey, actions, { task, model, maxSteps: opts.maxSteps });
+  let aiTask = task;
+  // 4) aplikáciu otvorí appka sama (bez AI) – ušetrí hľadanie ikony na ploche
+  for (const [re, ids, name] of OPEN_APPS) {
+    if (!re.test(task) || !actions.openApp) continue;
+    for (const id of ids) {
+      try { await actions.openApp(id); say(`📲 ${name} otvorená bez AI`); aiTask = `(${name} je už otvorená – spustila ju appka, neotváraj ju znova.) ` + task; await sleep(3500); break; } catch (_) {}
+    }
+    break;
+  }
+  // 7) zapamätaný postup: prvé kroky zopakuje appka bez AI, AI pokračuje až tam, kde sa obrazovka líši
+  const key = routineKey(task), vars = taskVars(task), rkey = key && `${dev.udid}|${key}`;
+  let record = null;
+  if (key && opts.routines !== false && actions.tapLabel && actions.describeAt) {
+    const all = store.readJson('routines.json', {}), r = all[rkey];
+    if (r && r.steps && r.steps.length) {
+      const done = [];
+      for (const st of r.steps) {
+        if (A.stop) { say('■ Zastavené'); return; }
+        let ok = false;
+        try {
+          if (st.a === 'tap') ok = await actions.tapLabel(st.el);
+          else if (st.a === 'type') { await actions.type(fillVars(st.text, vars)); ok = true; }
+          else if (st.a === 'wait') { await sleep(Math.min(10, st.s || 1) * 1000); ok = true; }
+        } catch (_) { ok = false; }
+        if (!ok) break;
+        done.push(st.a === 'tap' ? `ťuknutie na „${st.el.label}“` : st.a === 'type' ? 'napísanie textu' : 'čakanie');
+        await sleep(1200);
+      }
+      if (done.length) {
+        say(`⚡ ${done.length} ${done.length === 1 ? 'krok zopakovaný' : done.length < 5 ? 'kroky zopakované' : 'krokov zopakovaných'} bez AI (zapamätaný postup)`);
+        aiTask += `\n\nAPPKA UŽ AUTOMATICKY UROBILA PRVÉ KROKY: ${done.join(' → ')}. Pokračuj od aktuálnej obrazovky – nezačínaj odznova a tieto kroky neopakuj.`;
+        r.fails = 0;
+      } else { r.fails = (r.fails || 0) + 1; say('↪ zapamätaný postup tentoraz nesedel – pokračuje AI'); }
+      if (r.fails >= 2) { delete all[rkey]; say('🧠 postup sa zmenil – nabudúce si ho zapamätám znova'); }
+      else all[rkey] = r;
+      store.writeJson('routines.json', all);
+    } else record = { steps: [], stop: false, vars };
+  }
+  const res = await agentLoop(dev, apiKey, actions, { task: aiTask, model, maxSteps: opts.maxSteps, record });
+  // úspešný beh → zapamätať prvé kroky (len tie, ktoré sa dajú bezpečne zopakovať)
+  if (record && res && res.status === 'done' && record.steps.length >= 2 && !/nepodar|zlyhal|nedá|nedal|chyb|zasekol|nenaš|nemôž/i.test(res.summary || '')) {
+    const all = store.readJson('routines.json', {});
+    all[rkey] = { steps: record.steps.slice(0, 15), at: new Date().toISOString(), fails: 0 };
+    store.writeJson('routines.json', all);
+    say(`🧠 zapamätaných ${Math.min(15, record.steps.length)} krokov – nabudúce ich appka urobí bez AI`);
+  }
+}
+
+// ---------- úspory: otváranie aplikácií a zapamätané postupy ----------
+const OPEN_APPS = [
+  [/^Otvor aplikáciu Meta Business Suite/i, ['com.facebook.PagesManager', 'com.facebook.Pages'], 'Meta Business Suite'],
+  [/^Otvor Instagram/i, ['com.burbn.instagram'], 'Instagram'],
+];
+function routineKey(t) {
+  if (/Naplánuj 1 reel/.test(t)) return 'mbs-reel' + (/Instagram aj Facebook/.test(t) ? '-fb' : '');
+  if (/Naplánuj 1 carousel/.test(t)) return 'mbs-carousel' + (/Instagram aj Facebook/.test(t) ? '-fb' : '');
+  if (/pridať do Story/i.test(t)) return 'story';
+  return null;
+}
+function taskVars(t) {
+  const g = (re) => ((t.match(re) || [])[1] || '');
+  return { caption: g(/Napíš presne tento popis: „([\s\S]*?)“/), music: g(/Hudba: „([^“]*)“/), link: g(/Odkaz: „([^“]*)“/), linktext: g(/text na tlačidle: „([^“]*)“/) };
+}
+const fillVars = (text, v) => String(text).replace(/\{\{(\w+)\}\}/g, (_, k) => v[k] || '');
+// nahrávanie: ťuknutia podľa popisu tlačidla (nie súradníc), písanie s premennými; pri prvom kroku, ktorý sa nedá bezpečne zopakovať, nahrávanie končí
+async function recordStep(rec, name, i, f, actions) {
+  try {
+    if (name === 'tap') {
+      const el = await actions.describeAt(f(i.x), f(i.y));
+      if (!el || !el.label || el.dup > 2) { rec.stop = true; return; }
+      rec.steps.push({ a: 'tap', el });
+    } else if (name === 'type_text') {
+      let t = String(i.text || ''); const v = rec.vars || {};
+      for (const k of ['caption', 'music', 'link', 'linktext']) if (v[k] && t === v[k]) t = `{{${k}}}`;
+      if (t.length > 60 && !/^\{\{/.test(t)) { rec.stop = true; return; } // dlhý jedinečný text sa neopakuje
+      rec.steps.push({ a: 'type', text: t });
+    } else if (name === 'wait') rec.steps.push({ a: 'wait', s: Math.min(10, Number(i.seconds) || 1) });
+    else if (name !== 'done') rec.stop = true; // swipe, podržanie… → ďalej už len AI
+  } catch (_) { rec.stop = true; }
 }
 
 // jedna AI úloha: screenshot → akcia → screenshot … (vráti { status: done|ready|stopped|limit|end, summary })
@@ -225,9 +304,11 @@ async function agentLoop(dev, apiKey, actions, o) {
 
     const results = [];
     let finished = false, status = 'done', summary = '';
-    for (const u of uses) {
+    for (const [ui, u] of uses.entries()) {
       const i = u.input || {};
       let out = 'OK';
+      if (ui > 0) await sleep(700); // séria akcií: nech sa obrazovka stihne zmeniť
+      if (o.record && !o.record.stop) await recordStep(o.record, u.name, i, f, actions);
       try {
         switch (u.name) {
           case 'tap': say(`👆 tap ${Math.round(i.x)},${Math.round(i.y)}`); await actions.tap(f(i.x), f(i.y)); break;
@@ -371,4 +452,4 @@ async function askText(auth, system, content, maxTokens = 1200) {
   return (j.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('\n').trim();
 }
 
-module.exports = { startAgent, askText, grabFrame };
+module.exports = { startAgent, askText, grabFrame, clearRoutines: () => store.writeJson('routines.json', {}), routineCount: () => Object.keys(store.readJson('routines.json', {})).length };

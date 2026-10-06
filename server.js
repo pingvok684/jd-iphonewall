@@ -703,7 +703,47 @@ async function longPress(dev, fx, fy) {
 // model pre AI ovládanie: prieskum reels (jednoduché) a ostatné úlohy (plánovanie…)
 const MODEL_FAMS = ['haiku', 'sonnet', 'opus'];
 const aiModel = (k) => (MODEL_FAMS.includes((config.aiModels || {})[k]) ? config.aiModels[k] : k === 'research' ? 'haiku' : 'sonnet');
-const typingSpeed = () => Math.max(1, Math.min(60, Number(config.typingSpeed) || 60));
+// stromček obrazovky z WDA → prvok pod bodom s popisom (na zapamätané postupy)
+function walkTree(n, fn) { if (!n) return; fn(n); for (const c of n.children || []) walkTree(c, fn); }
+async function elementAt(dev, fx, fy) {
+  return withSession(dev, async (sid) => {
+    const r = await wda(dev, 'GET', `/session/${sid}/source?format=json`, null, 20000);
+    const W = dev.size.width, H = dev.size.height, px = fx * W, py = fy * H;
+    let best = null; const count = {};
+    walkTree(r.value, (n) => { const lab = String(n.label || '').trim(); if (lab) { const k = n.type + '|' + lab; count[k] = (count[k] || 0) + 1; } });
+    walkTree(r.value, (n) => {
+      const R = n.rect || {}, lab = String(n.label || '').trim();
+      if (!lab || lab.length > 80 || !(R.width > 0 && R.height > 0) || px < R.x || px > R.x + R.width || py < R.y || py > R.y + R.height) return;
+      if (!/Button|Cell|StaticText|Image|Link|Tab|Other|Switch|TextField/.test(n.type || '')) return;
+      const area = R.width * R.height;
+      if (area > W * H * 0.5) return; // celé okno nie je tlačidlo
+      const btn = /Button/.test(n.type);
+      if (!best || (btn && !best.btn && area < best.area * 6) || (btn === best.btn && area < best.area)) best = { type: n.type, label: lab, cx: (R.x + R.width / 2) / W, cy: (R.y + R.height / 2) / H, area, btn };
+    });
+    return best && { type: best.type, label: best.label, cx: +best.cx.toFixed(3), cy: +best.cy.toFixed(3), dup: count[best.type + '|' + best.label] || 1 };
+  });
+}
+async function tapByLabel(dev, el) {
+  if (!el || !el.label) return false;
+  const q = (t) => String(t).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return withSession(dev, async (sid) => {
+    const r = await wda(dev, 'POST', `/session/${sid}/elements`, { using: 'predicate string', value: `type == '${q(el.type)}' AND label == '${q(el.label)}'` }, 8000).catch(() => null);
+    const ids = (r && Array.isArray(r.value) ? r.value : []).map((e) => e.ELEMENT || e['element-6066-11e4-a52e-4f735466cecc']).filter(Boolean).slice(0, 6);
+    let best = null;
+    for (const id of ids) {
+      const rr = await wda(dev, 'GET', `/session/${sid}/element/${id}/rect`, null, 5000).catch(() => null), R = rr && rr.value;
+      if (!R || !(R.width > 0)) continue;
+      const cx = (R.x + R.width / 2) / dev.size.width, cy = (R.y + R.height / 2) / dev.size.height;
+      if (cx < 0 || cx > 1 || cy < 0 || cy > 1) continue;
+      const d = Math.hypot(cx - el.cx, cy - el.cy);
+      if (!best || d < best.d) best = { cx, cy, d };
+    }
+    if (!best || best.d > 0.25) return false;
+    await tap(dev, best.cx, best.cy);
+    return true;
+  });
+}
+const typingSpeed = () => Math.max(1, Math.min(60, Number(config.typingSpeed) || 10)); // predvolene Normálne (10 znakov/s)
 async function typeText(dev, text) {
   const chars = [...String(text)];
   // dlhý text pri pomalom písaní trvá dlhšie – podľa toho predĺžime čakanie na WDA
@@ -894,8 +934,11 @@ async function runAgentTask(dev, task, maxSteps) {
     // priamo bez AI: spustiť aplikáciu / otvoriť odkaz (napr. profil v Instagrame)
     openApp: async (bundleId) => { await wake(dev); return withSession(dev, (sid) => wda(dev, 'POST', `/session/${sid}/wda/apps/launch`, { bundleId }, 30000)); },
     reelLink: () => copyReelLink(dev),
+    // zapamätané postupy: tlačidlo pod bodom (podľa popisu) a ťuknutie na tlačidlo s rovnakým popisom
+    describeAt: (fx, fy) => elementAt(dev, fx, fy),
+    tapLabel: async (el) => { await wake(dev); return tapByLabel(dev, el); },
     openUrl: async (u) => { await wake(dev); await withSession(dev, (sid) => wda(dev, 'POST', `/session/${sid}/url`, { url: u }, 30000)); return acceptOpenPrompt(dev); },
-  }, { maxSteps, family: isResearch(task) ? aiModel('research') : aiModel('tasks'), navFamily: aiModel('tasks'), scroll: config.researchScroll === 'app' ? 'app' : 'auto' });
+  }, { maxSteps, family: isResearch(task) ? aiModel('research') : /pridať do Story/i.test(task) ? aiModel('story') : aiModel('tasks'), navFamily: aiModel('tasks'), scroll: config.researchScroll === 'app' ? 'app' : 'auto', routines: config.routines !== false });
   watchAgent(dev, task);
 }
 
@@ -1356,7 +1399,7 @@ const server = http.createServer(async (req, res) => {
       hasMagnificKey: !!(process.env.MAGNIFIC_API_KEY || config.magnificKey),
       hasKieKey: !!config.kieKey,
       keyLooksWrong: !!(config.apiKey && !/^sk-ant-/.test(config.apiKey)),
-      typingSpeed: typingSpeed(), aiModels: { research: aiModel('research'), tasks: aiModel('tasks') }, researchScroll: config.researchScroll === 'app' ? 'app' : 'auto',
+      typingSpeed: typingSpeed(), aiModels: { research: aiModel('research'), tasks: aiModel('tasks'), story: aiModel('story') }, routines: config.routines !== false, routineCount: require('./agent').routineCount(), researchScroll: config.researchScroll === 'app' ? 'app' : 'auto',
       cleanupDays: config.cleanupDays || 0,
       mediaUsb: config.mediaUsb !== false,
       telegram: { bot: tgCfg().bot || '', linked: !!(tgCfg().token && tgCfg().chatId), chatName: tgCfg().chatName || '', events: { ...TG_EVENTS, ...(tgCfg().events || {}) } },
@@ -1714,9 +1757,11 @@ const server = http.createServer(async (req, res) => {
     if (b.magnificKey !== undefined) config.magnificKey = String(b.magnificKey || '').trim();
     if (b.mediaUsb !== undefined) { config.mediaUsb = !!b.mediaUsb; for (const d of devices.values()) { d.usbSkipUntil = 0; d.usbInfo = ''; } }
     if (b.cleanupDays !== undefined) config.cleanupDays = [0, 14, 30, 60, 90].includes(+b.cleanupDays) ? +b.cleanupDays : 0;
-    if (b.aiModels && typeof b.aiModels === 'object') { config.aiModels = config.aiModels || {}; for (const k of ['research', 'tasks']) if (MODEL_FAMS.includes(b.aiModels[k])) config.aiModels[k] = b.aiModels[k]; }
+    if (b.aiModels && typeof b.aiModels === 'object') { config.aiModels = config.aiModels || {}; for (const k of ['research', 'tasks', 'story']) if (MODEL_FAMS.includes(b.aiModels[k])) config.aiModels[k] = b.aiModels[k]; }
+    if (typeof b.routines === 'boolean') config.routines = b.routines;
+    if (b.clearRoutines) require('./agent').clearRoutines();
     if (b.researchScroll === 'app' || b.researchScroll === 'auto') config.researchScroll = b.researchScroll;
-    if (b.typingSpeed !== undefined) config.typingSpeed = Math.max(1, Math.min(60, parseInt(b.typingSpeed, 10) || 60));
+    if (b.typingSpeed !== undefined) config.typingSpeed = Math.max(1, Math.min(60, parseInt(b.typingSpeed, 10) || 10));
     fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), () => {});
     return json(res, 200, { ok: true });
   }
