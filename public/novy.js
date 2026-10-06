@@ -24,7 +24,7 @@ async function openWizard(opts = {}) {
   let step = 0, libTab = 'mine', st = null, stopClock = () => {};
 
   const bg = document.createElement('div'); bg.className = 'modal-bg';
-  bg.innerHTML = `<div class="modal wiz"><div class="mhead"><h3>Nový príspevok</h3>${clockBox()}</div>
+  bg.innerHTML = `<div class="modal wiz"><div class="mhead"><h3>Nový príspevok</h3>${clockBox()}</div>${MBS_WARN}
     <div class="wsteps">${W_STEPS.map((s, i) => `<span data-n="${i + 1}">${i + 1}. ${s}</span>`).join('')}</div>
 
     <div class="wpane" data-p="0">
@@ -32,7 +32,6 @@ async function openWizard(opts = {}) {
         <button type="button" class="wkind" data-kind="carousel"><b>🖼️ Carousel</b><small>1 až 20 fotiek</small></button></div>
       <div class="fld"><span>Na ktorý účet (telefón) – môžeš vybrať viac</span>${chipsHtml(selPhones)}</div>
       <small class="hint" data-profhint></small>
-      <div class="mbsnote">📱 Plánuje sa cez aplikáciu <b>Meta Business Suite</b> – samotný Instagram nestačí. Musí byť v iPhone nainštalovaná, prihlásená a prepojená s Instagram účtom (profesionálny účet: Tvorca alebo Firma).</div>
     </div>
 
     <div class="wpane" data-p="1">

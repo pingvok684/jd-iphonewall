@@ -539,6 +539,26 @@ async function wireRecentProfiles(bg, input) {
   };
 }
 
+const MBS_WARN = "<div class=\"mbswarn\"><b>!!! Potrebuješ aplikáciu Meta Business Suite !!!</b><span>Príspevky sa plánujú cez <b>Meta Business Suite</b> – samotná aplikácia Instagram nestačí. Musí byť v každom iPhone nainštalovaná, prihlásená a prepojená s Instagram účtom (profesionálny účet: Tvorca alebo Firma).</span></div>";
+
+// naposledy použité hodnoty jedného políčka (napr. odkaz v story) – klik = vložiť
+function rememberRecent(key, v) {
+  v = String(v || '').trim(); if (!v) return;
+  let l = []; try { l = JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) {}
+  l = [v, ...l.filter((x) => x !== v)].slice(0, 15);
+  try { localStorage.setItem(key, JSON.stringify(l)); } catch (_) {}
+}
+function wireRecent(input) {
+  let list = []; try { list = JSON.parse(localStorage.getItem(input.dataset.recent) || '[]'); } catch (_) {}
+  const box = input.nextElementSibling, pl = box && box.querySelector('.rpl');
+  if (!pl || !list.length) return;
+  box.hidden = false;
+  const paint = () => { pl.innerHTML = list.map((v, k) => `<button type="button" class="pchip${input.value.trim() === v ? ' on' : ''}" data-k="${k}" title="${esc(v)}">${esc(v.length > 42 ? v.slice(0, 40) + '…' : v)}</button>`).join(''); };
+  paint();
+  input.addEventListener('input', paint);
+  pl.onclick = (e) => { const b = e.target.closest('[data-k]'); if (!b) return; const v = list[+b.dataset.k]; input.value = input.value.trim() === v ? '' : v; paint(); };
+}
+
 function askVars(title, vars, kind, defUdid) {
   return new Promise((resolve) => {
     const bg = document.createElement('div'); bg.className = 'modal-bg';
@@ -551,20 +571,23 @@ function askVars(title, vars, kind, defUdid) {
         : /popis/i.test(label) ? `<textarea data-i="${i}" rows="3"></textarea>${kind ? capHtml() : ''}`
         : /pesnič/i.test(label) ? musicHtml(`data-i="${i}"`)
         : /^profil/i.test(label) ? `<input data-i="${i}" data-prof placeholder="napr. @sophieraiin – viac profilov oddeľ čiarkou"><div class="rprofs" data-rp hidden><small>Naposledy použité – klikni a vyber aj viac:</small><div class="rpl"></div></div>`
+        : /^odkaz v story/i.test(label) ? `<input data-i="${i}" data-recent="jd-story-links" type="url" placeholder="https://…"><div class="rprofs" data-rp hidden><small>Naposledy použité – klikni a vlož:</small><div class="rpl"></div></div>`
+        : /^text na tlačidle/i.test(label) ? `<input data-i="${i}" data-recent="jd-story-linktexts" placeholder="napr. Klikni sem"><div class="rprofs" data-rp hidden><small>Naposledy použité – klikni a vlož:</small><div class="rpl"></div></div>`
         : `<input data-i="${i}">`;
-      const hint = /dátum a čas/i.test(label) ? '<small class="hint">Čas zadávaš slovenský. Meta dovolí naplánovať najskôr asi 20 minút dopredu.</small><small class="hint us-conv" data-conv></small>' : '';
+      const hint = /^odkaz v story/i.test(label) ? '<small class="hint">Prázdne = story bez odkazu. Odkaz sa pridá ako nálepka LINK, na ktorú ľudia ťuknú.</small>' : /^text na tlačidle/i.test(label) ? '<small class="hint">Prázdne = Instagram ukáže samotnú adresu odkazu.</small>' : /dátum a čas/i.test(label) ? '<small class="hint">Čas zadávaš slovenský. Meta dovolí naplánovať najskôr asi 20 minút dopredu.</small><small class="hint us-conv" data-conv></small>' : '';
       const isMus = /pesnič/i.test(label), tag = (kind && /popis/i.test(label)) || isMus || isPlace ? 'div' : 'label';
       return `<${tag} class="${tag === 'div' ? 'fld' : ''}"${tag === 'div' && !isMus && !isPlace ? ' data-capwrap' : ''}><span>${esc(isMus ? 'Hudba' : isPlace ? 'Kam zverejniť' : label.replace(/\s*\(napr\..*\)$/, ''))}</span>${ctl}${hint}</${tag}>`;
     }).join('');
     const phones = kind ? `<div class="fld"><span>Na ktorý telefón (môžeš vybrať viac)</span>${chipsHtml(defUdid ? [defUdid] : [])}</div>` : '';
     const drop = kind === 'story' ? phones + `<div class="fld"><span>Fotka alebo video (voliteľné)</span>${dropHtml(kind)}<small class="hint">Ak ju sem pretiahneš, najprv sa cez kábel pošle do galérie iPhonu ako najnovšia – AI ju tak dá do story. Inak použije najnovšiu fotku/video, ktoré už v iPhone sú.</small></div>`
       : kind ? phones + `<div class="fld"><span>${kind === 'reel' ? 'Video' : 'Fotky'} (voliteľné)</span>${dropHtml(kind)}<small class="hint">${kind === 'reel' ? 'Ak ho sem pretiahneš, pred plánovaním sa pošle' : 'Ak ich sem pretiahneš, pred plánovaním sa pošlú'} do galérie iPhonu ako najnovšie – AI tak vyberie presne ${kind === 'reel' ? 'toto video' : 'tieto fotky'}. Inak použije ${kind === 'reel' ? 'najnovšie video' : 'najnovšie fotky'}, ktoré už v iPhone sú.</small></div>` : '';
-    bg.innerHTML = `<div class="modal"><div class="mhead"><h3>${esc(title)}</h3>${clockBox()}</div>${drop}${fields}<div class="mact"><button data-x>Zrušiť</button><button class="go" data-ok>Vložiť príkaz</button></div></div>`;
+    bg.innerHTML = `<div class="modal"><div class="mhead"><h3>${esc(title)}</h3>${clockBox()}</div>${kind === 'reel' || kind === 'carousel' ? MBS_WARN : ''}${drop}${fields}<div class="mact"><button data-x>Zrušiť</button><button class="go" data-ok>Vložiť príkaz</button></div></div>`;
     const stopClock = startClock(bg);
     document.body.appendChild(bg);
     paintIcons(bg);
     const profIn = bg.querySelector('[data-prof]');
     if (profIn) wireRecentProfiles(bg, profIn);
+    bg.querySelectorAll('[data-recent]').forEach((el) => wireRecent(el));
     const dst = kind ? attachDrop(bg.querySelector('[data-drop]'), (st) => {
       // carousel: počet fotiek = počet pretiahnutých fotiek
       if (kind !== 'carousel') return;
@@ -596,6 +619,7 @@ function askVars(title, vars, kind, defUdid) {
         }
       }
       if (profIn) rememberProfiles(profIn.value);
+      bg.querySelectorAll('[data-recent]').forEach((el) => rememberRecent(el.dataset.recent, el.value));
       if (kind) {
         out.phones = readChips(bg.querySelector('[data-ph]'));
         if (!out.phones.length) return alert('Vyber aspoň jeden telefón.');
@@ -708,7 +732,7 @@ function askMulti(t, defUdid) {
   const nounOf = (k) => (k === 'reel' ? 'Reel' : 'Carousel');
   return new Promise((resolve) => {
     const bg = document.createElement('div'); bg.className = 'modal-bg';
-    bg.innerHTML = `<div class="modal multi"><div class="mhead"><h3>${esc(t.name)}</h3>${clockBox()}</div>
+    bg.innerHTML = `<div class="modal multi"><div class="mhead"><h3>${esc(t.name)}</h3>${clockBox()}</div>${MBS_WARN}
       <div class="mrow2"><label><span>Koľko príspevkov</span><select data-n>${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<option>${n}</option>`).join('')}</select></label>
         </div><div class="fld"><span>Kam zverejniť</span>${placeHtml()}</div>
       <div class="fld" data-allph><span>Telefón pre všetky (alebo vyber pri každom zvlášť nižšie)</span>${chipsHtml([], 'data-allbox')}</div>
