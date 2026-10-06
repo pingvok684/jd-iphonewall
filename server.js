@@ -763,7 +763,11 @@ function watchAgent(dev, task) {
       if (/ZHLIADNUTIA\s*:/i.test(task)) { const st = content.addStatFromText(dev.udid, dev.label, full); if (st) store.addActivity('ai_done', `Štatistika ${dev.label}: ${st.views.toLocaleString('sk-SK')} zhliadnutí`, { phone: dev.label }); }
       if (isResearch(task)) {
         const prof = (task.match(/Profil na prieskum:\s*„([^“”"]*)[“”"]/) || [])[1] || '';
-        content.addResearch({ udid: dev.udid, phone: dev.label, profile: prof.trim() || 'Reels feed', reels: reels || 0, ads, text: full });
+        const rn = (dev.agent.reelNotes || []).map((n) => { const { jpg, ...o } = n; if (jpg && jpg.length) { try { o.shot = content.saveShot(jpg); } catch (_) {} } return o; });
+        const list = rn.map((n, k) => `${k + 1}. ${n.hook || '—'}` + [n.format && `formát: ${n.format}`, n.prostredie && `prostredie: ${n.prostredie}`, n.hudba && `hudba: ${n.hudba}`, n.zhliadnutia && `zhliadnutia: ${n.zhliadnutia}`].filter(Boolean).map((x) => `\n   ${x}`).join(''));
+        const sum = dev.agent.summary || done;
+        const text = rn.length ? `Reely:\n${list.join('\n')}\n\nTrendy:\n${sum}` : full;
+        content.addResearch({ udid: dev.udid, phone: dev.label, profile: prof.trim() || 'Reels feed', reels: Math.max(reels || 0, rn.length), ads, notes: rn, trends: rn.length ? sum : '', text });
       }
     }
   }, 2000);
@@ -1262,6 +1266,12 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/calendar' && req.method === 'GET') return json(res, 200, content.listCalendar(url.searchParams.get('from'), url.searchParams.get('to')));
   if (url.pathname === '/api/stats' && req.method === 'GET') return json(res, 200, content.listStats());
   if (url.pathname === '/api/research' && req.method === 'GET') return json(res, 200, content.listResearch());
+  if (url.pathname.startsWith('/api/research/shot/') && req.method === 'GET') {
+    const f = content.shotFile(url.pathname.split('/').pop().replace(/\.jpg$/, ''));
+    if (!f) { res.writeHead(404); return res.end(); }
+    res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=31536000, immutable' });
+    return fs.createReadStream(f).pipe(res);
+  }
   if (['/api/library/delete', '/api/library/note', '/api/library/owners', '/api/calendar/delete', '/api/calendar/status', '/api/stats/delete', '/api/research/delete', '/api/profile', '/api/captions'].includes(url.pathname) && req.method === 'POST') {
     const b = await readBody(req, url.pathname === '/api/captions' ? 12e6 : 1e6);
     try {

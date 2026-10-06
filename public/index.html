@@ -155,7 +155,8 @@
   .card.focus { border-color: #4a3140; box-shadow: 0 0 0 1px rgba(255,61,104,.35); }
   .card.running { border-color: rgba(61,220,151,.6); box-shadow: 0 0 0 1px rgba(61,220,151,.3), 0 10px 30px rgba(61,220,151,.08); }
   .card .top { display: flex; align-items: center; gap: 6px; padding: 4px 4px 8px; }
-  .card .name { font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: text; }
+  .card .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+  .card .name { font-weight: 600; min-width: 0; white-space: normal; overflow-wrap: anywhere; cursor: text; }
   .card .ver { color: var(--muted); font-size: 11px; }
   .card .top button { padding: 5px 7px; font-size: 12px; border-radius: 8px; }
   .screen { position: relative; background: #000; min-height: 200px; display: flex; align-items: center; justify-content: center; border-radius: 14px; overflow: hidden; border: 1px solid #1c1e25; }
@@ -289,6 +290,19 @@
   .resq { min-width: 260px; }
   .reslist { display: grid; gap: 12px; }
   .rcard .rtext { white-space: pre-wrap; font-size: 13.5px; margin-top: 10px; color: var(--text); line-height: 1.55; }
+  .keyspanel { grid-column: 1 / -1; } .keyrow { padding: 12px 14px; margin-top: 10px; border-radius: 14px; background: rgba(255,255,255,.035); border: 1px solid var(--line); }
+  .keyrow .kh { display: flex; align-items: center; gap: 10px; } .keyrow .kh b { font-size: 15px; } .keyrow .kst { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .keyrow .sub { margin: 4px 0 10px; } .kbtns { display: flex; gap: 8px; flex-wrap: wrap; } .kbtns a.btn { text-decoration: none; }
+  .keyadv { margin-top: 10px; font-size: 13px; } .keyadv summary { cursor: pointer; color: var(--muted); }
+  .nitem .ntitle { font-size: 22px; font-weight: 800; letter-spacing: -.01em; margin-bottom: 2px; background: linear-gradient(90deg, #ff4f76, #ffb547); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .reshelp { margin-bottom: 12px; font-size: 13.5px; color: var(--muted); } .reshelp summary { cursor: pointer; color: var(--text); font-weight: 600; } .reshelp ol { margin: 10px 0 0; padding-left: 20px; line-height: 1.6; } .reshelp b { color: var(--text); }
+  .rreels { display: grid; gap: 8px; margin-top: 12px; } .rreel { display: grid; grid-template-columns: 28px 1fr; gap: 2px 10px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+  .rreel .n { grid-row: span 2; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: rgba(255,61,104,.16); color: #ff7a98; font-weight: 700; font-size: 12.5px; }
+  .rreel .h { font-weight: 600; font-size: 14px; } .rreel .m { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .rtrends { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: rgba(61,220,151,.07); border: 1px solid rgba(61,220,151,.25); white-space: pre-wrap; font-size: 13.5px; line-height: 1.55; } .rtrends b { display: block; margin-bottom: 4px; color: #3ddc97; }
+  .rreel.hasshot { grid-template-columns: 64px 28px 1fr; grid-template-rows: auto 1fr; align-items: start; } .rreel.hasshot .m { align-self: start; } .rreel .rshot { grid-row: span 2; width: 64px; height: 114px; object-fit: cover; border-radius: 9px; cursor: zoom-in; background: #000; border: 1px solid var(--line); }
+  .rzoom { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.85); display: grid; place-items: center; cursor: zoom-out; padding: 20px; } .rzoom img { max-height: 92vh; max-width: 92vw; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .rold { font-size: 12px; color: var(--muted); margin-top: 8px; }
   .rcard mark { background: rgba(255,181,71,.35); color: inherit; border-radius: 3px; }
   /* ---------- profily ---------- */
   .pcolors { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -403,7 +417,8 @@
   .mkinds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .modal .mkind { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(255,255,255,.03) !important; color: var(--text); text-align: left; display: grid; gap: 2px; font-weight: 600; font-size: 14px; min-width: 0; }
   .modal .mkind small { color: var(--muted); font-weight: 400; font-size: 11.5px; }
-  .modal .mkind.on { border-color: #ff5b80 !important; background: rgba(255,61,104,.12) !important; }
+  .modal .mkind.on { border-color: #ff4f76 !important; background: linear-gradient(180deg, #ff4f76, #e8285a) !important; color: #fff !important; }
+  .modal .mkind.on small { color: rgba(255,255,255,.85) !important; }
   .modal .fld { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--muted); }
   .pdrop .drop { margin: 0; display: grid; place-items: center; min-height: 92px; padding: 12px; border-radius: 14px; border: 1.5px dashed rgba(255,255,255,.22); background: rgba(0,0,0,.18); }
   .pdrop .drop > div { display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -548,7 +563,7 @@
   .hsum.ok { color: var(--ok); } .hsum.warn { color: var(--warn); } .hsum.bad { color: var(--bad); }
   .hmore { font-size: 12px; color: var(--muted); cursor: pointer; margin-top: 6px; display: inline-block; }
   /* ---------- karta telefónu: batéria / pamäť ---------- */
-  .pstat { position: absolute; left: 8px; bottom: 8px; z-index: 3; display: flex; gap: 8px; font-size: 11px; font-weight: 600; color: #e9ecf2; padding: 4px 8px; border-radius: 8px; background: rgba(0,0,0,.6); backdrop-filter: blur(6px); pointer-events: none; }
+  .pstat { position: absolute; left: 8px; top: 8px; z-index: 3; display: flex; gap: 8px; font-size: 11px; font-weight: 600; color: #e9ecf2; padding: 4px 8px; border-radius: 8px; background: rgba(0,0,0,.6); backdrop-filter: blur(6px); pointer-events: none; }
   .pstat[hidden] { display: none; } .pstat .lo { color: var(--warn); } .pstat .crit { color: #ff7d8f; }
   /* ---------- sprievodca Nový príspevok ---------- */
   .modal.wiz { width: min(760px, 100%); }
@@ -559,7 +574,8 @@
   .wkinds { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .wkind { padding: 16px; border-radius: 14px; border: 1px solid var(--line-2); background: rgba(255,255,255,.03); text-align: left; display: grid; gap: 4px; }
   .wkind b { font-size: 15px; } .wkind small { color: var(--muted); font-weight: 400; }
-  .wkind.on { border-color: #ff5b80; background: rgba(255,61,104,.12); }
+  .modal .wkind.on, .wkind.on { border-color: #ff4f76 !important; background: linear-gradient(180deg, #ff4f76, #e8285a) !important; color: #fff !important; box-shadow: 0 8px 24px rgba(255,61,104,.35); }
+  .wkind.on small { color: rgba(255,255,255,.85) !important; } .wkind.on b::after { content: '  ✓'; }
   .wlib { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; max-height: 260px; overflow: auto; padding: 2px; }
   .wlib .lit { aspect-ratio: 4/5; }
   .wsum { display: grid; gap: 8px; }
@@ -845,6 +861,10 @@
   <section class="view" id="v-prieskumy">
     <div class="vhead"><div><h2>Archív prieskumov</h2><div class="sub">Výsledky šablóny „🔎 Prieskum reels“ – hooky, trendy, hudba</div></div><div class="sp"></div>
       <input id="resQ" class="resq" placeholder="Hľadať (napr. hook, gym, pesnička…)"></div>
+    <details class="panel reshelp"><summary>Ako to funguje?</summary><ol>
+      <li>Na <b>Telefónoch</b> pri telefóne spusti šablónu <b>🔎 Prieskum reels</b> a zadaj profil (napr. <b>@sophieraiin</b>) alebo nechaj prázdne pre bežný Reels feed, a počet reelov.</li>
+      <li>AI v telefóne otvorí Instagram, pozrie si reely (nič nelajkuje ani nesleduje, reklamy preskočí) a pri každom si zapíše <b>hook, formát, prostredie/outfit, hudbu a zhliadnutia</b> a uloží <b>screenshot</b> (klikni naň a zväčší sa).</li>
+      <li>Keď skončí, výsledok sa uloží sem: zoznam reelov a <b>3 trendy</b>, ktoré môžeš použiť pre svoj obsah. Tlačidlom 📋 ho skopíruješ, vyhľadávaním nájdeš staršie prieskumy (napr. podľa pesničky).</li></ol></details>
     <div class="reslist" id="resList"></div>
   </section>
 
@@ -1169,6 +1189,31 @@
   <section class="view" id="v-nastavenia">
     <div class="vhead"><div><h2>Nastavenia</h2></div></div>
     <div class="sgrid">
+      <div class="panel keyspanel"><h3><span data-icon="key"></span>API kľúče</h3>
+        <p>Kľúče sa ukladajú iba na tomto počítači (nesynchronizujú sa). Kredit si dobiješ priamo u poskytovateľa.</p>
+        <div class="keyrow">
+          <div class="kh"><b>Claude (Anthropic)</b><span class="kst" id="keyState">—</span></div>
+          <p class="sub">Potrebný pre AI ovládanie telefónov a šablóny – AI vidí obrazovku a ťuká.</p>
+          <div class="kbtns"><button class="go" id="keybtn">Nastaviť kľúč</button><a class="btn" href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener">💳 Kúpiť kredit</a><a class="btn ghost" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">🔑 Vytvoriť kľúč</a></div>
+        </div>
+        <div class="keyrow">
+          <div class="kh"><b>KIE</b><span class="kst" id="kieKeyState">—</span></div>
+          <p class="sub">Voliteľné – lacnejšie návrhy popisov. AI klikanie cez KIE nejde (nevidí obrazovku telefónu).</p>
+          <div class="kbtns"><button class="go" id="kieKeyBtn">Nastaviť kľúč</button><a class="btn" href="https://kie.ai/billing" target="_blank" rel="noopener">💳 Kúpiť kredit</a><a class="btn ghost" href="https://kie.ai/api-key" target="_blank" rel="noopener">🔑 Vytvoriť kľúč</a></div>
+          <details class="keyadv"><summary>Nastavenia popisov</summary>
+        <label class="ctl" style="display:flex;margin-top:12px"><span style="flex:1">Návrhy popisov cez</span>
+          <select id="aiProv"><option value="auto">Automaticky</option><option value="kie">KIE</option><option value="anthropic">Claude priamo (Anthropic)</option></select></label>
+        <label class="ctl" style="display:flex;margin-top:8px"><span style="flex:1">Model cez KIE</span>
+          <select id="kieModel"><option value="claude-sonnet-5">Claude Sonnet 5 (odporúčané)</option><option value="claude-sonnet-4-6">Claude Sonnet 4.6</option><option value="claude-haiku-4-5">Claude Haiku 4.5 (lacnejší, menej presný)</option><option value="claude-opus-5">Claude Opus 5 (najdrahší)</option></select></label>
+        <p class="sub" id="aiUsing" style="margin-top:8px"></p></details>
+        </div></div>
+      <div class="panel" id="syncPanel"><h3><span data-icon="refresh"></span>Účet a synchronizácia</h3>
+        <p>Prihlás sa rovnakým účtom na viacerých počítačoch – knižnica (aj fotky a videá), kalendár, šablóny, profily účtov a názvy telefónov sa zosynchronizujú. API kľúče a heslá sa neposielajú.</p>
+        <div class="kv"><span>Stav</span><b id="syState">—</b></div>
+        <div class="kv"><span>Posledná synchronizácia</span><b id="syLast">—</b></div>
+        <p class="sub" id="syInfo" style="margin-top:6px"></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="go" id="syLogin">Prihlásiť sa</button><button id="syNow" hidden>Synchronizovať teraz</button><button id="syOut" hidden>Odhlásiť</button></div>
+      </div>
       <div class="panel" id="remPanel"><h3><span data-icon="phone"></span>Prístup z mobilu<span class="sp"></span><a class="lnk" href="/logout" id="remLogout" hidden>Odhlásiť</a></h3>
         <p>Otvor si svoju stránku z mobilu odkiaľkoľvek – doma aj mimo domu, na Wi-Fi aj dátach. Vidíš len svoje telefóny. Počítač s aplikáciou musí byť zapnutý.</p>
         <label class="remtog"><input type="checkbox" id="remOn"><span>Zapnúť prístup z mobilu</span></label>
@@ -1185,25 +1230,6 @@
         <div id="pinLocal" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="go" id="pinSet">Nastaviť PIN</button><button id="remUrlBtn">Zadať adresu</button><button id="pinDel" hidden>Vypnúť PIN</button></div>
         <p class="sub" id="pinMsg" style="margin-top:8px"></p>        </details></div>
-      <div class="panel"><h3><span data-icon="key"></span>Claude API kľúč</h3>
-        <p>Potrebný pre AI ovládanie telefónov. Ukladá sa iba na tomto počítači.</p>
-        <div class="kv"><span>Stav</span><b id="keyState">—</b></div>
-        <div style="margin-top:10px"><button class="go" id="keybtn">Nastaviť kľúč</button></div></div>
-      <div class="panel"><h3><span data-icon="key"></span>KIE API kľúč</h3>
-        <p>Návrhy popisov cez KIE (kredity z kie.ai). Kľúč nájdeš na kie.ai → API Key. Ukladá sa iba na tomto počítači.<br><b>AI klikanie a šablóny</b> potrebujú Claude kľúč – cez KIE AI nevidí obrazovku telefónu.</p>
-        <div class="kv"><span>Stav</span><b id="kieKeyState">—</b></div>
-        <div style="margin-top:10px"><button class="go" id="kieKeyBtn">Nastaviť kľúč</button></div>
-        <label class="ctl" style="display:flex;margin-top:12px"><span style="flex:1">Návrhy popisov cez</span>
-          <select id="aiProv"><option value="auto">Automaticky</option><option value="kie">KIE</option><option value="anthropic">Claude priamo (Anthropic)</option></select></label>
-        <label class="ctl" style="display:flex;margin-top:8px"><span style="flex:1">Model cez KIE</span>
-          <select id="kieModel"><option value="claude-sonnet-5">Claude Sonnet 5 (odporúčané)</option><option value="claude-sonnet-4-6">Claude Sonnet 4.6</option><option value="claude-haiku-4-5">Claude Haiku 4.5 (lacnejší, menej presný)</option><option value="claude-opus-5">Claude Opus 5 (najdrahší)</option></select></label>
-        <p class="sub" id="aiUsing" style="margin-top:8px"></p></div>
-      <div class="panel"><h3><span data-icon="list"></span>Písanie na klávesnici</h3>
-        <p>Ako rýchlo telefón píše text – ručne zo stránky aj keď píše AI (popisy, hashtagy, vyhľadávanie).</p>
-        <label class="ctl" style="display:flex"><span style="flex:1">Rýchlosť</span>
-          <select id="typeSpeed"><option value="60">Okamžite (60 znakov/s)</option><option value="20">Rýchlo (20 znakov/s)</option>
-            <option value="10">Normálne (10 znakov/s)</option><option value="5">Pomaly (5 znakov/s)</option><option value="3">Veľmi pomaly (3 znaky/s)</option></select></label>
-        <p class="sub" id="typeSpeedMsg" style="margin-top:8px"></p></div>
       <div class="panel"><h3><span data-icon="image"></span>Fotky a videá do galérie</h3>
         <p>Fotky a videá idú do iPhonu <b>len cez kábel (USB)</b> – iPhone musí byť pripojený káblom k tomuto počítaču. V iPhone ich uloží skratka <b id="scName">JD Save</b>.</p>
         <div id="usbDevs" class="usbdevs"></div>
@@ -1228,13 +1254,6 @@
         <div style="margin-top:10px"><button id="mediaUrlBtn">Vlastná adresa pre fotky…</button></div>
         <p class="sub" style="margin-top:6px">Voliteľné: stála adresa cez tvoju doménu v Cloudflare (napr. https://media.tvojadomena.com → http://localhost:3001). Spoľahlivejšia ako automatický tunel.</p>
         </details></div>
-      <div class="panel" id="syncPanel"><h3><span data-icon="refresh"></span>Účet a synchronizácia</h3>
-        <p>Prihlás sa rovnakým účtom na viacerých počítačoch – knižnica (aj fotky a videá), kalendár, šablóny, profily účtov a názvy telefónov sa zosynchronizujú. API kľúče a heslá sa neposielajú.</p>
-        <div class="kv"><span>Stav</span><b id="syState">—</b></div>
-        <div class="kv"><span>Posledná synchronizácia</span><b id="syLast">—</b></div>
-        <p class="sub" id="syInfo" style="margin-top:6px"></p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="go" id="syLogin">Prihlásiť sa</button><button id="syNow" hidden>Synchronizovať teraz</button><button id="syOut" hidden>Odhlásiť</button></div>
-      </div>
       <div class="panel" id="tgPanel"><h3><span data-icon="alert"></span>Upozornenia na mobil (Telegram)</h3>
         <p>Správa do Telegramu, keď sa plán dokončí alebo zlyhá (aj so snímkou z iPhonu), keď sa telefón odpojí, má slabú batériu alebo vyprší podpis WebDriverAgenta.</p>
         <div class="kv"><span>Stav</span><b id="tgState">—</b></div>
@@ -1256,6 +1275,12 @@
           <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button id="tgTest">Poslať test</button><button id="tgOff">Odpojiť</button></div>
         </div>
         <p class="sub" id="tgMsg" style="margin-top:8px"></p></div>
+      <div class="panel"><h3><span data-icon="list"></span>Písanie na klávesnici</h3>
+        <p>Ako rýchlo telefón píše text – ručne zo stránky aj keď píše AI (popisy, hashtagy, vyhľadávanie).</p>
+        <label class="ctl" style="display:flex"><span style="flex:1">Rýchlosť</span>
+          <select id="typeSpeed"><option value="60">Okamžite (60 znakov/s)</option><option value="20">Rýchlo (20 znakov/s)</option>
+            <option value="10">Normálne (10 znakov/s)</option><option value="5">Pomaly (5 znakov/s)</option><option value="3">Veľmi pomaly (3 znaky/s)</option></select></label>
+        <p class="sub" id="typeSpeedMsg" style="margin-top:8px"></p></div>
       <div class="panel"><h3><span data-icon="chart"></span>Míňanie na AI</h3>
         <p>Odhad podľa oficiálneho cenníka (Anthropic / Google) z počtu tokenov. Pri KIE môže byť skutočná suma nižšia – presný stav kreditu vidíš na kie.ai.</p>
         <div class="ukv"><div><small>Dnes</small><b id="uToday">—</b></div><div><small>Tento mesiac</small><b id="uMonth">—</b></div><div><small>Spolu</small><b id="uTotal">—</b></div></div>
@@ -1273,8 +1298,6 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn go" href="/api/backup" download>Záloha bez médií</a><a class="btn" href="/api/backup?media=1" download>Záloha aj s videami a fotkami</a></div>
         <label class="btn" style="margin-top:10px;display:inline-flex;cursor:pointer">Obnoviť zo zálohy…<input type="file" id="restoreIn" accept=".zip" hidden></label>
         <p class="sub" id="restoreMsg" style="margin-top:6px"></p></div>
-      <div class="panel"><h3><span data-icon="list"></span>Šablóny AI príkazov<span class="sp"></span><span class="lnk" id="tplReset">Obnoviť pôvodné</span></h3>
-        <div class="list" id="tplList"></div></div>
     </div>
   </section>
 </main>
@@ -1308,6 +1331,7 @@ const ICONS = {
   refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
   expand: '<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/>',
   save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
   wand: '<path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8l1.4 1.4M17.8 6.2l1.4-1.4M12.2 6.2l-1.4-1.4"/><path d="M3 21l12-12"/>',
   book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20v-3"/><path d="M8 7h8M8 11h6"/>',
   calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
@@ -1380,7 +1404,7 @@ async function checkUpdate(force) {
   $('updCur').textContent = u.current || '—';
   $('updLatest').textContent = !u.configured ? 'aktualizácie nie sú nastavené' : u.error ? 'nedá sa zistiť' : (u.latest || '—') + (u.available ? '' : ' ✓');
   $('updNotes').hidden = !(u.available && u.notes);
-  $('updNotes').innerHTML = u.available && u.notes ? `<b>Čo prinesie verzia ${esc(u.latest)}:</b>${notesHtml(u.notes)}` : '';
+  $('updNotes').innerHTML = u.available && u.notes ? `<b>${u.title ? esc(u.title) + ' – ' : ''}Čo prinesie verzia ${esc(u.latest)}:</b>${notesHtml(u.notes)}` : '';
   $('updApply').hidden = !u.available;
   $('updMsg').textContent = u.error ? u.error : u.available ? '' : u.configured ? 'Máš najnovšiu verziu.' : '';
 }
@@ -1437,7 +1461,7 @@ async function loadNews() {
   document.getElementById('newsList').innerHTML = (c.items || []).map((x) => {
     const cls = x.version === c.current ? 'cur' : !x.installed ? 'pending' : '';
     const tag = x.version === c.current ? '<span class="tag">nainštalovaná</span>' : !x.installed ? '<span class="tag">nová – <a href="#aktualizacie">aktualizovať</a></span>' : '';
-    return `<div class="nitem ${cls}"><h3>${esc(fmtVer(x.version, x.date))}${tag}<small>${esc(x.version)}</small></h3>${notesHtml(x.notes)}</div>`;
+    return `<div class="nitem ${cls}">${x.title ? `<div class="ntitle">${esc(x.title)}</div>` : ''}<h3>${esc(fmtVer(x.version, x.date))}${tag}<small>${esc(x.version)}</small></h3>${notesHtml(x.notes)}</div>`;
   }).join('') || '<div class="empty">Zatiaľ žiadne novinky.</div>';
   try { if (c.current) localStorage.setItem('jd-news-seen', c.current); } catch (_) {}
   document.getElementById('navNews').hidden = true;
@@ -1637,9 +1661,6 @@ async function loadSettings() {
   loadRemote();
   loadUsage(); loadCleanInfo();
   await loadTemplates();
-  document.getElementById('tplList').innerHTML = TEMPLATES.map((t) => `<div class="li"><div class="tx"><b>${esc(t.name)}</b><small>${esc(t.text.slice(0, 90))}…</small></div>
-    <button class="ghost" data-tdel="${esc(t.name)}">${icon('trash')}</button></div>`).join('') || '<div class="empty-s">Žiadne šablóny</div>';
-  document.querySelectorAll('[data-tdel]').forEach((b) => b.onclick = () => deleteTemplate(b.dataset.tdel));
 }
 const KIND_SK = { agent: 'AI ovládanie telefónov (šablóny, plánovanie)', popisy: 'Návrhy popisov' };
 async function loadUsage() {
@@ -1787,7 +1808,6 @@ document.getElementById('typeSpeed').onchange = async (e) => {
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ typingSpeed: +e.target.value }) });
   const m = document.getElementById('typeSpeedMsg'); m.textContent = 'Uložené ✓'; setTimeout(() => (m.textContent = ''), 2000);
 };
-document.getElementById('tplReset').onclick = () => { if (confirm('Obnoviť pôvodné šablóny? Tvoje vlastné sa zmažú.')) tplApi({ action: 'reset' }).then(loadSettings); };
 document.getElementById('keybtn').onclick = async () => {
   const k = prompt('Vlož Claude API kľúč (console.anthropic.com → API Keys). Uloží sa len na tvojom počítači.');
   if (k == null) return;

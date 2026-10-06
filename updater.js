@@ -34,7 +34,7 @@ async function check(force) {
   if (!r.ok) throw new Error(`GitHub odpovedal ${r.status} – skontroluj, či je repozitár ${repo} verejný`);
   const remote = await r.json();
   const cur = local();
-  const data = { configured: true, repo, current: cur.version, latest: remote.version, notes: remote.notes || '', date: remote.date || '',
+  const data = { configured: true, repo, current: cur.version, latest: remote.version, notes: remote.notes || '', title: remote.title || '', date: remote.date || '',
     available: String(remote.version) > String(cur.version) };
   cache = { at: Date.now(), data };
   return data;

@@ -43,7 +43,9 @@ const TOOLS = [
   { name: 'skip_ad', description: 'Reklama v Reels (Sponsored / Sponzorované / Reklama) – okamžite prejde na ďalší reel. Nepočíta sa medzi prezreté reely.', input_schema: { type: 'object', properties: {} } },
   { name: 'home', description: 'Tlačidlo Domov (návrat na plochu).', input_schema: { type: 'object', properties: {} } },
   { name: 'wait', description: 'Počká N sekúnd (načítavanie).', input_schema: { type: 'object', properties: { seconds: { type: 'number' } }, required: ['seconds'] } },
-  { name: 'done', description: 'Úloha hotová alebo nemožná.', input_schema: { type: 'object', properties: { summary: { type: 'string' } }, required: ['summary'] } },
+  { name: 'reel_note', description: 'Pri prieskume reels: zapíše poznámku o PRÁVE pozeranom reeli (volaj raz pri každom reeli, pred potiahnutím na ďalší). Píš po slovensky, stručne.', input_schema: { type: 'object',
+    properties: { hook: { type: 'string', description: 'prvý text na obrazovke alebo prvá veta' }, format: { type: 'string', description: 'formát videa (napr. tanec, POV, lip-sync, vlog, trend…)' }, prostredie: { type: 'string', description: 'prostredie a outfit' }, hudba: { type: 'string', description: 'pesnička / zvuk, ak je vidieť' }, zhliadnutia: { type: 'string', description: 'počet zhliadnutí, ak je vidieť' } }, required: ['hook', 'format'] } },
+  { name: 'done', description: 'Úloha hotová alebo nemožná. Pri prieskume reels daj do summary 3 opakujúce sa trendy, ktoré sa dajú použiť pre náš obsah.', input_schema: { type: 'object', properties: { summary: { type: 'string' } }, required: ['summary'] } },
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -193,7 +195,13 @@ async function runAgent(dev, task, apiKey, actions, opts = {}) {
           case 'skip_ad': say('⏭ reklama – preskakujem'); A.ads = (A.ads || 0) + 1; await actions.swipe({ x1: 0.5, y1: 0.75, x2: 0.5, y2: 0.25, ms: 250 }); break;
           case 'home': say('⌂ domov'); await actions.home(); break;
           case 'wait': await sleep(Math.min(15, Number(i.seconds) || 1) * 1000); break;
-          case 'done': say(`✓ Hotovo: ${i.summary || ''}`); finished = true; break;
+          case 'reel_note': {
+            A.reelNotes = A.reelNotes || [];
+            const n = { hook: String(i.hook || '').trim(), format: String(i.format || '').trim(), prostredie: String(i.prostredie || '').trim(), hudba: String(i.hudba || '').trim(), zhliadnutia: String(i.zhliadnutia || '').trim() };
+            try { n.jpg = await grabFrame(dev.mjpegPort); } catch (_) {}
+            A.reelNotes.push(n); say(`📝 Reel ${A.reelNotes.length}: ${n.hook.slice(0, 80)}`); out = `Zapísané (reel ${A.reelNotes.length}).`; break;
+          }
+          case 'done': say(`✓ Hotovo: ${i.summary || ''}`); A.summary = String(i.summary || ''); finished = true; break;
           default: out = 'Neznámy nástroj';
         }
       } catch (e) { out = `Chyba: ${e.message}`; say(`⚠ ${e.message}`); }

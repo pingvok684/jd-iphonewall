@@ -330,18 +330,26 @@ function renderResearch() {
   const q = (document.getElementById('resQ').value || '').toLowerCase().trim();
   const list = RES.filter((r) => !q || (r.text + ' ' + r.profile + ' ' + r.phone).toLowerCase().includes(q));
   const mark = (t) => { const e = esc(t); return q ? e.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), (m) => `<mark>${m}</mark>`) : e; };
+  const body = (r) => {
+    if (!(r.notes && r.notes.length)) return `<div class="rtext">${mark(r.text || '')}</div>${/Pozrela som|Posúvam/i.test(r.text || '') ? '<div class="rold">Starší prieskum – AI si vtedy reely nezapisovala. Nové prieskumy majú zoznam reelov aj trendy.</div>' : ''}`;
+    const m = (k, v) => (v ? `<span>${k} ${mark(v)}</span>` : '');
+    return `<div class="rreels">${r.notes.map((n, i) => `<div class="rreel${n.shot ? ' hasshot' : ''}">${n.shot ? `<img class="rshot" loading="lazy" src="/api/research/shot/${esc(n.shot)}.jpg" data-rshot="${esc(n.shot)}" alt="Reel ${i + 1}" title="Zväčšiť">` : ''}<div class="n">${i + 1}</div><div class="h">${mark(n.hook || '—')}</div><div class="m">${m('🎬', n.format)}${m('📍', n.prostredie)}${m('🎵', n.hudba)}${m('👁', n.zhliadnutia)}</div></div>`).join('')}</div>`
+      + (r.trends ? `<div class="rtrends"><b>📈 Trendy pre náš obsah</b>${mark(r.trends)}</div>` : '');
+  };
   document.getElementById('resList').innerHTML = list.map((r) => `<div class="panel rcard">
-      <h3>🔎 ${esc(r.profile || 'Reels feed')}<span class="sp"></span><button class="ghost" data-rcopy="${r.id}" title="Kopírovať">${icon('save')}</button><button class="ghost" data-rdel="${r.id}" title="Zmazať">${icon('trash')}</button></h3>
-      <div class="sub">${dts(r.at)} · ${esc(r.phone || '')}${r.reels ? ` · ${r.reels} reelov` : ''}${r.ads ? ` · ${r.ads} reklám preskočených` : ''}</div>
-      <div class="rtext">${mark(r.text || '')}</div></div>`).join('')
+      <h3>🔎 ${esc(r.profile || 'Reels feed')}<span class="sp"></span><button class="ghost" data-rcopy="${r.id}" title="Kopírovať text">${icon('copy')}</button><button class="ghost" data-rdel="${r.id}" title="Zmazať">${icon('trash')}</button></h3>
+      <div class="sub">${dts(r.at)} · ${esc(r.phone || '')}${r.reels ? ` · ${r.reels} reelov` : ''}${r.ads ? ` · ${r.ads} ${r.ads === 1 ? 'reklama preskočená' : r.ads < 5 ? 'reklamy preskočené' : 'reklám preskočených'}` : ''}</div>
+      ${body(r)}</div>`).join('')
     || `<div class="empty">${RES.length ? 'Nič sa nenašlo.' : 'Zatiaľ žiadne prieskumy. Spusti šablónu <b>🔎 Prieskum reels</b> – výsledok sa uloží sem.'}</div>`;
 }
 function initResearch() {
   document.getElementById('resQ').oninput = renderResearch;
   document.getElementById('resList').onclick = async (e) => {
+    const sh = e.target.closest('[data-rshot]');
+    if (sh) { const o = document.createElement('div'); o.className = 'rzoom'; o.innerHTML = `<img src="${sh.src}" alt="">`; o.onclick = () => o.remove(); document.body.appendChild(o); return; }
     const d = e.target.closest('[data-rdel]'), c = e.target.closest('[data-rcopy]');
     if (d && confirm('Zmazať prieskum?')) { await jfetch('/api/research/delete', { id: d.dataset.rdel }); loadResearch(); }
-    if (c) { const r = RES.find((x) => x.id === c.dataset.rcopy); try { await navigator.clipboard.writeText(r.text); c.innerHTML = '✓'; setTimeout(() => (c.innerHTML = icon('save')), 1500); } catch (_) {} }
+    if (c) { const r = RES.find((x) => x.id === c.dataset.rcopy); try { await navigator.clipboard.writeText(r.text); c.innerHTML = '✓'; setTimeout(() => (c.innerHTML = icon('copy')), 1500); } catch (_) {} }
   };
 }
 

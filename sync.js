@@ -66,16 +66,16 @@ async function logout() {
 function skip() { cfg().decided = true; ctx.saveConfig(); }
 
 // ---------- zlúčenie ----------
-function tombs() { return readJson(path.join(ctx.data, 'sync-tombstones.json'), { lib: [], cal: [] }); }
+function tombs() { const t = readJson(path.join(ctx.data, 'sync-tombstones.json'), {}); return { lib: t.lib || [], cal: t.cal || [], res: t.res || [] }; }
 function mergeDoc(kind, local, remote, name) {
   if (kind === 'object') return { ...(remote || {}), ...(local || {}) };
   if (kind === 'tomb') {
     const u = (a, b) => [...new Set([...(a || []), ...(b || [])])].slice(-5000);
-    return { lib: u(local && local.lib, remote && remote.lib), cal: u(local && local.cal, remote && remote.cal) };
+    return { lib: u(local && local.lib, remote && remote.lib), cal: u(local && local.cal, remote && remote.cal), res: u(local && local.res, remote && remote.res) };
   }
   const key = kind === 'byName' ? 'name' : 'id';
   if (!Array.isArray(local) || !Array.isArray(remote)) return Array.isArray(local) ? local : remote;
-  const t = tombs(), dead = new Set(name === 'library' ? t.lib : name === 'calendar' ? t.cal : []);
+  const t = tombs(), dead = new Set(name === 'library' ? t.lib : name === 'calendar' ? t.cal : name === 'research' ? t.res : []);
   const out = new Map();
   for (const x of remote) if (x && x[key] != null && !dead.has(x[key])) out.set(x[key], x);
   for (const x of local) {
@@ -127,8 +127,8 @@ async function syncOnce() {
   // zmazané v inom počítači → zmazať aj tu
   const t = tombs();
   for (const id of t.lib) { const f = path.join(ctx.libDir, id); if (/^[a-f0-9]{16}\.[a-z0-9]{2,5}$/.test(id) && fs.existsSync(f)) try { fs.unlinkSync(f); } catch (_) {} }
-  if (t.lib.length || t.cal.length) {
-    for (const [name, list] of [['library', t.lib], ['calendar', t.cal]]) {
+  if (t.lib.length || t.cal.length || t.res.length) {
+    for (const [name, list] of [['library', t.lib], ['calendar', t.cal], ['research', t.res]]) {
       const f = docs()[name].file, arr = readJson(f, null);
       if (!Array.isArray(arr)) continue;
       const keep = arr.filter((x) => !list.includes(x.id));
@@ -147,14 +147,19 @@ async function syncOnce() {
 
 // fotky a videá z knižnice: nahrať chýbajúce v cloude, stiahnuť chýbajúce v počítači
 async function syncMedia(s) {
-  const lib = readJson(docs().library.file, []);
+  const shotDir = path.join(ctx.data, 'research-shots');
+  const lib = readJson(docs().library.file, []).filter((x) => x.hash).map((x) => ({ ...x, f: path.join(ctx.libDir, x.id), dir: ctx.libDir }));
+  const seen = new Set();
+  for (const r of readJson(docs().research.file, [])) for (const n of (r && r.notes) || []) if (n && /^[a-f0-9]{40}$/.test(n.shot || '') && !seen.has(n.shot)) {
+    seen.add(n.shot); lib.push({ hash: n.shot, name: 'screenshot reelu', f: path.join(shotDir, n.shot + '.jpg'), dir: shotDir });
+  }
   s.uploaded = s.uploaded || {};
-  const up = lib.filter((x) => x.hash && fs.existsSync(path.join(ctx.libDir, x.id)) && !s.uploaded[x.hash]);
-  const down = lib.filter((x) => x.hash && !fs.existsSync(path.join(ctx.libDir, x.id)));
+  const up = lib.filter((x) => fs.existsSync(x.f) && !s.uploaded[x.hash]);
+  const down = lib.filter((x) => !fs.existsSync(x.f));
   st.pendingUp = up.length; st.pendingDown = down.length; st.skipped = 0;
   for (const x of up) {
     if (!loggedIn()) return;
-    const f = path.join(ctx.libDir, x.id), size = fs.statSync(f).size;
+    const f = x.f, size = fs.statSync(f).size;
     if (size > MAX_BLOB) { st.skipped++; st.pendingUp--; continue; }
     const h = await api('HEAD', `/sync/blob/${x.hash}`);
     if (h.status !== 200) {
@@ -166,8 +171,8 @@ async function syncMedia(s) {
     s.uploaded[x.hash] = 1; st.pendingUp--;
     fs.writeFileSync(stateFile(), JSON.stringify(s));
   }
-  fs.mkdirSync(ctx.libDir, { recursive: true });
   for (const x of down) {
+    fs.mkdirSync(x.dir, { recursive: true });
     if (!loggedIn()) return;
     st.phase = `Sťahujem ${x.name}…`;
     const r = await api('GET', `/sync/blob/${x.hash}`, undefined, { timeout: 15 * 60000 });
@@ -175,7 +180,7 @@ async function syncMedia(s) {
     if (!r.ok) throw new Error(`sťahovanie ${x.name} zlyhalo (${r.status})`);
     const buf = Buffer.from(await r.arrayBuffer());
     if (crypto.createHash('sha1').update(buf).digest('hex') !== x.hash) throw new Error(`${x.name} sa stiahol poškodený`);
-    const f = path.join(ctx.libDir, x.id);
+    const f = x.f;
     fs.writeFileSync(f + '.part', buf); fs.renameSync(f + '.part', f);
     s.uploaded[x.hash] = 1; st.down++; st.pendingDown--;
   }
@@ -196,8 +201,8 @@ async function syncNow() {
 // zaznamenať zmazanie (aby sa položka po synchronizácii nevrátila z iného počítača)
 function tombstone(kind, id) {
   if (!ctx || !loggedIn()) return;
-  const f = path.join(ctx.data, 'sync-tombstones.json'), t = readJson(f, { lib: [], cal: [] });
-  const k = kind === 'library' ? 'lib' : 'cal';
+  const f = path.join(ctx.data, 'sync-tombstones.json'), t = tombs();
+  const k = kind === 'library' ? 'lib' : kind === 'research' ? 'res' : 'cal';
   if (!t[k].includes(id)) { t[k].push(id); fs.writeFileSync(f, JSON.stringify(t)); }
 }
 

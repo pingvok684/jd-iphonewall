@@ -52,7 +52,7 @@ function makeCard(d) {
   const el = document.createElement('div');
   el.className = 'card';
   el.innerHTML = `
-    <div class="top"><span class="dot"></span><span class="name" title="Dvojklik = premenovať"></span><span class="ver"></span>
+    <div class="top"><span class="dot"></span><span class="nm"><span class="name" title="Dvojklik = premenovať"></span><span class="ver"></span></span>
       <button data-a="unlock" title="Zobudiť a odomknúť">${icon('unlock')}</button><button data-a="lock" title="Uspať">${icon('lock')}</button>
       <button data-a="solo" title="Zväčšiť">${icon('expand')}</button></div>
     <div class="screen"><img alt=""><div class="ph">Čakám na WebDriverAgent…</div><div class="pstat"></div></div>

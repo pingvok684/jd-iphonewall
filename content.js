@@ -8,6 +8,15 @@ const store = require('./store');
 
 const LIB_DIR = path.join(store.DATA, 'library');
 fs.mkdirSync(LIB_DIR, { recursive: true });
+// screenshoty reelov z prieskumov (názov = sha1 obsahu)
+const SHOT_DIR = path.join(store.DATA, 'research-shots');
+fs.mkdirSync(SHOT_DIR, { recursive: true });
+function saveShot(buf) {
+  const h = crypto.createHash('sha1').update(buf).digest('hex'), f = path.join(SHOT_DIR, h + '.jpg');
+  if (!fs.existsSync(f)) fs.writeFileSync(f, buf);
+  return h;
+}
+const shotFile = (h) => (/^[a-f0-9]{40}$/.test(h) && fs.existsSync(path.join(SHOT_DIR, h + '.jpg')) ? path.join(SHOT_DIR, h + '.jpg') : null);
 const TYPES = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.heic': 'image/heic', '.heif': 'image/heif', '.gif': 'image/gif', '.webp': 'image/webp',
   '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.m4v': 'video/x-m4v' };
 const isVideo = (ext) => /^\.(mp4|mov|m4v)$/i.test(ext);
@@ -144,7 +153,13 @@ function addResearch(r) {
   return it;
 }
 const listResearch = () => research;
-function removeResearch(id) { research = research.filter((x) => x.id !== id); store.writeJson('research.json', research); }
+function removeResearch(id) {
+  const it = research.find((x) => x.id === id);
+  research = research.filter((x) => x.id !== id); store.writeJson('research.json', research);
+  const used = new Set(research.flatMap((r) => (r.notes || []).map((n) => n.shot)));
+  for (const n of (it && it.notes) || []) if (n.shot && !used.has(n.shot)) { const f = shotFile(n.shot); if (f) fs.unlink(f, () => {}); }
+  onDel('research', id);
+}
 
 // ---------- profily telefónov ----------
 const getProfile = (udid) => profiles[udid] || {};
@@ -162,5 +177,5 @@ function setProfile(udid, p) {
 }
 
 module.exports = { onDelete, TYPES, LIB_DIR, addToLibrary, listLibrary, libFile, removeFromLibrary, markUsed, setLibNote, setOwners, bulkLibrary, cleanupLibrary, librarySize, reloadAll,
-  addCalendar, setCalendar, removeCalendar, listCalendar, getCalendar, addStatFromText, listStats, removeStat, addResearch, listResearch, removeResearch,
+  addCalendar, setCalendar, removeCalendar, listCalendar, getCalendar, addStatFromText, listStats, removeStat, addResearch, listResearch, removeResearch, saveShot, shotFile, SHOT_DIR,
   getProfile, setProfile };
