@@ -141,6 +141,9 @@ select{background:var(--raise2);border:1px solid var(--line);border-radius:8px;p
 /* export */
 .export{border-top:1px solid var(--line);padding:16px 20px 18px;background:linear-gradient(180deg,var(--panel),#0e0d0b);display:flex;flex-direction:column;gap:10px}
 .btns{display:grid;grid-template-columns:1fr auto;gap:8px}
+.btns2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.libbar{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#a0968a;margin-top:4px;padding-top:10px;border-top:1px solid var(--line)}
+button.lib{border-color:rgba(255,91,128,.45)!important}
 button.primary{position:relative;overflow:hidden;border:0;border-radius:12px;padding:13px 16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;
   font:600 14px/1 var(--f-body);color:var(--acc-ink);
   background:linear-gradient(180deg,#ffb468,var(--acc));box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 10px 24px -10px var(--accglow);transition:transform .15s,filter .15s}
@@ -393,6 +396,8 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:none!important}
     <div class="vprog" id="vprog" hidden><i></i></div>
     <button class="primary" id="vexport" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg>Exportovať video</button>
     <button class="ghost" id="vexportAll" disabled>Exportovať všetky videá</button>
+    <div class="libbar" data-libbar hidden><span>Knižnica JD Phone Studio · pre telefón</span><select data-libowner><option value="">Nepriradené</option></select></div>
+    <button class="ghost lib" id="vexportLib" disabled hidden>📚 Exportovať do knižnice</button>
     <p class="verr" id="verr" hidden></p>
     <div class="vresult" id="vresult" hidden>
       <video id="vresultVideo" controls playsinline></video>
@@ -409,6 +414,8 @@ button:disabled{opacity:.4;cursor:not-allowed;filter:none!important}
       <button class="ghost" id="reseed" title="Nový šum: každá fotka má unikátny odtlačok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r="1.1" fill="currentColor"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/><circle cx="15" cy="15" r="1.1" fill="currentColor"/></svg></button>
     </div>
     <button class="ghost" id="dlall">Stiahnuť všetky fotky (ZIP)</button>
+    <div class="libbar" data-libbar hidden><span>Knižnica JD Phone Studio · pre telefón</span><select data-libowner><option value="">Nepriradené</option></select></div>
+    <div class="btns2" data-libbtns hidden><button class="ghost lib" id="tolib">📚 Do knižnice</button><button class="ghost lib" id="tolibAll">📚 Všetky do knižnice</button></div>
     <div class="meta" id="meta" hidden></div>
     <p class="hint" id="savehint" hidden>Ulož fotku podržaním prsta na upravenej fotke, na počítači pravým klikom → Uložiť obrázok.</p>
   </div>
@@ -1832,6 +1839,7 @@ function renderList() {
   $('vexportAll').disabled = exporting || items.length < 2;
   $('vexportAll').textContent = items.length > 1 ? `Exportovať všetky videá (${items.length})` : 'Exportovať všetky videá';
   $('vexport').disabled = exporting || !loaded;
+  $('vexportLib').disabled = exporting || !loaded;
 }
 function showEmpty() {
   $('vempty').hidden = false; $('vstage').hidden = true;
@@ -2053,7 +2061,7 @@ async function vsave(blob, name) {
   try { await dls.save({ filename: name, data: blob }); return 'saved'; }
   catch (e) { return (e && e.code) || 'error'; }
 }
-async function exportList(list) {
+async function exportList(list, toLib = false) {
   if (!list.length) return;
   verr(''); $('vresult').hidden = true;
   exporting = true; placeCmp();
@@ -2062,8 +2070,8 @@ async function exportList(list) {
   list.forEach(it => { it.st = 'čaká'; it.err = ''; }); renderList();
   let ok = 0, last = '';
   const fast = !!(window.VideoEncoder && window.VideoDecoder && window.MP4Box && window.Mp4Muxer);
-  if (!dls) await ensureDls();
-  const batch = list.length > 1 && dls ? [] : null;   // viac videí → jeden ZIP, jedno potvrdenie
+  if (!dls && !toLib) await ensureDls();
+  const batch = list.length > 1 && dls && !toLib ? [] : null;   // viac videí → jeden ZIP, jedno potvrdenie
   for (let k = 0; k < list.length; k++) {
     const it = list[k], label = list.length > 1 ? `Video ${k + 1}/${list.length} · ` : '';
     it.st = 'exportujem'; renderList();
@@ -2078,6 +2086,11 @@ async function exportList(list) {
         out = await exportRealtime(label);
       }
       const name = newOutName().replace(/mp4$/, out.ext);
+      if (toLib) {
+        vstatus(label + 'Ukladám do knižnice ' + name + '…');
+        await toLibrary(out.blob, name);
+        it.st = 'v knižnici'; ok++; last = `${name} · ${out.info} · uložené do knižnice`; renderList(); continue;
+      }
       if (batch) { batch.push({ blob: out.blob, name, it }); it.st = 'hotové'; ok++; last = `${name} · ${out.info}`; renderList(); continue; }
       vstatus(label + 'Ukladám ' + name + '…');
       const res = await vsave(out.blob, name);
@@ -2108,6 +2121,53 @@ async function exportList(list) {
   setTimeout(() => { $('vprog').hidden = true; }, 1500);
   vstatus(list.length > 1 ? `Hotovo: exportované ${ok} z ${list.length} videí` + (ok < list.length ? ' (chybné sú v zozname červenou)' : '') : (ok ? 'Hotovo: ' + last : last));
 }
+// ---------- knižnica JD Phone Studio (keď nástroj beží v aplikácii) ----------
+const IN_APP = location.protocol.startsWith('http') && location.pathname.startsWith('/tools/');
+async function initLib() {
+  if (!IN_APP) return;
+  let ok = false; try { ok = (await fetch('/api/library', { cache: 'no-store' })).ok; } catch (e) {}
+  if (!ok) return;
+  document.querySelectorAll('[data-libbar]').forEach(x => x.hidden = false);
+  document.querySelectorAll('[data-libbtns]').forEach(x => x.hidden = false);
+  $('vexportLib').hidden = false;
+  try {
+    const ph = await (await fetch('/api/phone-names')).json();
+    const opts = Object.entries(ph).map(([u, p]) => `<option value="${u}">${(p.label || 'Telefón').replace(/</g, '&lt;')}${p.handle ? ' (@' + String(p.handle).replace(/</g, '&lt;') + ')' : ''}</option>`).join('');
+    let saved = ''; try { saved = localStorage.getItem('tait-libowner') || ''; } catch (e) {}
+    document.querySelectorAll('[data-libowner]').forEach(sel => { sel.insertAdjacentHTML('beforeend', opts); sel.value = saved && ph[saved] ? saved : '';
+      sel.onchange = () => { document.querySelectorAll('[data-libowner]').forEach(x => x.value = sel.value); try { localStorage.setItem('tait-libowner', sel.value); } catch (e) {} }; });
+  } catch (e) {}
+}
+const libOwner = () => (document.querySelector('[data-libowner]') || {}).value || '';
+async function toLibrary(blob, name) {
+  const ext = (name.match(/\.(\w+)$/) || [])[1] || '';
+  if (/^webm$/i.test(ext)) throw new Error('formát WebM knižnica nepodporuje – použi Chrome/Edge (rýchly export do MP4)');
+  const r = await fetch(`/api/library/upload?name=${encodeURIComponent(name)}${libOwner() ? '&owner=' + encodeURIComponent(libOwner()) : ''}`, { method: 'POST', body: blob });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'uloženie do knižnice zlyhalo');
+  return j;
+}
+initLib();
+$('tolib').onclick = async () => {
+  if (!outBlob) { status('Najprv pridaj fotku'); return; }
+  try { const b = await finalize(outBlob, files[cur]); await toLibrary(b, outName(files[cur], b)); status('Uložené do knižnice ✓'); }
+  catch (e) { status('Knižnica: ' + e.message); }
+};
+$('tolibAll').onclick = async () => {
+  if (!files.length) { status('Najprv pridaj fotky'); return; }
+  let ok = 0;
+  try {
+    for (let i = 0; i < files.length; i++) {
+      status(`Ukladám do knižnice ${i + 1}/${files.length}…`); busy(true, `Ukladám do knižnice ${i + 1} / ${files.length}…`); await paint();
+      const { canvas } = processImage(files[i].bmp, P, files[i].seed, await masksFor(files[i]), mode);
+      const b = await finalize(await encode(canvas, P, files[i]), files[i]);
+      await toLibrary(b, outName(files[i], b)); ok++;
+    }
+    status(`Uložené do knižnice: ${nFot(ok)} ✓`);
+  } catch (e) { status(`Knižnica: ${e.message} (uložené ${ok})`); }
+  finally { busy(false); }
+};
+$('vexportLib').onclick = () => (curItem || items.length) && exportList(items.length > 1 ? items.slice() : [curItem], true);
 $('vexport').onclick = () => curItem && exportList([curItem]);
 $('vexportAll').onclick = () => exportList(items.slice());
 

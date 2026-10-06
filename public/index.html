@@ -671,6 +671,7 @@
     <a class="navmore" id="navTools" data-sub="navToolsSub" data-key="jd-navtools" role="button" tabindex="0"><span data-icon="wand"></span><span class="t">Nástroje</span><span class="chev">▾</span></a>
     <div class="navsub" id="navToolsSub" hidden>
       <a href="#realism" data-v="realism"><span data-icon="image"></span><span class="t">Tait - Realism filter</span></a>
+      <a href="#upscaler" data-v="upscaler"><span data-icon="expand"></span><span class="t">Tait - Video Upscaler</span></a>
       <a href="#magnific" data-v="magnific"><span data-icon="wand"></span><span class="t">Magnific</span><span class="badge soon">čoskoro</span></a>
     </div>
     <a href="#statistiky" data-v="statistiky"><span data-icon="chart"></span><span class="t">Štatistiky</span></a>
@@ -758,6 +759,16 @@
       <a class="btn" href="/tools/realism.html" target="_blank" rel="noopener"><span data-icon="expand"></span>Otvoriť v novom okne</a>
     </div>
     <div class="toolframe"><iframe id="realismFrame" title="Tait - Realism filter" loading="lazy"></iframe></div>
+  </section>
+
+  <!-- VIDEO UPSCALER -->
+  <section class="view" id="v-upscaler">
+    <div class="vhead">
+      <div><h2>Tait - Video Upscaler</h2><div class="sub">AI zväčšenie videa na 1080×1920 a plynulosť 60 fps – lokálne na grafike počítača</div></div>
+      <div class="sp"></div>
+      <a class="btn" href="/tools/upscaler.html" target="_blank" rel="noopener"><span data-icon="expand"></span>Otvoriť v novom okne</a>
+    </div>
+    <div class="toolframe"><iframe id="upscalerFrame" title="Tait - Video Upscaler" loading="lazy" style="background:#0c0d11"></iframe></div>
   </section>
 
   <!-- KALENDÁR -->
@@ -1400,6 +1411,7 @@ function route() {
   if (view === 'prehlad') loadOverview();
   if (view === 'aktivita') loadActivity();
   if (view === 'realism') { const fr = document.getElementById('realismFrame'); if (!fr.src) fr.src = '/tools/realism.html'; }
+  if (view === 'upscaler') { const fr = document.getElementById('upscalerFrame'); if (!fr.src) fr.src = '/tools/upscaler.html'; }
   if (view === 'nastavenia') { loadSettings(); loadPin(); }
   if (view === 'novinky') loadNews();
   if (view === 'aktualizacie') checkUpdate(false);

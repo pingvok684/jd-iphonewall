@@ -24,6 +24,7 @@ const media = require('./media');
 const templates = require('./templates');
 const store = require('./store');
 const magnific = require('./magnific');
+const upscaler = require('./upscaler');
 const updater = require('./updater');
 const auth = require('./auth');
 const CONFIG_FILE = path.join(__dirname, 'config.json');
@@ -1094,6 +1095,14 @@ const server = http.createServer(async (req, res) => {
     } catch (e) { return json(res, 400, { error: e.message }); }
   }
 
+  // Video Upscaler (Nástroje): AI zväčšenie + 60 fps lokálne na grafike
+  if (parts[0] === 'api' && parts[1] === 'upscaler') {
+    return upscaler.handle(req, res, parts, url, { json, addToLibrary: (stream, name, owner) => content.addToLibrary(stream, name, owner),
+      openPath: (p, select) => { try {
+        if (IS_WIN) spawn('explorer', select ? ['/select,', p] : [p], { detached: true, stdio: 'ignore' }).unref();
+        else if (process.platform === 'darwin') spawn('open', select ? ['-R', p] : [p], { detached: true, stdio: 'ignore' }).unref();
+      } catch (_) {} } }).catch((e) => { if (!res.headersSent) json(res, 500, { error: e.message }); });
+  }
   if (parts[0] === 'api' && parts[2] === 'upload' && parts[1] !== 'library' && parts[1] !== 'magnific' && req.method === 'POST') {
     const dev = devices.get(parts[1]);
     if (!dev) { req.resume(); return json(res, 404, { error: 'Telefón nenájdený' }); }
@@ -1324,7 +1333,7 @@ const server = http.createServer(async (req, res) => {
     const withMedia = url.searchParams.get('media') === '1';
     const out = path.join(require('os').tmpdir(), `jd-zaloha-${Date.now()}.zip`);
     const names = ['data'].concat(['labels.json', 'templates.json'].filter((f) => fs.existsSync(path.join(__dirname, f))));
-    const skip = ['data/backup-*', 'data/plan-files', 'data/tmp-captions', 'data/magnific', 'data/inspiration'].concat(withMedia ? [] : ['data/library', 'data/proofs']);
+    const skip = ['data/backup-*', 'data/plan-files', 'data/tmp-captions', 'data/magnific', 'data/inspiration', 'data/upscaled'].concat(withMedia ? [] : ['data/library', 'data/proofs']);
     const args = IS_WIN ? ['-a', '-c', '-f', out, ...skip.map((x) => `--exclude=${x}`), ...names]
       : ['-r', '-q', out, ...names, '-x', ...skip.map((x) => `${x}/*`), ...skip.map((x) => x)];
     execFile(IS_WIN ? 'tar' : 'zip', args, { cwd: __dirname, timeout: 600000, maxBuffer: 1 << 24 }, (err) => {
@@ -1557,6 +1566,7 @@ server.listen(PORT, '0.0.0.0', () => {
   log(`JD Phone Studio beží na http://localhost:${PORT}  (WebDriverAgent: ${WDA_MODE})`);
   media.startMediaServer(config);
   if (remoteOn()) startWebTunnel();
+  try { upscaler.init(store.DATA); } catch (_) {}
   magnific.init(() => process.env.MAGNIFIC_API_KEY || config.magnificKey || '');
   refresh();
   setInterval(refresh, 5000);

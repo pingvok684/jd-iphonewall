@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tait - Video Upscaler</title>
+<style>
+:root{
+  --bg:#0c0d11; --panel:#14161c; --panel2:#1b1d25; --line:#262a33; --text:#e8eaf0; --mute:#8a90a2;
+  --acc:#ff3d68; --acc2:#ff8aa5; --warn:#f5a524; --err:#ff5470; --ok:#2ecc71;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,Segoe UI,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 20px 60px}
+header{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+.logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;font-weight:700;font-size:20px;color:#fff}
+h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--mute);font-size:13px}
+header .sp{flex:1}
+.btn{appearance:none;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:8px 14px;border-radius:9px;font:inherit;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;text-decoration:none}
+.btn:hover{border-color:#3a4152;background:#212634}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn.sm{padding:5px 10px;font-size:12.5px;border-radius:7px}
+.btn.ghost{background:transparent}
+.btn.danger:hover{border-color:var(--err);color:var(--err)}
+.grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h2{margin:0 0 14px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);font-weight:600}
+.presets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.preset{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:10px 8px;cursor:pointer;text-align:center;color:var(--text);font:inherit}
+.preset b{display:block;font-size:13px;font-weight:600}
+.preset span{display:block;font-size:11px;color:var(--mute);margin-top:2px}
+.preset.on{border-color:var(--acc);background:#ff3d681a}
+.field{margin-bottom:16px}
+.field label{display:flex;justify-content:space-between;font-size:13px;font-weight:500;margin-bottom:7px}
+.field label em{font-style:normal;color:var(--mute);font-weight:400}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:3px}
+.seg button{flex:1;border:0;background:transparent;color:var(--mute);padding:7px 0;border-radius:7px;font:inherit;font-weight:500;cursor:pointer}
+.seg button.on{background:#2a3040;color:var(--text)}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.hint{font-size:12px;color:var(--mute);margin-top:4px}
+.est{margin-top:4px;padding:10px 12px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);font-size:12.5px;color:var(--mute)}
+.est b{color:var(--text)}
+.drop{border:2px dashed #2f3546;border-radius:14px;padding:34px 20px;text-align:center;cursor:pointer;transition:.15s;background:var(--panel)}
+.drop:hover,.drop.over{border-color:var(--acc);background:#ff3d6810}
+.drop svg{opacity:.8}
+.drop h3{margin:10px 0 4px;font-size:16px}
+.drop p{margin:0;color:var(--mute);font-size:13px}
+.listhead{display:flex;align-items:center;justify-content:space-between;margin:20px 0 10px}
+.listhead h2{margin:0}
+.empty{color:var(--mute);text-align:center;padding:26px 0;font-size:13px}
+.job{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.job .top{display:flex;align-items:center;gap:10px}
+.job .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:99px;background:#2a3040;color:var(--mute);white-space:nowrap}
+.badge.running{background:#ff3d6826;color:#ff8aa5}
+.badge.done{background:#2ecc7122;color:var(--ok)}
+.badge.error{background:#ff547022;color:var(--err)}
+.badge.uploading{background:#f5a52422;color:var(--warn)}
+.meta{color:var(--mute);font-size:12.5px;margin-top:4px}
+.meta .arrow{color:var(--acc2);margin:0 4px}
+.bar{height:7px;background:var(--panel2);border-radius:99px;overflow:hidden;margin:11px 0 7px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:99px;transition:width .4s}
+.job.done .bar i{background:var(--ok)}
+.job.error .bar i{background:var(--err)}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.stage{font-size:12.5px;color:var(--mute);flex:1;min-width:160px}
+.job.error .stage{color:var(--err)}
+.modal{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:10;padding:20px}
+.modal.on{display:flex}
+.mbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;max-width:96vw;max-height:94vh;display:flex;flex-direction:column;gap:12px}
+.mbox .vids{display:flex;gap:12px;min-height:0}
+.mbox figure{margin:0;display:flex;flex-direction:column;gap:6px;min-height:0}
+.mbox figcaption{font-size:12px;color:var(--mute);text-align:center}
+.mbox video{max-height:76vh;max-width:44vw;border-radius:8px;background:#000}
+.mbox .row{justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">⇧</div>
+    <div>
+      <h1>Tait - Video Upscaler</h1>
+      <div class="sub">Lokálne na grafike počítača · AI zväčšenie (Real-ESRGAN) + plynulosť 60 fps (RIFE) · Windows aj Mac</div>
+    </div>
+    <div class="sp"></div>
+    <button class="btn" id="openFolder">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      Priečinok s hotovými
+    </button>
+  </header>
+
+  <div class="card" id="setup" hidden style="margin-bottom:18px">
+    <h2>Prvé spustenie</h2>
+    <p style="margin:0 0 12px">Upscaler potrebuje 3 programy (~150 MB): <b>Real-ESRGAN</b> (AI zväčšenie), <b>RIFE</b> (60 fps) a <b>FFmpeg</b>. Stiahnu sa raz z ich oficiálnych stránok na GitHube a ostanú v počítači.</p>
+    <div class="row"><button class="btn pri" id="installBtn">Stiahnuť programy</button><div class="stage" id="instTxt"></div></div>
+    <div class="bar" id="instBar" hidden><i></i></div>
+    <div class="hint">Potrebná je grafická karta s podporou Vulkan (Windows: NVIDIA/AMD/Intel s aktuálnymi ovládačmi; Mac: Apple Silicon alebo novší Intel Mac).</div>
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Nastavenia</h2>
+      <div class="presets" id="presets">
+        <button class="preset" data-p="rec"><b>Prirodzený</b><span>odporúčané</span></button>
+        <button class="preset" data-p="fast"><b>Rýchly</b><span>bez AI</span></button>
+        <button class="preset" data-p="max"><b>Max detail</b><span>ťažký model, pomalý</span></button>
+      </div>
+
+      <div class="field">
+        <label>Rozlíšenie <em>kratšia strana</em></label>
+        <div class="seg" id="res">
+          <button data-v="720">720p</button><button data-v="1080">1080p</button><button data-v="1440">1440p</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Snímky za sekundu</label>
+        <div class="seg" id="fps">
+          <button data-v="0">Pôvodné</button><button data-v="30">30</button><button data-v="60">60</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>AI model</label>
+        <div class="seg" id="model">
+          <button data-v="natural">Prirodzený · rýchly</button><button data-v="heavy">Ťažký · pomalý</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Sila AI detailov <em id="aiV"></em></label>
+        <input type="range" id="ai" min="0" max="100" step="5">
+        <div class="hint">0 % = bez AI (rýchle). Vyššie = ostrejšie, ale tvár môže pôsobiť umelo.</div>
+      </div>
+      <div class="field">
+        <label>Doostrenie <em id="sharpV"></em></label>
+        <input type="range" id="sharp" min="0" max="100" step="5">
+      </div>
+      <div class="field">
+        <label>Jemné zrno <em id="grainV"></em></label>
+        <input type="range" id="grain" min="0" max="10" step="1">
+      </div>
+      <div class="est" id="est"></div>
+    </section>
+
+    <section>
+      <div class="drop" id="drop">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M12 15V9m0 0-3 3m3-3 3 3"/></svg>
+        <h3>Pretiahni sem videá</h3>
+        <p>alebo klikni a vyber · môžeš pridať viac naraz, spracujú sa postupne</p>
+        <input type="file" id="file" accept="video/*" multiple hidden>
+      </div>
+
+      <div class="listhead">
+        <h2 class="sub" style="text-transform:uppercase;letter-spacing:.08em;font-weight:600">Poradie</h2>
+        <button class="btn sm ghost" id="clearDone">Vyčistiť hotové</button>
+      </div>
+      <div id="list"><div class="empty">Zatiaľ žiadne videá.</div></div>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="mbox">
+    <div class="vids">
+      <figure><video id="vA" muted playsinline loop></video><figcaption id="capA">Originál</figcaption></figure>
+      <figure><video id="vB" playsinline loop></video><figcaption id="capB">Upscale</figcaption></figure>
+    </div>
+    <div class="row">
+      <div class="row"><button class="btn sm" id="playBoth">▶ Prehrať / pauza</button></div>
+      <button class="btn sm" id="closeModal">Zavrieť</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const PRESETS = {
+  rec:  {res:1080, fps:60, model:"natural", ai:60, sharp:30, grain:3},
+  fast: {res:1080, fps:60, model:"natural", ai:0,  sharp:55, grain:3},
+  max:  {res:1080, fps:60, model:"heavy",   ai:50, sharp:25, grain:2},
+};
+let S = {...PRESETS.rec};
+try { const o = JSON.parse(localStorage.getItem("vu_settings2") || "{}"); if (o.model) Object.assign(S, o); } catch {}
+
+// rýchlosť nameraná na RX 7600 XT (s/snímka)
+const T_AI = {natural: 0.22, heavy: 3.5}, T_RIFE = 0.05, T_ENC = 0.04;
+
+function save(){ try { localStorage.setItem("vu_settings2", JSON.stringify(S)); } catch {} }
+function fmtMin(sec){
+  if (sec < 60) return Math.max(5, Math.round(sec/5)*5) + " s";
+  const m = Math.round(sec/60); return m < 60 ? m + " min" : (Math.floor(m/60) + " h " + (m%60) + " min");
+}
+function estimate(dur, fps, s){
+  const n = Math.max(1, dur*fps);
+  const tf = s.fps > fps*1.05 ? s.fps : fps;
+  const m = n * tf / fps;
+  const k = (s.res/1080)**2;
+  return n*0.02 + (s.ai > 0 ? n*(T_AI[s.model] || 0.3) : 0) + (tf > fps ? m*T_RIFE*k : 0) + m*T_ENC*k;
+}
+function render(){
+  for (const id of ["res","fps","model"]) for (const b of document.querySelectorAll(`#${id} button`)) b.classList.toggle("on", b.dataset.v == S[id]);
+  for (const id of ["ai","sharp","grain"]) $("#"+id).value = S[id];
+  $("#aiV").textContent = S.ai + " %"; $("#sharpV").textContent = S.sharp + " %"; $("#grainV").textContent = S.grain;
+  for (const b of document.querySelectorAll(".preset")) {
+    const p = PRESETS[b.dataset.p]; b.classList.toggle("on", Object.keys(p).every(k => p[k] == S[k]));
+  }
+  $("#est").innerHTML = `Odhad pre 12 s video (30 fps): <b>~${fmtMin(estimate(12,30,S))}</b>`;
+  save();
+}
+for (const id of ["res","fps","model"]) $("#"+id).addEventListener("click", e => { const v = e.target.dataset.v; if (v) { S[id] = id === "model" ? v : +v; render(); } });
+for (const id of ["ai","sharp","grain"]) $("#"+id).addEventListener("input", e => { S[id] = +e.target.value; render(); });
+$("#presets").addEventListener("click", e => { const b = e.target.closest(".preset"); if (b) { S = {...PRESETS[b.dataset.p]}; render(); } });
+render();
+
+// ---------------------------------------------------------------- nahrávanie
+const local = {};      // id servera alebo dočasné id -> {url (blob), name}
+const uploads = [];    // prebiehajúce nahrávania
+const drop = $("#drop"), file = $("#file");
+drop.onclick = () => file.click();
+file.onchange = () => { addFiles(file.files); file.value = ""; };
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); };
+
+function addFiles(files){
+  if (!READY) { alert("Najprv stiahni programy (tlačidlo hore)."); return; }
+  for (const f of files) if (f.type.startsWith("video/") || /\.(mp4|mov|webm|mkv|avi|m4v)$/i.test(f.name)) upload(f);
+}
+function upload(f){
+  const u = {tmp: "u" + Math.random().toString(36).slice(2), name: f.name, progress: 0, size: f.size, url: URL.createObjectURL(f)};
+  uploads.push(u); draw();
+  const settings = encodeURIComponent(JSON.stringify(S));
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", `/api/upscaler/upload?name=${encodeURIComponent(f.name)}&settings=${settings}`);
+  xhr.upload.onprogress = e => { if (e.lengthComputable) { u.progress = e.loaded/e.total*100; draw(); } };
+  xhr.onload = () => {
+    uploads.splice(uploads.indexOf(u), 1);
+    try {
+      const r = JSON.parse(xhr.responseText);
+      if (xhr.status === 200) local[r.id] = {url: u.url, name: f.name};
+      else alert(`${f.name}: ${r.error || "chyba"}`);
+    } catch { alert(`${f.name}: server neodpovedá`); }
+    poll();
+  };
+  xhr.onerror = () => { uploads.splice(uploads.indexOf(u), 1); alert(`${f.name}: server neodpovedá – je spustené JD Phone Studio?`); draw(); };
+  xhr.send(f);
+}
+
+// ---------------------------------------------------------------- zoznam
+let JOBS = [], NOW = Date.now()/1000, offline = false;
+async function poll(){
+  try {
+    const r = await (await fetch("/api/upscaler/jobs")).json();
+    JOBS = r.jobs; NOW = r.now; offline = false;
+  } catch { offline = true; }
+  draw();
+}
+setInterval(poll, 1000); poll();
+let READY = true;
+async function status(){
+  let st; try { st = await (await fetch("/api/upscaler/status")).json(); } catch { return; }
+  READY = st.ready; const i = st.install || {};
+  $("#setup").hidden = st.ready && !i.running;
+  $("#installBtn").hidden = i.running || st.ready;
+  $("#instBar").hidden = !i.running; $("#instBar i").style.width = (i.pct || 0) + "%";
+  $("#instTxt").textContent = i.error ? "Chyba: " + i.error : i.running ? `${i.step} ${i.pct || 0} %` : st.ready ? "Programy sú pripravené ✓" : "";
+  $("#instTxt").style.color = i.error ? "var(--err)" : "";
+  drop.style.opacity = st.ready ? "" : ".45";
+}
+$("#installBtn").onclick = async () => { await fetch("/api/upscaler/install", {method:"POST"}); status(); };
+setInterval(status, 1500); status();
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const mb = b => (b/1048576).toFixed(b > 104857600 ? 0 : 1) + " MB";
+const LABEL = {queued:"V poradí", running:"Spracúva sa", done:"Hotovo", error:"Chyba", cancelled:"Zrušené", uploading:"Nahráva sa"};
+
+function jobHTML(j){
+  const s = j.settings || {}, info = j.info || {};
+  const tfps = s.fps > (info.fps||0)*1.05 ? s.fps : Math.round(info.fps||0);
+  let metaR = `${info.w}×${info.h} · ${Math.round(info.fps)} fps · ${Math.round(info.dur)} s`;
+  metaR += `<span class="arrow">→</span>${j.target || "~" + s.res + "p"} · ${j.out_fps ? Math.round(j.out_fps) : tfps} fps · AI ${s.ai ? s.ai + " % " + (s.model === "heavy" ? "ťažký" : "prirodzený") : "vyp."}`;
+  let stage = esc(j.stage || ""), btns = "";
+  if (j.status === "running") {
+    const el = NOW - j.started;
+    const left = j.eta_stage != null ? null : (j.progress > 3 ? el/j.progress*(100-j.progress) : null);
+    stage += ` · ${Math.floor(j.progress)} %` + (left ? ` · zostáva ~${fmtMin(left)}` : "") + (j.eta_stage ? ` · etapa ešte ~${fmtMin(j.eta_stage)}` : "");
+    btns = `<button class="btn sm danger" data-a="cancel">Zrušiť</button>`;
+  } else if (j.status === "queued") {
+    stage += ` · odhad ~${fmtMin(estimate(info.dur||12, info.fps||30, s))}`;
+    btns = `<button class="btn sm danger" data-a="cancel">Zrušiť</button>`;
+  } else if (j.status === "done") {
+    stage = `Hotovo za ${fmtMin(j.finished - j.started)} · ${esc(j.out_name)} · ${mb(j.out_size)}`;
+    btns = `<button class="btn sm" data-a="compare">Porovnať</button>
+            <a class="btn sm pri" href="/api/upscaler/download/${j.id}">Stiahnuť</a>
+            <button class="btn sm" data-a="lib"${j.libId ? " disabled" : ""}>${j.libId ? "✓ V knižnici" : "Do knižnice"}</button>
+            <button class="btn sm" data-a="show">Ukázať v priečinku</button>
+            <button class="btn sm ghost" data-a="remove">×</button>`;
+  } else {
+    btns = `<button class="btn sm ghost" data-a="remove">×</button>`;
+  }
+  return `<div class="job ${j.status}" data-id="${j.id}">
+    <div class="top"><div class="name" title="${esc(j.name)}">${esc(j.name)}</div><span class="badge ${j.status}">${LABEL[j.status]}</span></div>
+    <div class="meta">${metaR}</div>
+    <div class="bar"><i style="width:${j.status==="done"?100:j.progress||0}%"></i></div>
+    <div class="row"><div class="stage">${stage}</div>${btns}</div>
+  </div>`;
+}
+function uploadHTML(u){
+  return `<div class="job"><div class="top"><div class="name">${esc(u.name)}</div><span class="badge uploading">Nahráva sa</span></div>
+    <div class="meta">${mb(u.size)}</div><div class="bar"><i style="width:${u.progress}%"></i></div>
+    <div class="row"><div class="stage">Nahrávam do upscalera · ${Math.floor(u.progress)} %</div></div></div>`;
+}
+let lastHTML = "";
+function draw(){
+  let h = uploads.map(uploadHTML).join("") + JOBS.map(jobHTML).join("");
+  if (offline) h = `<div class="job error"><div class="stage">Server neodpovedá – je JD Phone Studio spustené?</div></div>` + h;
+  if (!h) h = `<div class="empty">Zatiaľ žiadne videá.</div>`;
+  if (h !== lastHTML) { $("#list").innerHTML = h; lastHTML = h; }
+  const run = JOBS.find(j => j.status === "running");
+  document.title = run ? `${Math.floor(run.progress)} % · Tait - Video Upscaler` : "Tait - Video Upscaler";
+}
+
+$("#list").addEventListener("click", async e => {
+  const b = e.target.closest("[data-a]"); if (!b) return;
+  const id = b.closest(".job").dataset.id, a = b.dataset.a;
+  if (a === "cancel" || a === "remove") { await fetch(`/api/upscaler/${a}/${id}`, {method:"POST"}); poll(); }
+  if (a === "show") fetch(`/api/upscaler/open-folder/${id}`, {method:"POST"});
+  if (a === "compare") compare(id);
+  if (a === "lib") { b.disabled = true; b.textContent = "Pridávam…"; const r = await fetch(`/api/upscaler/library/${id}`, {method:"POST"}).then(r => r.json()).catch(() => ({})); b.textContent = r.ok ? "✓ V knižnici" : "Chyba"; poll(); }
+});
+$("#openFolder").onclick = () => fetch("/api/upscaler/open-folder", {method:"POST"});
+$("#clearDone").onclick = async () => {
+  for (const j of JOBS) if (!["queued","running"].includes(j.status)) await fetch(`/api/upscaler/remove/${j.id}`, {method:"POST"});
+  poll();
+};
+
+// ---------------------------------------------------------------- porovnanie
+const vA = $("#vA"), vB = $("#vB");
+function compare(id){
+  const j = JOBS.find(x => x.id === id);
+  vB.src = `/api/upscaler/stream/${id}`;
+  $("#capB").textContent = `Upscale · ${j.target} · ${Math.round(j.out_fps)} fps`;
+  const l = local[id];
+  vA.parentElement.style.display = l ? "" : "none";
+  if (l) { vA.src = l.url; $("#capA").textContent = `Originál · ${j.info.w}×${j.info.h} · ${Math.round(j.info.fps)} fps`; }
+  $("#modal").classList.add("on");
+  Promise.all([vA, vB].filter(v => v.src).map(v => new Promise(r => v.readyState > 1 ? r() : v.addEventListener("loadeddata", r, {once:true}))))
+    .then(() => { vA.currentTime = vB.currentTime = 0; vA.play(); vB.play(); });
+}
+vB.addEventListener("seeked", () => { if (Math.abs(vA.currentTime - vB.currentTime) > .05) vA.currentTime = vB.currentTime; });
+vB.addEventListener("play", () => { if (vA.src) { vA.currentTime = vB.currentTime; vA.play(); } });
+vB.addEventListener("pause", () => vA.pause());
+$("#playBoth").onclick = () => vB.paused ? vB.play() : vB.pause();
+function closeModal(){ $("#modal").classList.remove("on"); vA.pause(); vB.pause(); vB.removeAttribute("src"); vB.load(); }
+$("#closeModal").onclick = closeModal;
+$("#modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
+addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+</script>
+</body>
+</html>
