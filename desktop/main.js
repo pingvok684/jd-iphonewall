@@ -255,13 +255,50 @@ async function checkSetup() {
     try { const j = JSON.parse(line); for (const d of j.deviceList || []) res.phones.push(typeof d === 'string' ? { udid: d } : { udid: d.Udid || d.udid, name: d.DeviceName || '', version: d.ProductVersion || '' }); } catch (_) {}
   }
   for (const p of res.phones) {
-    const a = await run(IOS, ['apps', '--list', `--udid=${p.udid}`]);
-    p.wda = /xctrunner|WebDriverAgentRunner/i.test(a.out);
+    const a = await run(IOS, ['apps', `--udid=${p.udid}`], 30000);
+    const app = wdaApp(a.out);
+    p.wda = !!app || /xctrunner|WebDriverAgentRunner/i.test(a.out);
     p.appsError = a.ok ? '' : a.err.slice(0, 200);
+    p.bundle = app ? app.CFBundleIdentifier : ((a.out.match(/[A-Za-z0-9._\-]*(?:xctrunner|WebDriverAgentRunner)[A-Za-z0-9._\-]*/i) || [])[0] || '');
+    // starý WebDriverAgent bez zdieľania súborov → priečinok sa v aplikácii Súbory neukáže
+    p.fileSharing = app ? app.UIFileSharingEnabled === true : null;
+    // režim pre vývojárov (Developer Mode) – existuje až od iOS 16
+    if (parseInt(p.version, 10) && parseInt(p.version, 10) < 16) p.devMode = true;
+    else {
+      const d = await run(IOS, ['devmode', 'get', `--udid=${p.udid}`], 15000);
+      const t = d.out + ' ' + d.err;
+      p.devMode = /DeveloperModeEnabled"?\s*:\s*true|enabled:\s*true/i.test(t) ? true : /DeveloperModeEnabled"?\s*:\s*false|enabled:\s*false/i.test(t) ? false : null;
+    }
+    // priečinok pre skratku JD Save (Súbory → Na mojom iPhone) – stačí nainštalovaný WDA, nemusí bežať
+    p.folder = !!(p.wda && p.bundle && p.fileSharing !== false && await ensureShortcutFolder(p.udid, p.bundle));
   }
   return res;
 }
+function wdaApp(out) {
+  let list = [];
+  for (const chunk of [out, ...out.split('\n')]) { try { const j = JSON.parse(chunk); if (Array.isArray(j)) { list = j; break; } } catch (_) {} }
+  return list.find((x) => x && /xctrunner|WebDriverAgentRunner/i.test(String(x.CFBundleIdentifier || '') + ' ' + String(x.CFBundleName || ''))) || null;
+}
+const folderDone = new Map();
+async function ensureShortcutFolder(udid, bundle) {
+  const k = udid + '|' + bundle;
+  if (folderDone.get(k)) return true;
+  const t = path.join(require('os').tmpdir(), '_Nemazat-JD-Phone-Studio.txt');
+  try { fs.writeFileSync(t, 'Priečinok pre JD Phone Studio – sem chodia fotky a videá cez kábel. Nemaž ho.\n'); } catch (_) {}
+  for (const d of ['Documents/_Nemazat-JD-Phone-Studio.txt', '_Nemazat-JD-Phone-Studio.txt']) {
+    const r = await run(IOS, ['fsync', `--app=${bundle}`, `--udid=${udid}`, 'push', `--srcPath=${t}`, `--dstPath=${d}`], 20000);
+    if (r.ok) { folderDone.set(k, true); return true; }
+  }
+  return false;
+}
 ipcMain.handle('jd:check', () => checkSetup());
+// zobrazí prepínač „Režim pre vývojárov“ v Nastaveniach iPhonu (aj keď ešte nie je nainštalovaný WDA)
+ipcMain.handle('jd:revealDev', async () => {
+  const l = await run(IOS, ['list']); let ids = [];
+  try { ids = (JSON.parse(l.out.trim().split('\n').pop()).deviceList || []).map((d) => (typeof d === 'string' ? d : d.Udid || d.udid)); } catch (_) {}
+  for (const u of ids) await run(IOS, ['devmode', 'reveal', `--udid=${u}`], 15000);
+  return ids.length;
+});
 ipcMain.handle('jd:open', (_, url) => { if (/^(https?|ms-windows-store|macappstore):/.test(url)) shell.openExternal(url); });
 ipcMain.handle('jd:showIpa', () => { const f = path.join(HOME, 'WebDriverAgent.ipa'); if (fs.existsSync(f)) shell.showItemInFolder(f); else shell.openPath(HOME); return f; });
 ipcMain.handle('jd:xcodeSetup', () => {

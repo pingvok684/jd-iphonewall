@@ -104,7 +104,7 @@ if [ "$RC" != "0" ]; then
 
   echo
   echo "  Najčastejšie príčiny:"
-  echo "   • Režim pre vývojárov na iPhone nie je zapnutý (Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov)"
+  echo "   • Režim pre vývojárov na iPhone nie je zapnutý (Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov (Developer Mode))"
   echo "   • iPhone je zamknutý"
   echo "   • Xcode ešte kopíruje súbory z iPhonu – otvor Xcode, počkaj a skús znova"
   fail "Build zlyhal."
@@ -117,7 +117,7 @@ echo
 echo "=============================================="
 echo " ✅ HOTOVO. Teraz:"
 echo "   1. Dvojklik na START_STRANKY.command (otvorí sa stránka)"
-echo "   2. Na iPhone: Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov → Zapnúť"
+echo "   2. Na iPhone: Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov (Developer Mode) → Zapnúť"
 echo "   3. Keď server nahrá aplikáciu do iPhonu: Nastavenia → Všeobecné →"
 echo "      VPN a správa zariadení → tvoj účet → Dôverovať → Verify App"
 echo "   4. Nastavenia → Vývojár → Enable UI Automation → Zapnúť"

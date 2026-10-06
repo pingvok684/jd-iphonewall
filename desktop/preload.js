@@ -2,6 +2,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('jdApp', {
   check: () => ipcRenderer.invoke('jd:check'),
+  revealDev: () => ipcRenderer.invoke('jd:revealDev'),
   open: (url) => ipcRenderer.invoke('jd:open', url),
   showIpa: () => ipcRenderer.invoke('jd:showIpa'),
   xcodeSetup: () => ipcRenderer.invoke('jd:xcodeSetup'),

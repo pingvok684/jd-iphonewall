@@ -90,7 +90,7 @@ if [ "$RC" != "0" ]; then
 
   echo
   echo "  Najčastejšie príčiny:"
-  echo "   • Režim pre vývojárov na iPhone nie je zapnutý (Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov)"
+  echo "   • Režim pre vývojárov na iPhone nie je zapnutý (Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov (Developer Mode))"
   echo "   • iPhone je zamknutý"
   echo "   • Xcode ešte kopíruje súbory z iPhonu – otvor Xcode, počkaj a skús znova"
   fail "Build zlyhal."
@@ -108,6 +108,6 @@ echo "=============================================="
 echo " ✅ HOTOVO. Aplikácia JD Phone Studio sa o chvíľu"
 echo "    prepne do Xcode režimu – toto okno môžeš zavrieť."
 echo "    Na iPhone zapni: Nastavenia → Súkromie a bezpečnosť"
-echo "    → Režim pre vývojárov."
+echo "    → Režim pre vývojárov (Developer Mode)."
 echo "=============================================="
 read -r -p "Stlač Enter na zatvorenie…"

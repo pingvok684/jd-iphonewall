@@ -15,7 +15,7 @@ function openAddPhone() {
       <li><b>Pripoj iPhone káblom</b> k počítaču, na ktorom beží JD Phone Studio. Odomkni ho a ťukni <b>Dôverovať</b> (Trust) + zadaj kód.</li>
       ${win ? '<li><b>Windows:</b> musí byť nainštalované <b>Apple Devices</b> (Microsoft Store) alebo <b>iTunes</b> z apple.com.</li>' : ''}
       <li><b>WebDriverAgent:</b> ${win ? 'nahraj do iPhonu <b>WebDriverAgent.ipa</b> cez <b>Sideloadly</b> (súbor nájdeš v priečinku aplikácie).' : 'v režime Xcode sa nainštaluje sám (pár minút). Pri Sideloadly nahraj <b>WebDriverAgent.ipa</b>.'}</li>
-      <li>Na iPhone: <b>Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov → Zapnúť</b> (iPhone sa reštartuje). Potom <b>Nastavenia → Vývojár → Enable UI Automation</b>.</li>
+      <li>Na iPhone: <b>Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov (Developer Mode) → Zapnúť</b> (iPhone sa reštartuje). Potom <b>Nastavenia → Vývojár → Enable UI Automation</b>.</li>
       <li><b>Nastavenia → Všeobecné → VPN a správa zariadení</b> → ťukni na svoje Apple ID → <b>Dôverovať</b>.</li>
       <li>Skratka <b>JD Save</b> (fotky cez kábel): <b>Nastavenia → Fotky a videá</b> → naskenuj QR kód.</li>
     </ol>

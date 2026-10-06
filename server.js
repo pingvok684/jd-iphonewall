@@ -201,6 +201,8 @@ function startDevice(dev) {
       if (dev.gone) return;
       if (!bundle) { dev.lastLog = 'WebDriverAgent nie je v telefóne nainštalovaný (pozri návod – Sideloadly / install)'; return; }
       log(`[${dev.label}] WebDriverAgent: ${bundle}`);
+      // priečinok pre skratku JD Save v aplikácii Súbory pripravíme hneď (netreba čakať, kým WDA naštartuje)
+      setTimeout(() => mediaCtx.usb.ensureFolder(dev, bundle).catch(() => {}), 3000);
       dev.procs.push(startProc(dev, IOS_BIN, [
         'runwda', u,
         `--bundleid=${bundle}`,
