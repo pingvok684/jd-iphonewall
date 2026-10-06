@@ -25,6 +25,7 @@ const templates = require('./templates');
 const store = require('./store');
 const magnific = require('./magnific');
 const upscaler = require('./upscaler');
+const sync = require('./sync');
 const updater = require('./updater');
 const auth = require('./auth');
 const CONFIG_FILE = path.join(__dirname, 'config.json');
@@ -1124,6 +1125,22 @@ const server = http.createServer(async (req, res) => {
     } catch (e) { return json(res, 400, { error: e.message }); }
   }
 
+  // ---------- účet a synchronizácia ----------
+  if (parts[0] === 'api' && parts[1] === 'sync') {
+    if (req.method === 'GET' && parts[2] === 'status') return json(res, 200, sync.status());
+    if (req.method === 'POST' && (parts[2] === 'login' || parts[2] === 'signup')) {
+      const b = await readBody(req);
+      try { return json(res, 200, await sync.login(String(b.email || ''), String(b.password || ''), parts[2] === 'signup')); }
+      catch (e) { return json(res, 400, { error: e.message }); }
+    }
+    if (req.method === 'POST' && parts[2] === 'logout') { await sync.logout(); return json(res, 200, { ok: true }); }
+    if (req.method === 'POST' && parts[2] === 'skip') { sync.skip(); return json(res, 200, { ok: true }); }
+    if (req.method === 'POST' && parts[2] === 'now') { sync.syncNow(); return json(res, 200, { ok: true }); }
+    return json(res, 404, { error: 'nenájdené' });
+  }
+  // zmeny knižnice, kalendára, šablón, profilov → synchronizovať o chvíľu
+  if (req.method === 'POST' && /^\/api\/(library|plan-file|calendar|profile|templates|label|stats|research|captions)/.test(url.pathname)) res.on('finish', () => sync.touch());
+
   // Video Upscaler (Nástroje): AI zväčšenie + 60 fps lokálne na grafike
   if (parts[0] === 'api' && parts[1] === 'upscaler') {
     return upscaler.handle(req, res, parts, url, { json, addToLibrary: (stream, name, owner) => content.addToLibrary(stream, name, owner),
@@ -1596,6 +1613,10 @@ server.listen(PORT, '0.0.0.0', () => {
   media.startMediaServer(config);
   if (remoteOn()) startWebTunnel();
   try { upscaler.init(store.DATA); } catch (_) {}
+  // účet a synchronizácia (knižnica, kalendár, šablóny… medzi počítačmi)
+  content.onDelete((kind, id) => sync.tombstone(kind, id));
+  sync.init({ root: __dirname, data: store.DATA, libDir: content.LIB_DIR, config: () => config, saveConfig, relay: () => RELAY, log,
+    reload: () => { content.reloadAll(); try { labels = JSON.parse(fs.readFileSync(LABELS_FILE, 'utf8')); } catch (_) {} } });
   magnific.init(() => process.env.MAGNIFIC_API_KEY || config.magnificKey || '');
   refresh();
   setInterval(refresh, 5000);

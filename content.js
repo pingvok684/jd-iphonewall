@@ -22,6 +22,10 @@ function reloadAll() { lib = store.readJson('library.json', []); cal = store.rea
 const saveLib = () => store.writeJson('library.json', lib);
 const saveCal = () => store.writeJson('calendar.json', cal);
 
+// zmazanie → synchronizácia (aby sa položka nevrátila z iného počítača)
+let onDel = () => {};
+const onDelete = (fn) => { onDel = fn; };
+
 // ---------- knižnica ----------
 // nahranie súboru; rovnaký súbor (podľa obsahu) sa neukladá dvakrát
 function addToLibrary(req, name, owner) {
@@ -58,7 +62,7 @@ const libFile = (id) => {
 };
 function removeFromLibrary(id) {
   const fp = libFile(id); if (fp) fs.unlink(fp, () => {});
-  lib = lib.filter((x) => x.id !== id); saveLib();
+  lib = lib.filter((x) => x.id !== id); saveLib(); onDel('library', id);
 }
 function markUsed(ids, udid, calId) {
   let ch = false;
@@ -74,7 +78,7 @@ function setOwners(id, owners) { const it = lib.find((x) => x.id === id); if (it
 function bulkLibrary(ids, action, owners) {
   ids = new Set((Array.isArray(ids) ? ids : []).map(String));
   owners = (Array.isArray(owners) ? owners : []).map(String);
-  if (action === 'delete') { for (const id of ids) { const fp = libFile(id); if (fp) fs.unlink(fp, () => {}); } lib = lib.filter((x) => !ids.has(x.id)); saveLib(); return ids.size; }
+  if (action === 'delete') { for (const id of ids) { const fp = libFile(id); if (fp) fs.unlink(fp, () => {}); } lib = lib.filter((x) => !ids.has(x.id)); saveLib(); for (const id of ids) onDel('library', id); return ids.size; }
   let n = 0;
   for (const it of lib) if (ids.has(it.id)) {
     const cur = new Set(it.owners || []);
@@ -106,7 +110,7 @@ function addCalendar(e) {
   return it;
 }
 function setCalendar(id, patch) { const it = cal.find((x) => x.id === id); if (it) { Object.assign(it, patch); saveCal(); } }
-function removeCalendar(id) { cal = cal.filter((x) => x.id !== id); saveCal(); }
+function removeCalendar(id) { cal = cal.filter((x) => x.id !== id); saveCal(); onDel('calendar', id); }
 const getCalendar = (id) => cal.find((x) => x.id === id);
 const listCalendar = (from, to) => cal.filter((x) => (!from || x.when >= from) && (!to || x.when < to));
 
@@ -157,6 +161,6 @@ function setProfile(udid, p) {
   return profiles[udid];
 }
 
-module.exports = { TYPES, LIB_DIR, addToLibrary, listLibrary, libFile, removeFromLibrary, markUsed, setLibNote, setOwners, bulkLibrary, cleanupLibrary, librarySize, reloadAll,
+module.exports = { onDelete, TYPES, LIB_DIR, addToLibrary, listLibrary, libFile, removeFromLibrary, markUsed, setLibNote, setOwners, bulkLibrary, cleanupLibrary, librarySize, reloadAll,
   addCalendar, setCalendar, removeCalendar, listCalendar, getCalendar, addStatFromText, listStats, removeStat, addResearch, listResearch, removeResearch,
   getProfile, setProfile };

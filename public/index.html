@@ -653,6 +653,21 @@
   .addin b { font-size: 16px; } .addin small { color: var(--muted); font-size: 12.5px; }
   .modal.addph { width: min(560px, 100%); }
   .addsteps { margin: 6px 0 4px; padding-left: 20px; display: grid; gap: 10px; font-size: 14px; line-height: 1.45; }
+  #acct { position: fixed; inset: 0; z-index: 9998; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 50% 30%, #3a1422 0%, #0c0d11 62%); overflow: auto; }
+  #acct[hidden] { display: none; }
+  .acin { width: min(400px, 100%); display: grid; gap: 14px; justify-items: center; text-align: center; }
+  .aclogo { width: 96px; height: 96px; border-radius: 26px; box-shadow: 0 18px 50px rgba(255,61,104,.4); }
+  .acin h2 { margin: 4px 0 0; font-size: 32px; letter-spacing: -.02em; }
+  .acsub { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .actabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; padding: 4px; border-radius: 14px; background: rgba(255,255,255,.05); border: 1px solid var(--line); }
+  .actabs button { padding: 10px; border-radius: 10px; border: 0; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
+  .actabs button.on { background: rgba(255,61,104,.18); color: #fff; }
+  #acForm { display: grid; gap: 10px; width: 100%; }
+  #acForm input { padding: 13px 14px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(255,255,255,.04); color: var(--text); font-size: 15px; }
+  #acForm .go { padding: 13px; font-size: 15px; }
+  .acerr { margin: 0; color: #ff7d8f; font-size: 13.5px; text-align: left; }
+  .aclink { border: 0; background: none; color: #ff8aa5; font-weight: 600; cursor: pointer; font-size: 14px; padding: 6px; }
+  .acnote { margin: 0; color: var(--faint, #6b7080); font-size: 12.5px; }
 </style>
 </head>
 <body>
@@ -663,6 +678,23 @@
     <div class="sp-by">Juraj Dvorščák</div>
     <div class="sp-role">Tvorca editorov: Tait</div></div>
     <div class="sp-bar"><i></i></div>
+  </div>
+</div>
+<div id="acct" hidden>
+  <div class="acin">
+    <img src="/ikona.png" alt="" class="aclogo">
+    <h2>Phone Studio</h2>
+    <p class="acsub">Prihlás sa, aby si mal knižnicu, kalendár a šablóny rovnaké na každom počítači.</p>
+    <div class="actabs"><button type="button" data-ac="login" class="on">Prihlásiť sa</button><button type="button" data-ac="signup">Vytvoriť účet</button></div>
+    <form id="acForm" autocomplete="on">
+      <input id="acEmail" type="email" placeholder="E-mail" autocomplete="username" required>
+      <input id="acPass" type="password" placeholder="Heslo (aspoň 8 znakov)" autocomplete="current-password" minlength="8" required>
+      <input id="acPass2" type="password" placeholder="Heslo znova" autocomplete="new-password" hidden>
+      <p class="acerr" id="acErr" hidden></p>
+      <button class="go" type="submit" id="acGo">Prihlásiť sa</button>
+    </form>
+    <button type="button" class="aclink" id="acSkip">Pokračovať bez prihlásenia – len na tomto počítači</button>
+    <p class="acnote">Prihlásiť sa môžeš aj neskôr v Nastaveniach → Účet a synchronizácia.</p>
   </div>
 </div>
 <aside class="side">
@@ -1196,6 +1228,13 @@
         <div style="margin-top:10px"><button id="mediaUrlBtn">Vlastná adresa pre fotky…</button></div>
         <p class="sub" style="margin-top:6px">Voliteľné: stála adresa cez tvoju doménu v Cloudflare (napr. https://media.tvojadomena.com → http://localhost:3001). Spoľahlivejšia ako automatický tunel.</p>
         </details></div>
+      <div class="panel" id="syncPanel"><h3><span data-icon="refresh"></span>Účet a synchronizácia</h3>
+        <p>Prihlás sa rovnakým účtom na viacerých počítačoch – knižnica (aj fotky a videá), kalendár, šablóny, profily účtov a názvy telefónov sa zosynchronizujú. API kľúče a heslá sa neposielajú.</p>
+        <div class="kv"><span>Stav</span><b id="syState">—</b></div>
+        <div class="kv"><span>Posledná synchronizácia</span><b id="syLast">—</b></div>
+        <p class="sub" id="syInfo" style="margin-top:6px"></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="go" id="syLogin">Prihlásiť sa</button><button id="syNow" hidden>Synchronizovať teraz</button><button id="syOut" hidden>Odhlásiť</button></div>
+      </div>
       <div class="panel" id="tgPanel"><h3><span data-icon="alert"></span>Upozornenia na mobil (Telegram)</h3>
         <p>Správa do Telegramu, keď sa plán dokončí alebo zlyhá (aj so snímkou z iPhonu), keď sa telefón odpojí, má slabú batériu alebo vyprší podpis WebDriverAgenta.</p>
         <div class="kv"><span>Stav</span><b id="tgState">—</b></div>
@@ -1594,6 +1633,7 @@ async function loadSettings() {
   { const q = document.getElementById('scQr'); if (q && d.shortcutUrl && q.dataset.u !== d.shortcutUrl && window.QR) { q.dataset.u = d.shortcutUrl; q.innerHTML = QR.svg(d.shortcutUrl, { ecc: 'M', border: 2 }); } }
   document.getElementById('usbDevs').innerHTML = (d.devices || []).map((x) => `<div><span>${esc(x.label || x.name || x.udid)} · kábel:</span><b style="color:${/funguje/.test(x.usb) ? 'var(--ok)' : x.usb ? 'var(--warn)' : 'var(--faint)'}" title="${esc(x.usb || '')}">${esc(x.usb || 'zatiaľ neskúšané')}</b></div>`).join('');
   renderTg(d.telegram || {});
+  loadSync();
   loadRemote();
   loadUsage(); loadCleanInfo();
   await loadTemplates();
@@ -1620,6 +1660,57 @@ document.getElementById('cleanDays').onchange = async (e) => {
   document.getElementById('cleanMsg').textContent = +e.target.value ? 'Uložené ✓ – upratuje sa samo každých 6 hodín.' : 'Automatické upratovanie je vypnuté.';
 };
 document.getElementById('cleanNow').onclick = () => openCleanup();
+// ---------- účet a synchronizácia ----------
+let SY = null, acMode = 'login';
+const isLocal = () => ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+function acSetMode(m) {
+  acMode = m;
+  document.querySelectorAll('[data-ac]').forEach((b) => b.classList.toggle('on', b.dataset.ac === m));
+  document.getElementById('acPass2').hidden = m !== 'signup'; document.getElementById('acPass2').required = m === 'signup';
+  document.getElementById('acPass').autocomplete = m === 'signup' ? 'new-password' : 'current-password';
+  document.getElementById('acGo').textContent = m === 'signup' ? 'Vytvoriť účet' : 'Prihlásiť sa';
+  document.getElementById('acErr').hidden = true;
+}
+document.querySelectorAll('[data-ac]').forEach((b) => (b.onclick = () => acSetMode(b.dataset.ac)));
+function openAcct() { acSetMode('login'); document.getElementById('acct').hidden = false; setTimeout(() => document.getElementById('acEmail').focus(), 50); }
+document.getElementById('acForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('acErr'), go = document.getElementById('acGo');
+  const email = document.getElementById('acEmail').value.trim(), pw = document.getElementById('acPass').value;
+  if (acMode === 'signup' && pw !== document.getElementById('acPass2').value) { err.textContent = 'Heslá sa nezhodujú.'; err.hidden = false; return; }
+  go.disabled = true; go.textContent = acMode === 'signup' ? 'Vytváram účet…' : 'Prihlasujem…'; err.hidden = true;
+  try {
+    const r = await fetch('/api/sync/' + acMode, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password: pw }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Prihlásenie zlyhalo');
+    document.getElementById('acct').hidden = true; document.getElementById('acPass').value = ''; document.getElementById('acPass2').value = '';
+    if (typeof toast === 'function') toast(`Prihlásený ako ${j.email} – synchronizujem…`);
+    loadSync();
+  } catch (x) { err.textContent = x.message; err.hidden = false; }
+  finally { go.disabled = false; go.textContent = acMode === 'signup' ? 'Vytvoriť účet' : 'Prihlásiť sa'; }
+};
+document.getElementById('acSkip').onclick = async () => {
+  document.getElementById('acct').hidden = true;
+  if (!(SY && SY.loggedIn)) await fetch('/api/sync/skip', { method: 'POST' }).catch(() => {});
+};
+const agoSk = (t) => { if (!t) return '—'; const s = Math.round((Date.now() - t) / 1000); return s < 60 ? 'pred chvíľou' : s < 3600 ? `pred ${Math.round(s / 60)} min` : new Date(t).toLocaleString('sk-SK'); };
+async function loadSync() {
+  try { SY = await (await fetch('/api/sync/status')).json(); } catch (_) { return; }
+  const $ = (id) => document.getElementById(id);
+  $('syState').innerHTML = SY.loggedIn ? `<span style="color:var(--ok)">prihlásený · ${esc(SY.email)}</span>` : '<span style="color:var(--faint)">len tento počítač (neprihlásený)</span>';
+  $('syLast').textContent = SY.loggedIn ? (SY.running ? 'práve prebieha…' : agoSk(SY.lastAt)) : '—';
+  const pend = [SY.pendingUp ? `nahráva sa ${SY.pendingUp} médií` : '', SY.pendingDown ? `sťahuje sa ${SY.pendingDown} médií` : '', SY.skipped ? `${SY.skipped} súborov je väčších ako 95 MB – nesynchronizujú sa` : ''].filter(Boolean).join(' · ');
+  $('syInfo').innerHTML = SY.error ? `<span style="color:var(--bad)">Chyba: ${esc(SY.error)}</span>` : esc(SY.phase || pend || '');
+  $('syLogin').hidden = SY.loggedIn; $('syNow').hidden = !SY.loggedIn; $('syOut').hidden = !SY.loggedIn;
+  return SY;
+}
+document.getElementById('syLogin').onclick = () => openAcct();
+document.getElementById('syNow').onclick = async () => { await fetch('/api/sync/now', { method: 'POST' }); setTimeout(loadSync, 800); };
+document.getElementById('syOut').onclick = async () => { if (!confirm('Odhlásiť sa? Údaje v tomto počítači ostanú, len sa prestanú synchronizovať.')) return; await fetch('/api/sync/logout', { method: 'POST' }); loadSync(); };
+setInterval(() => { if (view === 'nastavenia') loadSync(); }, 3000);
+// pri prvom spustení: ponuka prihlásenia (len priamo na počítači, nie z mobilu)
+setTimeout(async () => { const s = await loadSync(); if (s && !s.decided && isLocal()) openAcct(); }, 3300);
+
 // ---------- prístup z mobilu (rozcestník + QR párovanie) ----------
 let REM = null;
 async function loadRemote() {
