@@ -805,6 +805,29 @@ function reelsViewed(dev, task) {
   return Math.min(want, (dev.agent.swipes || 0) + 1);
 }
 
+// po dokončení šablóny / plánu: zavrieť aplikácie na pozadí (WebDriverAgent ostáva bežať)
+const BG_APPS = ['com.burbn.instagram', 'com.facebook.PagesManager', 'com.facebook.Pages', 'com.facebook.Facebook', 'com.facebook.Messenger', 'com.apple.mobileslideshow',
+  'com.apple.mobilesafari', 'com.apple.shortcuts', 'com.apple.DocumentsApp', 'com.apple.Preferences', 'com.apple.camera', 'com.apple.AppStore', 'com.zhiliaoapp.musically', 'com.google.chrome.ios'];
+function runningApps(dev) {
+  return new Promise((ok) => execFile(IOS_BIN, ['ps', '--apps', `--udid=${dev.udid}`], { timeout: 12000, maxBuffer: 8e6, windowsHide: true }, (e, so) => {
+    const ids = new Set(); for (const m of String(so || '').matchAll(/"[Bb]undle[Ii]d(?:entifier)?"\s*:\s*"([^"]+)"/g)) ids.add(m[1]);
+    ok([...ids]);
+  }));
+}
+async function closeBgApps(dev) {
+  if (!dev || dev.gone || !dev.wdaOk) return;
+  try {
+    const ids = [...new Set([...(await runningApps(dev)), ...BG_APPS])].filter((id) => !/WebDriverAgent|xctrunner|^com\.apple\.(springboard|Spotlight|backboardd)/i.test(id) && id !== dev.wdaBundle);
+    let n = 0;
+    for (const id of ids) {
+      const r = await withSession(dev, (sid) => wda(dev, 'POST', `/session/${sid}/wda/apps/terminate`, { bundleId: id }, 8000)).catch(() => null);
+      if (r && r.value === true) n++;
+    }
+    await wda(dev, 'POST', '/wda/homescreen').catch(() => {});
+    if (dev.agent && dev.agent.log) { dev.agent.log.push(`🧹 Zavreté aplikácie na pozadí${n ? ` (${n})` : ''}`); if (dev.agent.log.length > 60) dev.agent.log.shift(); }
+  } catch (_) {}
+}
+
 // sleduje AI úlohu a zapíše výsledok do aktivity
 function watchAgent(dev, task) {
   const short = task.length > 90 ? task.slice(0, 90) + '…' : task;
@@ -815,6 +838,7 @@ function watchAgent(dev, task) {
     clearInterval(t);
     const last = dev.agent.log[dev.agent.log.length - 1] || '';
     const ok = last.startsWith('✓');
+    if (!(dev.plan && dev.plan.running) && !/^■/.test(last)) setTimeout(() => closeBgApps(dev), 3000);
     const extra = { phone: dev.label };
     const reels = reelsViewed(dev, task);
     const ads = (dev.agent && dev.agent.ads) || 0;
@@ -964,6 +988,7 @@ async function runPlan(dev, steps) {
     for (const st of steps) for (const f of st.files) { if (content.libFile(f.id)) continue; const fp = planFile(f.id); if (fp && !inUse.has(f.id)) fs.unlink(fp, () => {}); }
     for (const st of steps) if (st.calId && st.status !== 'done') { const c = content.listCalendar().find((x) => x.id === st.calId); if (c && c.status === 'čaká') content.setCalendar(st.calId, { status: 'nespustené' }); }
     say(okCount === steps.length ? `✓ Plán hotový: naplánované ${okCount}/${steps.length}` : `■ Plán skončil: naplánované ${okCount}/${steps.length}`);
+    if (!plan.stop && !(dev.agent && dev.agent.stop)) setTimeout(() => closeBgApps(dev), 4000);
     if (okCount === steps.length) notify('done', `✅ ${dev.label}: naplánované ${okCount}/${steps.length}\n${doneList.map((x) => '• ' + x).join('\n')}`, lastProof);
     else if (plan.stop || (dev.agent && dev.agent.stop)) notify('fail', `■ ${dev.label}: plán zastavený ručne – naplánované ${okCount}/${steps.length}.`);
     else notify('fail', `⚠ ${dev.label}: plán zlyhal – naplánované ${okCount}/${steps.length}.\n${failMsg || 'Pozri kartu telefónu na stránke.'}${okCount < steps.length ? '\nV Prehľade (Dnes) môžeš dať „Skúsiť znova“.' : ''}`, failProof);
