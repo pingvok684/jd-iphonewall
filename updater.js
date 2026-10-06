@@ -82,7 +82,10 @@ async function apply() {
       const dst = path.join(ROOT, f);
       fs.mkdirSync(path.dirname(dst), { recursive: true });
       fs.copyFileSync(path.join(src, f), dst + '.new');
-      fs.renameSync(dst + '.new', dst);
+      // Windows: premenovanie môže zlyhať, keď súbor práve číta antivírus → skúsiť znova, inak prepísať priamo
+      let done = false;
+      for (let i = 0; i < 5 && !done; i++) { try { fs.renameSync(dst + '.new', dst); done = true; } catch (_) { const t = Date.now() + 300; while (Date.now() < t); } }
+      if (!done) { fs.copyFileSync(dst + '.new', dst); try { fs.unlinkSync(dst + '.new'); } catch (_) {} }
       if (f.endsWith('.command') && process.platform !== 'win32') fs.chmodSync(dst, 0o755);
     }
     cache = { at: 0, data: null };

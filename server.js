@@ -630,6 +630,15 @@ setInterval(() => { for (const d of devices.values()) if (!d.gone && (!d.info ||
 
 // ---------- zamknutie / odomknutie ----------
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+// súbor do odpovede – chýbajúci/poškodený súbor nesmie zhodiť celý server
+function pipeSafe(stream, res) {
+  stream.on('error', (e) => {
+    console.log(`[súbor] ${e.code || ''} ${e.path || ''}`);
+    if (!res.headersSent) { res.writeHead(e.code === 'ENOENT' ? 404 : 500, { 'content-type': 'text/plain; charset=utf-8' }); res.end(e.code === 'ENOENT' ? 'Súbor chýba – reštartuj aplikáciu (opraví sa sama).' : 'Chyba súboru'); }
+    else res.destroy();
+  });
+  return stream.pipe(res);
+}
 async function isLocked(dev) {
   const r = await wda(dev, 'GET', '/wda/locked', null, 5000);
   return !!(r && r.value);
@@ -1196,7 +1205,7 @@ const server = http.createServer(async (req, res) => {
     const f = path.join(PUBLIC_DIR, url.pathname.slice(1));
     if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { 'Content-Type': url.pathname.endsWith('.png') ? 'image/png' : 'application/manifest+json', 'Cache-Control': 'max-age=86400' });
-    return fs.createReadStream(f).pipe(res);
+    return pipeSafe(fs.createReadStream(f), res);
   }
   // PIN pre mobil – meniť sa dá len priamo na počítači
   if (url.pathname === '/api/pin') {
@@ -1244,34 +1253,34 @@ const server = http.createServer(async (req, res) => {
     const f = path.join(PUBLIC_DIR, 'tools', parts[1]);
     if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-    return fs.createReadStream(f).pipe(res);
+    return pipeSafe(fs.createReadStream(f), res);
   }
   // podpísaná skratka JD Save (stiahnutie do počítača; do iPhonu ide cez QR kód z GitHubu)
   if (url.pathname === '/skratka' || url.pathname === '/JD%20Save.shortcut') {
     const f = path.join(PUBLIC_DIR, 'JD Save.shortcut');
     if (!fs.existsSync(f)) { res.writeHead(404); return res.end('Skratka chýba – aktualizuj stránku.'); }
     res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Disposition': 'attachment; filename="JD Save.shortcut"' });
-    return fs.createReadStream(f).pipe(res);
+    return pipeSafe(fs.createReadStream(f), res);
   }
   if (url.pathname === '/qr.js') {
     res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
-    return fs.createReadStream(path.join(PUBLIC_DIR, 'qr.js')).pipe(res);
+    return pipeSafe(fs.createReadStream(path.join(PUBLIC_DIR, 'qr.js')), res);
   }
   if (url.pathname === '/novy.js') {
     res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
-    return fs.createReadStream(path.join(PUBLIC_DIR, 'novy.js')).pipe(res);
+    return pipeSafe(fs.createReadStream(path.join(PUBLIC_DIR, 'novy.js')), res);
   }
   if (url.pathname === '/obsah.js') {
     res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
-    return fs.createReadStream(path.join(PUBLIC_DIR, 'obsah.js')).pipe(res);
+    return pipeSafe(fs.createReadStream(path.join(PUBLIC_DIR, 'obsah.js')), res);
   }
   if (url.pathname === '/wall.js') {
     res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
-    return fs.createReadStream(path.join(PUBLIC_DIR, 'wall.js')).pipe(res);
+    return pipeSafe(fs.createReadStream(path.join(PUBLIC_DIR, 'wall.js')), res);
   }
   if (url.pathname === '/' || url.pathname === '/index.html') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    return fs.createReadStream(path.join(PUBLIC_DIR, 'index.html')).pipe(res);
+    return pipeSafe(fs.createReadStream(path.join(PUBLIC_DIR, 'index.html')), res);
   }
 
   if (url.pathname === '/api/devices') {
@@ -1336,10 +1345,10 @@ const server = http.createServer(async (req, res) => {
     if (range) {
       const start = range[1] ? parseInt(range[1], 10) : 0, end = range[2] ? Math.min(size - 1, parseInt(range[2], 10)) : size - 1;
       res.writeHead(206, { 'Content-Type': type, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Accept-Ranges': 'bytes', 'Content-Length': end - start + 1, 'Cache-Control': 'max-age=86400' });
-      return fs.createReadStream(f, { start, end }).pipe(res);
+      return pipeSafe(fs.createReadStream(f, { start, end }), res);
     }
     res.writeHead(200, { 'Content-Type': type, 'Content-Length': size, 'Accept-Ranges': 'bytes', 'Cache-Control': 'max-age=86400' });
-    return fs.createReadStream(f).pipe(res);
+    return pipeSafe(fs.createReadStream(f), res);
   }
   // ---------- kalendár, štatistiky, prieskumy, profily, popisy ----------
   if (url.pathname === '/api/calendar' && req.method === 'GET') return json(res, 200, content.listCalendar(url.searchParams.get('from'), url.searchParams.get('to')));
@@ -1349,7 +1358,7 @@ const server = http.createServer(async (req, res) => {
     const f = content.shotFile(url.pathname.split('/').pop().replace(/\.jpg$/, ''));
     if (!f) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=31536000, immutable' });
-    return fs.createReadStream(f).pipe(res);
+    return pipeSafe(fs.createReadStream(f), res);
   }
   if (['/api/library/delete', '/api/library/note', '/api/library/owners', '/api/calendar/delete', '/api/calendar/status', '/api/stats/delete', '/api/research/delete', '/api/research/fav', '/api/profile', '/api/captions'].includes(url.pathname) && req.method === 'POST') {
     const b = await readBody(req, url.pathname === '/api/captions' ? 12e6 : 1e6);
@@ -1402,7 +1411,7 @@ const server = http.createServer(async (req, res) => {
     const f = proofFile(parts[1].replace(/\.(png|jpg)$/, ''));
     if (!f) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { 'Content-Type': f.endsWith('.png') ? 'image/png' : 'image/jpeg', 'Cache-Control': 'max-age=86400' });
-    return fs.createReadStream(f).pipe(res);
+    return pipeSafe(fs.createReadStream(f), res);
   }
   // WDA bol znova podpísaný (Sideloadly) → počítaj 7 dní odznova
   if (url.pathname === '/api/wda/renewed' && req.method === 'POST') {
@@ -1515,7 +1524,7 @@ const server = http.createServer(async (req, res) => {
     const f = path.join(store.INSP_DIR, path.basename(parts[1]));
     if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { 'Content-Type': media.TYPES[path.extname(f).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'max-age=86400' });
-    return fs.createReadStream(f).pipe(res);
+    return pipeSafe(fs.createReadStream(f), res);
   }
   if (url.pathname === '/api/inspiration' && req.method === 'GET') return json(res, 200, store.listInspiration());
   if (url.pathname === '/api/inspiration/delete' && req.method === 'POST') {
@@ -1549,10 +1558,10 @@ const server = http.createServer(async (req, res) => {
     if (range) { // prehrávač videa potrebuje Range
       const start = range[1] ? parseInt(range[1], 10) : 0, end = range[2] ? parseInt(range[2], 10) : size - 1;
       res.writeHead(206, { 'Content-Type': type, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Accept-Ranges': 'bytes', 'Content-Length': end - start + 1 });
-      return fs.createReadStream(f, { start, end }).pipe(res);
+      return pipeSafe(fs.createReadStream(f, { start, end }), res);
     }
     res.writeHead(200, { 'Content-Type': type, 'Content-Length': size, 'Accept-Ranges': 'bytes' });
-    return fs.createReadStream(f).pipe(res);
+    return pipeSafe(fs.createReadStream(f), res);
   }
   if (url.pathname === '/api/magnific/generate' && req.method === 'POST') {
     try { const it = await magnific.generate(req, url.searchParams); return json(res, 200, { ok: true, id: it.id }); }

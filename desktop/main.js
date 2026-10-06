@@ -45,12 +45,30 @@ const ver = (dir) => String(readJson(path.join(dir, 'version.json'), {}).version
 function syncApp() {
   fs.mkdirSync(HOME, { recursive: true }); fs.mkdirSync(LOGS, { recursive: true });
   const fresh = !fs.existsSync(path.join(HOME, 'server.js'));
+  // po súboroch – keď jeden zlyhá (zamknutý, antivírus…), ostatné sa aj tak skopírujú
+  const walk = (dir, rel = '') => fs.readdirSync(path.join(dir, rel), { withFileTypes: true }).flatMap((e) => {
+    const r = rel ? path.join(rel, e.name) : e.name;
+    if (!rel && PROTECT.has(e.name)) return [];
+    return e.isDirectory() ? walk(dir, r) : e.isFile() ? [r] : [];
+  });
+  const copy = (r) => {
+    const src = path.join(BUNDLED_APP, r), dst = path.join(HOME, r);
+    for (let i = 0; i < 3; i++) {
+      try { fs.mkdirSync(path.dirname(dst), { recursive: true }); fs.copyFileSync(src, dst); return true; }
+      catch (err) { if (i === 2) log('kopírovanie', r, err.message); }
+    }
+    return false;
+  };
+  let files = [];
+  try { files = walk(BUNDLED_APP); } catch (e) { log('balík stránky', e.message); }
   if (fresh || ver(BUNDLED_APP) > ver(HOME)) {
     log('kopírujem stránku', ver(BUNDLED_APP), '→', HOME);
-    for (const e of fs.readdirSync(BUNDLED_APP)) {
-      if (PROTECT.has(e)) continue;
-      try { fs.cpSync(path.join(BUNDLED_APP, e), path.join(HOME, e), { recursive: true, force: true }); } catch (err) { log('kopírovanie', e, err.message); }
-    }
+    let bad = 0; for (const r of files) if (!copy(r)) bad++;
+    if (bad) log('nepodarilo sa skopírovať', bad, 'súborov');
+  } else {
+    // oprava: chýbajúce súbory (napr. zmazané antivírusom alebo nedokončená aktualizácia) doplň z inštalácie
+    const miss = files.filter((r) => !fs.existsSync(path.join(HOME, r)));
+    if (miss.length) { log('dopĺňam chýbajúce súbory', miss.length, miss.slice(0, 5).join(', ')); miss.forEach(copy); }
   }
   // go-ios a cloudflared (stránka ich hľadá v bin/)
   if (fs.existsSync(BUNDLED_BIN)) {
