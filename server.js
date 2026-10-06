@@ -372,6 +372,33 @@ async function ensureSession(dev) {
   return sid;
 }
 
+// „Otvoriť v Instagrame?“ (Open in …?) po otvorení odkazu – potvrdíme sami, nech netreba nič stláčať
+async function acceptOpenPrompt(dev, ms = 7000) {
+  const OPEN = /^(open|otvoriť|otvorit|öffnen|ouvrir|abrir|apri)$/i;
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    try {
+      const done = await withSession(dev, async (sid) => {
+        let btns = null;
+        try { btns = (await wda(dev, 'GET', `/session/${sid}/wda/alert/buttons`, null, 4000)).value; } catch (_) {}
+        if (Array.isArray(btns) && btns.length) {
+          const name = btns.find((b) => OPEN.test(String(b).trim()));
+          await wda(dev, 'POST', `/session/${sid}/alert/accept`, name ? { name } : {}, 5000);
+          return true;
+        }
+        const r = await wda(dev, 'POST', `/session/${sid}/elements`, { using: 'predicate string', value: "type == 'XCUIElementTypeButton' AND label IN {'Open', 'Otvoriť', 'Otvorit'}" }, 4000).catch(() => null);
+        const el = r && Array.isArray(r.value) && r.value[0];
+        const id = el && (el.ELEMENT || el['element-6066-11e4-a52e-4f735466cecc']);
+        if (id) { await wda(dev, 'POST', `/session/${sid}/element/${id}/click`, {}, 5000); return true; }
+        return false;
+      });
+      if (done) return true;
+    } catch (_) {}
+    await pause(500);
+  }
+  return false;
+}
+
 async function withSession(dev, fn) {
   try {
     return await fn(await ensureSession(dev));
@@ -803,7 +830,7 @@ async function runAgentTask(dev, task, maxSteps) {
     home: async () => { await wake(dev); return wda(dev, 'POST', '/wda/homescreen'); },
     // priamo bez AI: spustiť aplikáciu / otvoriť odkaz (napr. profil v Instagrame)
     openApp: async (bundleId) => { await wake(dev); return withSession(dev, (sid) => wda(dev, 'POST', `/session/${sid}/wda/apps/launch`, { bundleId }, 30000)); },
-    openUrl: async (u) => { await wake(dev); return withSession(dev, (sid) => wda(dev, 'POST', `/session/${sid}/url`, { url: u }, 30000)); },
+    openUrl: async (u) => { await wake(dev); await withSession(dev, (sid) => wda(dev, 'POST', `/session/${sid}/url`, { url: u }, 30000)); return acceptOpenPrompt(dev); },
   }, { maxSteps, family: isResearch(task) ? aiModel('research') : aiModel('tasks'), navFamily: aiModel('tasks'), scroll: config.researchScroll === 'app' ? 'app' : 'auto' });
   watchAgent(dev, task);
 }
