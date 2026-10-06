@@ -684,11 +684,13 @@ async function applyTemplateByName(name, target) {
 // ---------- úloha pre AI: naplánuj 1 reel / carousel v Meta Business Suite ----------
 // x = { files, cap, mus, when (text), whenISO, cnt }; pick = null → médiá poslané pred tým (najnovšie), inak k-te najnovšie v telefóne
 function postTask(isReel, place, x, pick, title) {
+  // vždy album Recents / Nedávne (nikdy iné priečinky) – médiá poslané pred plánovaním sú v ňom ako prvé vľavo hore
+  const REC = 'v galérii nechaj / prepni album na Recents / Nedávne (iný priečinok ani album – Videos, Favorites, Instagram… – NEPOUŽÍVAJ); ';
   const which = isReel
-    ? (pick && pick.k > 1 ? `v galérii prepni album na Videos / Videá a vyber ${pick.k}. najnovšie video (počítaj od prvého vľavo hore, zľava doprava, zhora nadol) – fotku nevyberaj; ťukni Next; `
-      : 'v galérii prepni album na Videos / Videá a vyber NAJNOVŠIE video (prvé vľavo hore) – fotku nevyberaj; ťukni Next; ')
-    : (pick && pick.from > 1 ? (x.cnt === 1 ? `ťukni na pridanie fotiek a vyber fotku č. ${pick.from} (počítané od najnovšej fotky vľavo hore, zľava doprava, zhora nadol); potvrď výber; ` : `ťukni na pridanie fotiek a vyber fotky č. ${pick.from} až ${pick.from + x.cnt - 1} (počítané od najnovšej fotky vľavo hore, zľava doprava, zhora nadol) v tomto poradí; potvrď výber; `)
-      : (x.cnt === 1 ? 'ťukni na pridanie fotiek a vyber 1 fotku – NAJNOVŠIU (prvá vľavo hore); potvrď výber; ' : `ťukni na pridanie fotiek a vyber ${x.cnt} najnovších fotiek v poradí – začni prvou vľavo hore (najnovšia), pokračuj zľava doprava; potvrď výber; `));
+    ? REC + (pick && pick.k > 1 ? `vyber ${pick.k}. najnovšie VIDEO – počítaj od prvej položky vľavo hore, zľava doprava, zhora nadol a fotky preskakuj (video má na náhľade v rohu dĺžku, napr. 0:15); ťukni Next; `
+      : 'vyber NAJNOVŠIE VIDEO – prvé video vľavo hore (video má na náhľade v rohu dĺžku, napr. 0:15; fotku nevyberaj); ťukni Next; ')
+    : 'ťukni na pridanie fotiek; ' + REC + (pick && pick.from > 1 ? (x.cnt === 1 ? `vyber fotku č. ${pick.from} (počítané od najnovšej fotky vľavo hore, zľava doprava, zhora nadol; videá preskakuj); potvrď výber; ` : `vyber fotky č. ${pick.from} až ${pick.from + x.cnt - 1} (počítané od najnovšej fotky vľavo hore, zľava doprava, zhora nadol; videá preskakuj) v tomto poradí; potvrď výber; `)
+      : (x.cnt === 1 ? 'vyber 1 fotku – NAJNOVŠIU (prvá fotka vľavo hore; video nevyberaj); potvrď výber; ' : `vyber ${x.cnt} najnovších fotiek v poradí – začni prvou fotkou vľavo hore (najnovšia), pokračuj zľava doprava, videá preskakuj; potvrď výber; `));
   return { title, files: x.files, maxSteps: isReel ? 110 : 130,
     meta: { kind: isReel ? 'reel' : 'carousel', when: x.whenISO, whenText: x.when, caption: x.cap, music: x.mus, place }, task:
     `Otvor aplikáciu Meta Business Suite. Naplánuj 1 ${isReel ? 'reel' : 'carousel'}: ťukni na „+“ / „Create“ a vyber ${isReel ? 'Reel' : 'Post / Príspevok'}; pri účtoch / umiestneniach nastav: ${place}; ` + which +
