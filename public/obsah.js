@@ -321,19 +321,36 @@ function drawStatChart(series) {
 }
 
 // ---------- PRIESKUMY ----------
-let RES = [];
+let RES = [], RES_FAV = false;
 async function loadResearch() {
   try { RES = await jfetch('/api/research'); } catch (_) {}
   renderResearch();
 }
+// jeden reel (riadok v prieskume aj v Obľúbených)
+function reelRow(r, n, i, mark, withProf) {
+  const m = (k, v) => (v ? `<span>${k} ${mark(v)}</span>` : '');
+  return `<div class="rreel${n.shot ? ' hasshot' : ''}${n.fav ? ' fav' : ''}">${n.shot ? `<img class="rshot" loading="lazy" src="/api/research/shot/${esc(n.shot)}.jpg" data-rshot="${esc(n.shot)}" alt="Reel ${i + 1}" title="Zväčšiť">` : ''}<div class="n">${i + 1}</div>`
+    + `<div class="h">${withProf ? `<small class="rprof">${esc(r.profile || 'Reels feed')} · ${dts(r.at)}</small>` : ''}${mark(n.hook || '—')}</div>`
+    + `<div class="m">${m('🎬', n.format)}${m('📍', n.prostredie)}${m('🎵', n.hudba)}${m('👁', n.zhliadnutia)}</div>`
+    + `<div class="ra">${n.link ? `<a class="btn ghost rlink" href="${esc(n.link)}" target="_blank" rel="noopener" title="${esc(n.link)}">↗ Reel</a>` : ''}<button type="button" class="ghost rfav${n.fav ? ' on' : ''}" data-fav="${r.id}" data-idx="${i}" title="${n.fav ? 'Odobrať z Na recreate' : 'Pridať do Na recreate'}">${n.fav ? '★' : '☆'}</button></div></div>`;
+}
 function renderResearch() {
   const q = (document.getElementById('resQ').value || '').toLowerCase().trim();
-  const list = RES.filter((r) => !q || (r.text + ' ' + r.profile + ' ' + r.phone).toLowerCase().includes(q));
   const mark = (t) => { const e = esc(t); return q ? e.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), (m) => `<mark>${m}</mark>`) : e; };
+  const favs = RES.flatMap((r) => (r.notes || []).map((n, i) => ({ r, n, i })).filter((x) => x.n.fav));
+  const fb = document.getElementById('resFav');
+  if (fb) { fb.innerHTML = `★ Na recreate${favs.length ? ` <b>${favs.length}</b>` : ''}`; fb.classList.toggle('on', RES_FAV); }
+  if (RES_FAV) {
+    const l = favs.filter((x) => !q || JSON.stringify(x.n).toLowerCase().includes(q) || String(x.r.profile).toLowerCase().includes(q)).sort((a, b) => String(b.n.fav).localeCompare(String(a.n.fav)));
+    document.getElementById('resList').innerHTML = l.length
+      ? `<div class="panel rcard"><h3>★ Reely na recreate<span class="sp"></span><small class="hint">${l.length} ${l.length === 1 ? 'reel' : l.length < 5 ? 'reely' : 'reelov'}</small></h3><div class="rreels">${l.map((x) => reelRow(x.r, x.n, x.i, mark, true)).join('')}</div></div>`
+      : `<div class="empty">${favs.length ? 'Nič sa nenašlo.' : 'Zatiaľ žiadne. V prieskume klikni pri reeli na <b>☆</b> a uloží sa sem – na neskoršie recreate.'}</div>`;
+    return;
+  }
+  const list = RES.filter((r) => !q || (r.text + ' ' + r.profile + ' ' + r.phone).toLowerCase().includes(q));
   const body = (r) => {
     if (!(r.notes && r.notes.length)) return `<div class="rtext">${mark(r.text || '')}</div>${/Pozrela som|Posúvam/i.test(r.text || '') ? '<div class="rold">Starší prieskum – AI si vtedy reely nezapisovala. Nové prieskumy majú zoznam reelov aj trendy.</div>' : ''}`;
-    const m = (k, v) => (v ? `<span>${k} ${mark(v)}</span>` : '');
-    return `<div class="rreels">${r.notes.map((n, i) => `<div class="rreel${n.shot ? ' hasshot' : ''}">${n.shot ? `<img class="rshot" loading="lazy" src="/api/research/shot/${esc(n.shot)}.jpg" data-rshot="${esc(n.shot)}" alt="Reel ${i + 1}" title="Zväčšiť">` : ''}<div class="n">${i + 1}</div><div class="h">${mark(n.hook || '—')}</div><div class="m">${m('🎬', n.format)}${m('📍', n.prostredie)}${m('🎵', n.hudba)}${m('👁', n.zhliadnutia)}</div></div>`).join('')}</div>`
+    return `<div class="rreels">${r.notes.map((n, i) => reelRow(r, n, i, mark, false)).join('')}</div>`
       + (r.trends ? `<div class="rtrends"><b>📈 Trendy pre náš obsah</b>${mark(r.trends)}</div>` : '');
   };
   document.getElementById('resList').innerHTML = list.map((r) => `<div class="panel rcard">
@@ -344,9 +361,21 @@ function renderResearch() {
 }
 function initResearch() {
   document.getElementById('resQ').oninput = renderResearch;
+  const fb = document.getElementById('resFav');
+  if (fb) fb.onclick = () => { RES_FAV = !RES_FAV; renderResearch(); };
   document.getElementById('resList').onclick = async (e) => {
     const sh = e.target.closest('[data-rshot]');
     if (sh) { const o = document.createElement('div'); o.className = 'rzoom'; o.innerHTML = `<img src="${sh.src}" alt="">`; o.onclick = () => o.remove(); document.body.appendChild(o); return; }
+    const fv = e.target.closest('[data-fav]');
+    if (fv) {
+      const r = RES.find((x) => x.id === fv.dataset.fav), n = r && r.notes[+fv.dataset.idx];
+      if (!n) return;
+      const on = !n.fav;
+      if (on) n.fav = new Date().toISOString(); else delete n.fav;
+      renderResearch();
+      try { await jfetch('/api/research/fav', { id: r.id, idx: +fv.dataset.idx, fav: on }); } catch (_) { loadResearch(); }
+      return;
+    }
     const d = e.target.closest('[data-rdel]'), c = e.target.closest('[data-rcopy]');
     if (d && confirm('Zmazať prieskum?')) { await jfetch('/api/research/delete', { id: d.dataset.rdel }); loadResearch(); }
     if (c) { const r = RES.find((x) => x.id === c.dataset.rcopy); try { await navigator.clipboard.writeText(r.text); c.innerHTML = '✓'; setTimeout(() => (c.innerHTML = icon('copy')), 1500); } catch (_) {} }

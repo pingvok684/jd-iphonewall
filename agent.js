@@ -244,7 +244,7 @@ async function agentLoop(dev, apiKey, actions, o) {
             A.reelNotes.push(n); say(`📝 Reel ${A.reelNotes.length}: ${n.hook.slice(0, 80)}`); out = `Zapísané (reel ${A.reelNotes.length}).`; break;
           }
           case 'done': summary = String(i.summary || ''); if (!o.quietDone) say(`✓ Hotovo: ${summary}`); A.summary = summary; finished = true; break;
-          case 'reels_ready': say('▶ reely sú otvorené – ďalej posúva appka'); status = 'ready'; finished = true; break;
+          case 'reels_ready': say('▶ reely sú otvorené – ďalej ich už len čítam'); status = 'ready'; finished = true; break;
           default: out = 'Neznámy nástroj';
         }
       } catch (e) { out = `Chyba: ${e.message}`; say(`⚠ ${e.message}`); }
@@ -272,7 +272,7 @@ async function runResearch(dev, task, apiKey, actions, opts = {}) {
   // ťukanie (otvoriť profil, reely) robí presnejší model, čítanie reelov lacný model
   const navModel = await prepModel(apiKey, opts.navFamily || 'sonnet', say, ' · otvára profil');
   const model = isKie(apiKey) ? null : await modelFor(keyOf(apiKey), opts.family || 'haiku');
-  if (model) say(`🧠 Model: ${model} · číta reely (posúvanie robí appka)`);
+  if (model) say(`🧠 Model: ${model} · číta reely`);
   A.reelNotes = []; A.ads = 0; A.swipes = 0;
   const up = () => actions.swipe({ x1: 0.5, y1: 0.75, x2: 0.5, y2: 0.25, ms: 280 });
   const scroll = opts.scroll === 'app' ? 'app' : 'auto';
@@ -320,7 +320,8 @@ async function runResearch(dev, task, apiKey, actions, opts = {}) {
       if (u.name === 'skip_ad') { ads++; A.ads++; say('⏭ reklama – preskakujem'); await up(); A.swipes++; continue; }
       seen++;
       const n = { profil: p || 'Reels feed', hook: String(i.hook || '').trim(), format: String(i.format || '').trim(), prostredie: String(i.prostredie || '').trim(), hudba: String(i.hudba || '').trim(), zhliadnutia: String(i.zhliadnutia || '').trim(), jpg };
-      A.reelNotes.push(n); last = n; say(`📝 Reel ${A.reelNotes.length}: ${(n.hook || '—').slice(0, 80)}`);
+      if (actions.reelLink) { try { n.link = await actions.reelLink(); } catch (_) {} }
+      A.reelNotes.push(n); last = n; say(`📝 Reel ${A.reelNotes.length}: ${(n.hook || '—').slice(0, 80)}${n.link ? ' 🔗' : ''}`);
       if (!auto && seen < want) { await up(); A.swipes++; }
       else if (auto) A.swipes++;
     }

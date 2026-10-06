@@ -302,7 +302,13 @@
   .rreel .n { grid-row: span 2; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: rgba(255,61,104,.16); color: #ff7a98; font-weight: 700; font-size: 12.5px; }
   .rreel .h { font-weight: 600; font-size: 14px; } .rreel .m { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
   .rtrends { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: rgba(61,220,151,.07); border: 1px solid rgba(61,220,151,.25); white-space: pre-wrap; font-size: 13.5px; line-height: 1.55; } .rtrends b { display: block; margin-bottom: 4px; color: #3ddc97; }
-  .rreel.hasshot { grid-template-columns: 64px 28px 1fr; grid-template-rows: auto 1fr; align-items: start; } .rreel.hasshot .m { align-self: start; } .rreel .rshot { grid-row: span 2; width: 64px; height: 114px; object-fit: cover; border-radius: 9px; cursor: zoom-in; background: #000; border: 1px solid var(--line); }
+  .rreel { position: relative; } .rreel.hasshot { grid-template-columns: 64px 28px 1fr; grid-template-rows: auto 1fr; align-items: start; } .rreel.hasshot .m { align-self: start; }
+  .rreel .h, .rreel .m { padding-right: 112px; } .rreel .ra { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; align-items: center; }
+  .rreel .ra .btn, .rreel .ra button { padding: 5px 10px; font-size: 12.5px; border-radius: 9px; text-decoration: none; } .rreel .rfav { font-size: 16px !important; line-height: 1; color: var(--muted); }
+  .rreel .rfav.on { color: #ffb547; border-color: rgba(255,181,71,.6) !important; background: rgba(255,181,71,.12) !important; } .rreel.fav { border-color: rgba(255,181,71,.45); }
+  .rreel .rprof { display: block; font-size: 11.5px; color: var(--muted); font-weight: 500; margin-bottom: 2px; }
+  .resfav { margin-right: 8px; white-space: nowrap; } .resfav.on { background: linear-gradient(180deg, #ffb547, #f08c1a) !important; color: #1b1205 !important; border-color: #ffb547 !important; } .resfav b { margin-left: 4px; }
+  @media (max-width: 600px) { .rreel .h, .rreel .m { padding-right: 0; } .rreel .ra { position: static; grid-column: 1 / -1; justify-content: flex-end; } } .rreel .rshot { grid-row: span 2; width: 64px; height: 114px; object-fit: cover; border-radius: 9px; cursor: zoom-in; background: #000; border: 1px solid var(--line); }
   .rzoom { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,.85); display: grid; place-items: center; cursor: zoom-out; padding: 20px; } .rzoom img { max-height: 92vh; max-width: 92vw; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
   .rold { font-size: 12px; color: var(--muted); margin-top: 8px; }
   .rcard mark { background: rgba(255,181,71,.35); color: inherit; border-radius: 3px; }
@@ -866,11 +872,12 @@
   <!-- PRIESKUMY -->
   <section class="view" id="v-prieskumy">
     <div class="vhead"><div><h2>Archív prieskumov</h2><div class="sub">Výsledky šablóny „🔎 Prieskum reels“ – hooky, trendy, hudba</div></div><div class="sp"></div>
-      <input id="resQ" class="resq" placeholder="Hľadať (napr. hook, gym, pesnička…)"></div>
+      <button type="button" id="resFav" class="resfav">★ Na recreate</button><input id="resQ" class="resq" placeholder="Hľadať (napr. hook, gym, pesnička…)"></div>
     <details class="panel reshelp"><summary>Ako to funguje?</summary><ol>
       <li>Na <b>Telefónoch</b> pri telefóne spusti šablónu <b>🔎 Prieskum reels</b> a zadaj profil (napr. <b>@sophieraiin</b>) alebo nechaj prázdne pre bežný Reels feed, a počet reelov. Pod políčkom sú <b>naposledy použité profily</b> – môžeš vybrať aj viac naraz, každý sa uloží ako samostatný prieskum.</li>
       <li>AI v telefóne otvorí Instagram, pozrie si reely (nič nelajkuje ani nesleduje, reklamy preskočí) a pri každom si zapíše <b>hook, formát, prostredie/outfit, hudbu a zhliadnutia</b> a uloží <b>screenshot</b> (klikni naň a zväčší sa).</li>
-      <li>Keď skončí, výsledok sa uloží sem: zoznam reelov a <b>3 trendy</b>, ktoré môžeš použiť pre svoj obsah. Tlačidlom 📋 ho skopíruješ, vyhľadávaním nájdeš staršie prieskumy (napr. podľa pesničky).</li></ol></details>
+      <li>Keď skončí, výsledok sa uloží sem: zoznam reelov a <b>3 trendy</b>, ktoré môžeš použiť pre svoj obsah. Tlačidlom 📋 ho skopíruješ, vyhľadávaním nájdeš staršie prieskumy (napr. podľa pesničky).</li>
+      <li>Pri každom reeli je odkaz <b>↗ Reel</b> (otvorí ho v Instagrame) a hviezdička <b>☆</b> – reely, ktoré chceš urobiť po svojom, sa uložia do <b>★ Na recreate</b> hore.</li></ol></details>
     <div class="reslist" id="resList"></div>
   </section>
 

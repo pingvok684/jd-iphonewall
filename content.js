@@ -153,6 +153,13 @@ function addResearch(r) {
   return it;
 }
 const listResearch = () => research;
+function setResearchFav(id, idx, fav) {
+  const it = research.find((x) => x.id === id), n = it && it.notes && it.notes[idx];
+  if (!n) throw new Error('Reel sa nenašiel');
+  if (fav) n.fav = new Date().toISOString(); else delete n.fav;
+  store.writeJson('research.json', research);
+  return n;
+}
 function removeResearch(id) {
   const it = research.find((x) => x.id === id);
   research = research.filter((x) => x.id !== id); store.writeJson('research.json', research);
@@ -177,5 +184,5 @@ function setProfile(udid, p) {
 }
 
 module.exports = { onDelete, TYPES, LIB_DIR, addToLibrary, listLibrary, libFile, removeFromLibrary, markUsed, setLibNote, setOwners, bulkLibrary, cleanupLibrary, librarySize, reloadAll,
-  addCalendar, setCalendar, removeCalendar, listCalendar, getCalendar, addStatFromText, listStats, removeStat, addResearch, listResearch, removeResearch, saveShot, shotFile, SHOT_DIR,
+  addCalendar, setCalendar, removeCalendar, listCalendar, getCalendar, addStatFromText, listStats, removeStat, addResearch, listResearch, removeResearch, setResearchFav, saveShot, shotFile, SHOT_DIR,
   getProfile, setProfile };

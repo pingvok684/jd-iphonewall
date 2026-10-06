@@ -372,6 +372,36 @@ async function ensureSession(dev) {
   return sid;
 }
 
+// odkaz na práve prehrávaný reel: Zdieľať → Kopírovať odkaz → prečítať schránku (bez AI, nič sa nezverejní)
+async function copyReelLink(dev) {
+  if (dev.noReelLink) return '';
+  const find = (sid, pred) => wda(dev, 'POST', `/session/${sid}/elements`, { using: 'predicate string', value: pred }, 5000)
+    .then((r) => (r && Array.isArray(r.value) ? r.value.map((e) => e.ELEMENT || e['element-6066-11e4-a52e-4f735466cecc']).filter(Boolean) : [])).catch(() => []);
+  const click = (sid, id) => wda(dev, 'POST', `/session/${sid}/element/${id}/click`, {}, 5000);
+  try {
+    return await withSession(dev, async (sid) => {
+      const share = await find(sid, "type == 'XCUIElementTypeButton' AND (label ==[c] 'Share' OR label ==[c] 'Send' OR label BEGINSWITH[c] 'Share' OR label ==[c] 'Zdieľať' OR label ==[c] 'Odoslať' OR label ==[c] 'Poslať')");
+      if (!share.length) { dev.reelLinkFails = (dev.reelLinkFails || 0) + 1; if (dev.reelLinkFails >= 3) dev.noReelLink = true; return ''; }
+      await click(sid, share[share.length - 1]);
+      await pause(1300);
+      const copy = await find(sid, "label ==[c] 'Copy link' OR label ==[c] 'Kopírovať odkaz' OR label ==[c] 'Kopírovať prepojenie' OR name ==[c] 'Copy link'");
+      if (!copy.length) {
+        await swipe(dev, { x1: 0.5, y1: 0.5, x2: 0.5, y2: 0.97, ms: 250 }).catch(() => {}); // zavrieť ponuku
+        dev.reelLinkFails = (dev.reelLinkFails || 0) + 1; if (dev.reelLinkFails >= 3) dev.noReelLink = true;
+        return '';
+      }
+      await click(sid, copy[0]);
+      await pause(900);
+      let r = await wda(dev, 'POST', `/session/${sid}/wda/getPasteboard`, { contentType: 'plaintext' }, 15000).catch(() => null);
+      if (!r) r = await wda(dev, 'POST', '/wda/getPasteboard', { contentType: 'plaintext' }, 15000).catch(() => null);
+      const txt = r && r.value ? Buffer.from(String(r.value), 'base64').toString('utf8') : '';
+      const m = txt.match(/https?:\/\/(www\.)?instagram\.com\/[^\s"']+/i);
+      dev.reelLinkFails = 0;
+      return m ? m[0].replace(/\?.*$/, '') : '';
+    });
+  } catch (_) { return ''; }
+}
+
 // „Otvoriť v Instagrame?“ (Open in …?) po otvorení odkazu – potvrdíme sami, nech netreba nič stláčať
 async function acceptOpenPrompt(dev, ms = 7000) {
   const OPEN = /^(open|otvoriť|otvorit|öffnen|ouvrir|abrir|apri)$/i;
@@ -830,6 +860,7 @@ async function runAgentTask(dev, task, maxSteps) {
     home: async () => { await wake(dev); return wda(dev, 'POST', '/wda/homescreen'); },
     // priamo bez AI: spustiť aplikáciu / otvoriť odkaz (napr. profil v Instagrame)
     openApp: async (bundleId) => { await wake(dev); return withSession(dev, (sid) => wda(dev, 'POST', `/session/${sid}/wda/apps/launch`, { bundleId }, 30000)); },
+    reelLink: () => copyReelLink(dev),
     openUrl: async (u) => { await wake(dev); await withSession(dev, (sid) => wda(dev, 'POST', `/session/${sid}/url`, { url: u }, 30000)); return acceptOpenPrompt(dev); },
   }, { maxSteps, family: isResearch(task) ? aiModel('research') : aiModel('tasks'), navFamily: aiModel('tasks'), scroll: config.researchScroll === 'app' ? 'app' : 'auto' });
   watchAgent(dev, task);
@@ -1320,7 +1351,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=31536000, immutable' });
     return fs.createReadStream(f).pipe(res);
   }
-  if (['/api/library/delete', '/api/library/note', '/api/library/owners', '/api/calendar/delete', '/api/calendar/status', '/api/stats/delete', '/api/research/delete', '/api/profile', '/api/captions'].includes(url.pathname) && req.method === 'POST') {
+  if (['/api/library/delete', '/api/library/note', '/api/library/owners', '/api/calendar/delete', '/api/calendar/status', '/api/stats/delete', '/api/research/delete', '/api/research/fav', '/api/profile', '/api/captions'].includes(url.pathname) && req.method === 'POST') {
     const b = await readBody(req, url.pathname === '/api/captions' ? 12e6 : 1e6);
     try {
       switch (url.pathname) {
@@ -1331,6 +1362,7 @@ const server = http.createServer(async (req, res) => {
         case '/api/calendar/status': content.setCalendar(String(b.id), { status: String(b.status || '').slice(0, 20) }); break;
         case '/api/stats/delete': content.removeStat(String(b.id)); break;
         case '/api/research/delete': content.removeResearch(String(b.id)); break;
+        case '/api/research/fav': content.setResearchFav(String(b.id), parseInt(b.idx, 10), !!b.fav); break;
         case '/api/profile': {
           const dev = devices.get(String(b.udid));
           if (b.label !== undefined && dev) { dev.label = String(b.label || '').slice(0, 40) || dev.name; labels[dev.udid] = dev.label; saveLabels(); }
