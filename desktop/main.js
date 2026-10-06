@@ -10,7 +10,7 @@ const { spawn, execFile } = require('child_process');
 
 const IS_MAC = process.platform === 'darwin', IS_WIN = process.platform === 'win32';
 const PORT = 3000;
-const URL = `http://localhost:${PORT}`;
+const URL = `http://127.0.0.1:${PORT}`;
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 
@@ -134,7 +134,26 @@ async function showWhenReady() {
   await new Promise((r) => setTimeout(r, 1500));
   while (!quitting && !(await ping())) await new Promise((r) => setTimeout(r, 800));
   waiting = false; status.error = '';
-  if (win && !quitting) win.loadURL(URL);
+  if (win && !quitting) openPage();
+}
+
+// načítanie stránky so strážcom: keď sa nenačíta do 25 s alebo zlyhá, ukáže úvodnú obrazovku so stavom a skúsi znova
+let pageTimer = null;
+function openPage() {
+  if (!win || quitting) return;
+  clearTimeout(pageTimer);
+  const wc = win.webContents;
+  const ok = () => { clearTimeout(pageTimer); wc.removeListener('did-fail-load', bad); };
+  const bad = (_e, code, desc, url, main) => {
+    if (main === false || (url && !String(url).startsWith(URL))) return;
+    ok(); log('stránka sa nenačítala', code, desc);
+    status.error = `Stránka sa nenačítala (${desc || code}) – skúšam znova…`;
+    showWhenReady();
+  };
+  wc.once('did-finish-load', ok);
+  wc.on('did-fail-load', bad);
+  pageTimer = setTimeout(() => { wc.removeListener('did-fail-load', bad); log('stránka sa nenačítala do 25 s'); status.error = 'Stránka sa nenačítala do 25 sekúnd – skúšam znova…'; showWhenReady(); }, 25000);
+  win.loadURL(URL);
 }
 
 // go-ios tunel (iOS 17+): Windows vždy, Mac len bez Xcode režimu
@@ -165,6 +184,8 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
   });
   win.once('ready-to-show', () => win.show());
+  // stránka spadla alebo zamrzla → úvodná obrazovka a znova načítať
+  win.webContents.on('render-process-gone', (_e, d) => { log('okno spadlo', d && d.reason); if (!quitting) showWhenReady(); });
   win.loadFile(path.join(__dirname, 'splash.html'));
   // odkazy von (Cloudflare, Sideloadly, App Store…) do bežného prehliadača
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -308,7 +329,11 @@ ipcMain.handle('jd:xcodeSetup', () => {
   execFile('open', ['-a', 'Terminal', dst]);
   return true;
 });
-ipcMain.handle('jd:done', () => { state.setupDone = true; state.setupBuild = buildId(); saveState(); if (win) win.loadURL(URL); });
+ipcMain.handle('jd:done', async () => {
+  state.setupDone = true; state.setupBuild = buildId(); saveState();
+  if (!win) return;
+  if (await ping(2500)) openPage(); else showWhenReady(); // server ešte nebeží → úvodná obrazovka so stavom
+});
 ipcMain.handle('jd:setup', () => { showWin(); win.loadFile(path.join(__dirname, 'setup.html')); });
 ipcMain.handle('jd:restart', () => restartServer());
 ipcMain.handle('jd:status', () => ({ ...status, log: tail(path.join(LOGS, 'server.log')), appLog: tail(path.join(LOGS, 'app.log'), 6), logs: LOGS }));
@@ -359,6 +384,6 @@ app.whenReady().then(async () => {
   status.ready = true; status.error = ''; step('Hotovo');
   if (!win) return;
   if ((!state.setupDone || (app.isPackaged && state.setupBuild !== buildId())) && !external) win.loadFile(path.join(__dirname, 'setup.html'));
-  else win.loadURL(URL);
+  else openPage();
 });
 app.on('window-all-closed', () => {}); // aplikácia beží ďalej v lište
