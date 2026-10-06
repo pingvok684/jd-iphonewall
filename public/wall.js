@@ -511,6 +511,34 @@ function wireCaptions(root, getCtx) {
 }
 
 // okno na vyplnenie [premenných]; [Názov|a|b|c] = rolovacie menu s možnosťami
+// ---------- prieskum: naposledy použité profily (z archívu prieskumov + tohto prehliadača) ----------
+const splitProfs = (t) => String(t || '').split(/\s*[,;]\s*/).map((x) => x.trim()).filter(Boolean);
+const profKey = (x) => x.toLowerCase().replace(/^@/, '');
+function rememberProfiles(t) {
+  const now = splitProfs(t); if (!now.length) return;
+  let l = []; try { l = JSON.parse(localStorage.getItem('jd-research-profiles') || '[]'); } catch (_) {}
+  l = [...now, ...l.filter((x) => !now.some((y) => profKey(y) === profKey(x)))].slice(0, 30);
+  try { localStorage.setItem('jd-research-profiles', JSON.stringify(l)); } catch (_) {}
+}
+async function wireRecentProfiles(bg, input) {
+  let mine = []; try { mine = JSON.parse(localStorage.getItem('jd-research-profiles') || '[]'); } catch (_) {}
+  let arch = []; try { arch = (await (await fetch('/api/research')).json()).map((r) => r.profile); } catch (_) {}
+  const list = [];
+  for (const p of [...mine, ...arch.flatMap(splitProfs)]) if (p && !/^reels feed$/i.test(p) && !list.some((x) => profKey(x) === profKey(p))) list.push(p);
+  const box = bg.querySelector('[data-rp]'), pl = box.querySelector('.rpl');
+  if (!list.length) return;
+  box.hidden = false;
+  const paint = () => { const cur = splitProfs(input.value).map(profKey); pl.innerHTML = list.slice(0, 16).map((p) => `<button type="button" class="pchip${cur.includes(profKey(p)) ? ' on' : ''}" data-p="${esc(p)}">${esc(p)}</button>`).join(''); };
+  paint();
+  input.addEventListener('input', paint);
+  pl.onclick = (e) => {
+    const b = e.target.closest('[data-p]'); if (!b) return;
+    const cur = splitProfs(input.value), p = b.dataset.p, i = cur.findIndex((x) => profKey(x) === profKey(p));
+    if (i >= 0) cur.splice(i, 1); else cur.push(p);
+    input.value = cur.join(', '); paint();
+  };
+}
+
 function askVars(title, vars, kind, defUdid) {
   return new Promise((resolve) => {
     const bg = document.createElement('div'); bg.className = 'modal-bg';
@@ -521,7 +549,9 @@ function askVars(title, vars, kind, defUdid) {
         ? `<select data-i="${i}">${opts.map((o) => `<option>${esc(o)}</option>`).join('')}</select>`
         : /dátum a čas/i.test(label) ? dtPicker(i)
         : /popis/i.test(label) ? `<textarea data-i="${i}" rows="3"></textarea>${kind ? capHtml() : ''}`
-        : /pesnič/i.test(label) ? musicHtml(`data-i="${i}"`) : `<input data-i="${i}">`;
+        : /pesnič/i.test(label) ? musicHtml(`data-i="${i}"`)
+        : /^profil/i.test(label) ? `<input data-i="${i}" data-prof placeholder="napr. @sophieraiin – viac profilov oddeľ čiarkou"><div class="rprofs" data-rp hidden><small>Naposledy použité – klikni a vyber aj viac:</small><div class="rpl"></div></div>`
+        : `<input data-i="${i}">`;
       const hint = /dátum a čas/i.test(label) ? '<small class="hint">Čas zadávaš slovenský. Meta dovolí naplánovať najskôr asi 20 minút dopredu.</small><small class="hint us-conv" data-conv></small>' : '';
       const isMus = /pesnič/i.test(label), tag = (kind && /popis/i.test(label)) || isMus || isPlace ? 'div' : 'label';
       return `<${tag} class="${tag === 'div' ? 'fld' : ''}"${tag === 'div' && !isMus && !isPlace ? ' data-capwrap' : ''}><span>${esc(isMus ? 'Hudba' : isPlace ? 'Kam zverejniť' : label.replace(/\s*\(napr\..*\)$/, ''))}</span>${ctl}${hint}</${tag}>`;
@@ -533,6 +563,8 @@ function askVars(title, vars, kind, defUdid) {
     const stopClock = startClock(bg);
     document.body.appendChild(bg);
     paintIcons(bg);
+    const profIn = bg.querySelector('[data-prof]');
+    if (profIn) wireRecentProfiles(bg, profIn);
     const dst = kind ? attachDrop(bg.querySelector('[data-drop]'), (st) => {
       // carousel: počet fotiek = počet pretiahnutých fotiek
       if (kind !== 'carousel') return;
@@ -563,6 +595,7 @@ function askVars(title, vars, kind, defUdid) {
           else if (/kam zverejniť/i.test(lab)) out.meta.place = out[out.length - 1];
         }
       }
+      if (profIn) rememberProfiles(profIn.value);
       if (kind) {
         out.phones = readChips(bg.querySelector('[data-ph]'));
         if (!out.phones.length) return alert('Vyber aspoň jeden telefón.');
@@ -609,6 +642,9 @@ async function applyTemplateByName(name, target) {
     target.focus();
     return true;
   }
+  // prieskum: viac profilov / reelov = viac krokov pre AI
+  const pm = text.match(/Profil na prieskum:\s*„([^“”"]*)[“”"]/), rm = text.match(/pozri\s+(\d+)\s+reel/i);
+  if (pm && rm) { const np = Math.max(1, splitProfs(pm[1]).length); target.dataset.maxSteps = Math.min(400, Math.max(90, np * (+rm[1] * 4 + 15))); }
   target.value = text;
   target.focus();
   return true;

@@ -764,10 +764,25 @@ function watchAgent(dev, task) {
       if (isResearch(task)) {
         const prof = (task.match(/Profil na prieskum:\s*„([^“”"]*)[“”"]/) || [])[1] || '';
         const rn = (dev.agent.reelNotes || []).map((n) => { const { jpg, ...o } = n; if (jpg && jpg.length) { try { o.shot = content.saveShot(jpg); } catch (_) {} } return o; });
-        const list = rn.map((n, k) => `${k + 1}. ${n.hook || '—'}` + [n.format && `formát: ${n.format}`, n.prostredie && `prostredie: ${n.prostredie}`, n.hudba && `hudba: ${n.hudba}`, n.zhliadnutia && `zhliadnutia: ${n.zhliadnutia}`].filter(Boolean).map((x) => `\n   ${x}`).join(''));
         const sum = dev.agent.summary || done;
-        const text = rn.length ? `Reely:\n${list.join('\n')}\n\nTrendy:\n${sum}` : full;
-        content.addResearch({ udid: dev.udid, phone: dev.label, profile: prof.trim() || 'Reels feed', reels: Math.max(reels || 0, rn.length), ads, notes: rn, trends: rn.length ? sum : '', text });
+        const profs = prof.split(/\s*[,;]\s*/).map((x) => x.trim()).filter(Boolean);
+        const key = (x) => String(x || '').toLowerCase().replace(/^@/, '').replace(/[^\p{L}\p{N}]/gu, '');
+        const fmt = (list) => list.map((n, k) => `${k + 1}. ${n.hook || '—'}` + [n.format && `formát: ${n.format}`, n.prostredie && `prostredie: ${n.prostredie}`, n.hudba && `hudba: ${n.hudba}`, n.zhliadnutia && `zhliadnutia: ${n.zhliadnutia}`].filter(Boolean).map((x) => `\n   ${x}`).join(''));
+        // viac profilov naraz → každý profil zvlášť v archíve
+        const groups = [];
+        if (profs.length > 1 && rn.length) {
+          for (const p of profs) groups.push({ profile: p, notes: [] });
+          let lastG = groups[0];
+          for (const n of rn) {
+            const k = key(n.profil);
+            const g = !k ? lastG : groups.find((x) => key(x.profile) === k) || groups.filter((x) => k.startsWith(key(x.profile)) || key(x.profile).startsWith(k)).sort((a, b) => key(b.profile).length - key(a.profile).length)[0] || lastG;
+            g.notes.push(n); lastG = g;
+          }
+        } else groups.push({ profile: profs[0] || 'Reels feed', notes: rn });
+        for (const g of groups.filter((x) => x.notes.length || groups.length === 1).reverse()) {
+          const text = g.notes.length ? `Reely:\n${fmt(g.notes).join('\n')}\n\nTrendy:\n${sum}` : full;
+          content.addResearch({ udid: dev.udid, phone: dev.label, profile: g.profile, reels: groups.length > 1 ? g.notes.length : Math.max(reels || 0, g.notes.length), ads: groups.length > 1 ? 0 : ads, notes: g.notes, trends: g.notes.length ? sum : '', text });
+        }
       }
     }
   }, 2000);

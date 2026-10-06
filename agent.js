@@ -44,7 +44,7 @@ const TOOLS = [
   { name: 'home', description: 'Tlačidlo Domov (návrat na plochu).', input_schema: { type: 'object', properties: {} } },
   { name: 'wait', description: 'Počká N sekúnd (načítavanie).', input_schema: { type: 'object', properties: { seconds: { type: 'number' } }, required: ['seconds'] } },
   { name: 'reel_note', description: 'Pri prieskume reels: zapíše poznámku o PRÁVE pozeranom reeli (volaj raz pri každom reeli, pred potiahnutím na ďalší). Píš po slovensky, stručne.', input_schema: { type: 'object',
-    properties: { hook: { type: 'string', description: 'prvý text na obrazovke alebo prvá veta' }, format: { type: 'string', description: 'formát videa (napr. tanec, POV, lip-sync, vlog, trend…)' }, prostredie: { type: 'string', description: 'prostredie a outfit' }, hudba: { type: 'string', description: 'pesnička / zvuk, ak je vidieť' }, zhliadnutia: { type: 'string', description: 'počet zhliadnutí, ak je vidieť' } }, required: ['hook', 'format'] } },
+    properties: { profil: { type: 'string', description: 'profil, ktorého reel pozeráš (ako bol zadaný v úlohe; prázdne = Reels feed)' }, hook: { type: 'string', description: 'prvý text na obrazovke alebo prvá veta' }, format: { type: 'string', description: 'formát videa (napr. tanec, POV, lip-sync, vlog, trend…)' }, prostredie: { type: 'string', description: 'prostredie a outfit' }, hudba: { type: 'string', description: 'pesnička / zvuk, ak je vidieť' }, zhliadnutia: { type: 'string', description: 'počet zhliadnutí, ak je vidieť' } }, required: ['hook', 'format'] } },
   { name: 'done', description: 'Úloha hotová alebo nemožná. Pri prieskume reels daj do summary 3 opakujúce sa trendy, ktoré sa dajú použiť pre náš obsah.', input_schema: { type: 'object', properties: { summary: { type: 'string' } }, required: ['summary'] } },
 ];
 
@@ -197,7 +197,7 @@ async function runAgent(dev, task, apiKey, actions, opts = {}) {
           case 'wait': await sleep(Math.min(15, Number(i.seconds) || 1) * 1000); break;
           case 'reel_note': {
             A.reelNotes = A.reelNotes || [];
-            const n = { hook: String(i.hook || '').trim(), format: String(i.format || '').trim(), prostredie: String(i.prostredie || '').trim(), hudba: String(i.hudba || '').trim(), zhliadnutia: String(i.zhliadnutia || '').trim() };
+            const n = { profil: String(i.profil || '').trim(), hook: String(i.hook || '').trim(), format: String(i.format || '').trim(), prostredie: String(i.prostredie || '').trim(), hudba: String(i.hudba || '').trim(), zhliadnutia: String(i.zhliadnutia || '').trim() };
             try { n.jpg = await grabFrame(dev.mjpegPort); } catch (_) {}
             A.reelNotes.push(n); say(`📝 Reel ${A.reelNotes.length}: ${n.hook.slice(0, 80)}`); out = `Zapísané (reel ${A.reelNotes.length}).`; break;
           }
