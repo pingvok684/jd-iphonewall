@@ -52,20 +52,20 @@ function makeCard(d) {
   const el = document.createElement('div');
   el.className = 'card';
   el.innerHTML = `
-    <div class="top"><span class="dot"></span><span class="nm"><span class="name" title="Dvojklik = premenovať"></span><span class="ver"></span></span>
-      <button data-a="unlock" title="Zobudiť a odomknúť">${icon('unlock')}</button><button data-a="lock" title="Uspať">${icon('lock')}</button>
-      <button data-a="solo" title="Zväčšiť">${icon('expand')}</button></div>
-    <div class="screen"><img alt=""><div class="ph">Čakám na WebDriverAgent…</div><div class="pstat"></div></div>
+    <div class="top"><span class="dot" data-tip="Zelená = telefón je pripojený a pripravený, červená = odpojený alebo sa ešte pripája"></span><span class="nm"><span class="name" data-tip="Názov telefónu – dvojklik ho premenuje"></span><span class="ver"></span></span>
+      <button data-a="unlock" data-tip="Zobudí a odomkne tento iPhone">${icon('unlock')}</button><button data-a="lock" data-tip="Uspí tento iPhone (zamkne obrazovku)">${icon('lock')}</button>
+      <button data-a="solo" data-tip="Zväčší tento telefón – ovládaš ho pohodlnejšie">${icon('expand')}</button></div>
+    <div class="screen" data-tip="Živý obraz iPhonu: klik = ťuknutie, potiahnutie myšou = potiahnutie prstom"><img alt=""><div class="ph">Čakám na WebDriverAgent…</div><div class="pstat"></div></div>
     <div class="log"></div>
     <div class="bar">
-      <input placeholder="Text… (Enter = poslať)">
-      <button data-a="home" title="Domov">${icon('home')}</button>
-      <button data-a="reset" title="Obnoviť spojenie">${icon('refresh')}</button>
+      <input placeholder="Text… (Enter = poslať)" data-tip="Napíše text do tohto iPhonu – najprv ťukni do políčka v telefóne, Enter = odoslať">
+      <button data-a="home" data-tip="Tlačidlo Domov na tomto iPhone">${icon('home')}</button>
+      <button data-a="reset" data-tip="Obnoví spojenie s týmto iPhonom (keď obraz zamrzne)">${icon('refresh')}</button>
     </div>
-    <div class="tplrow"><button class="tplbtn" data-a="tpick">${icon('list')}<span>Šablóny</span></button><button data-a="tsave" title="Uložiť text ako šablónu">${icon('save')}</button></div>
-    <div class="row"><textarea placeholder="Úloha pre AI…"></textarea><button class="go" data-a="run">Spustiť</button></div>
+    <div class="tplrow"><button class="tplbtn" data-a="tpick" data-tip="Hotové AI príkazy (prieskum reels, story, plánovanie…) len pre TENTO iPhone">${icon('list')}<span>Šablóny</span></button><button data-a="tsave" data-tip="Uloží napísanú úlohu ako vlastnú šablónu">${icon('save')}</button></div>
+    <div class="row"><textarea placeholder="Úloha pre AI…" data-tip="Napíš po slovensky, čo má AI na tomto iPhone urobiť – napr. „otvor Instagram a pozri 5 reelov“"></textarea><button class="go" data-a="run" data-tip="Spustí AI úlohu na tomto iPhone (počas behu sa tlačidlo zmení na Stop)">Spustiť</button></div>
     <div class="alog"></div>
-    <label class="drop"><b>Fotky / videá do galérie</b><br>pretiahni sem alebo klikni
+    <label class="drop" data-tip="Pošle fotky a videá cez kábel do galérie tohto iPhonu (uloží ich skratka JD Save)"><b>Fotky / videá do galérie</b><br>pretiahni sem alebo klikni
       <input type="file" multiple accept="image/*,video/*,.heic,.mov,.mp4"></label>
     <div class="mlist"></div>`;
   const c = { el, d, img: el.querySelector('img'), ph: el.querySelector('.ph'), dot: el.querySelector('.dot'),
@@ -822,7 +822,7 @@ const splitName = (n) => { const m = n.match(/^(\S+)\s+(.*)$/); return m && !/[A
 function pickTemplate(target, phoneLabel) {
   const bg = document.createElement('div'); bg.className = 'modal-bg';
   const render = () => {
-    bg.innerHTML = `<div class="modal picker"><div class="phead"><div><h3>Šablóny</h3><div class="sub">${phoneLabel ? 'Pre telefón ' + esc(phoneLabel) : 'Pre všetky telefóny'} · vyber, čo má AI urobiť</div></div>
+    bg.innerHTML = `<div class="modal picker"><div class="phead"><div><h3>Šablóny</h3><div class="sub">${phoneLabel ? 'Len pre telefón <b>' + esc(phoneLabel) + '</b>' : '<b class="allph">Pre VŠETKY iPhony naraz</b> – úloha sa spustí na každom pripojenom telefóne'} · vyber, čo má AI urobiť</div></div>
       <button class="ghost" data-x>${icon('plus').replace('<svg', '<svg style="transform:rotate(45deg)"')}</button></div>
       <div class="tgrid">${TEMPLATES.map((t, i) => { const [em, nm] = splitName(t.name); return `
         <div class="ttile" data-i="${i}" tabindex="0"><div class="tem">${esc(em)}</div><div class="tnm">${esc(nm)}</div>

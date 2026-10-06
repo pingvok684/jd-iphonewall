@@ -12,6 +12,69 @@ const json = (o, status = 200) => new Response(JSON.stringify(o), { status, head
 async function sha(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join(''); }
 const ID = /^[a-z0-9]{10,32}$/;
 
+// ---------- nahlásené chyby (Report a bug) ----------
+// POST /bugs (ktokoľvek, max 10 za hodinu z jednej IP) → R2 bugs/<id>.json (+ bugs/<id>.img)
+// GET /bugs, PATCH/DELETE /bugs/<id>, GET /bugs/<id>/img – len prihlásený účet, ktorého e-mail je v premennej ADMIN_EMAIL
+// voliteľne: TG_TOKEN + TG_CHAT → správa do Telegramu pri každej novej chybe
+async function bugsApi(request, env, url) {
+  if (!env.R2) return json({ error: 'Nahlasovanie chýb nie je zapnuté.' }, 503);
+  const p = url.pathname, m = request.method;
+  if (p === '/bugs' && m === 'POST') {
+    const ip = request.headers.get('cf-connecting-ip') || 'x';
+    const n = +(await env.KV.get('bip:' + ip)) || 0;
+    if (n >= 10) return json({ error: 'Príliš veľa hlásení – skús to o hodinu.' }, 429);
+    await env.KV.put('bip:' + ip, String(n + 1), { expirationTtl: 3600 });
+    let b = {}; try { b = await request.json(); } catch (_) {}
+    const text = String(b.text || '').trim().slice(0, 5000);
+    if (text.length < 5) return json({ error: 'Prázdne hlásenie.' }, 400);
+    const id = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14) + '-' + rnd(3);
+    let img = false;
+    const sm = String(b.shot || '').match(/^data:(image\/(?:png|jpe?g|webp));base64,(.+)$/);
+    if (sm && sm[2].length < 5e6) {
+      const bin = Uint8Array.from(atob(sm[2]), (c) => c.charCodeAt(0));
+      await env.R2.put('bugs/' + id + '.img', bin, { httpMetadata: { contentType: sm[1] } }); img = true;
+    }
+    const info = b.info && typeof b.info === 'object' ? b.info : {};
+    const bug = { id, at: Date.now(), text, contact: String(b.contact || '').slice(0, 200), where: String(b.where || '').slice(0, 100),
+      info: { version: String(info.version || '').slice(0, 40), platform: String(info.platform || '').slice(0, 80), wda: String(info.wda || '').slice(0, 20), phones: (Array.isArray(info.phones) ? info.phones : []).slice(0, 30).map((x) => String(x).slice(0, 120)) },
+      log: String(b.log || '').slice(-15000), img, done: false, country: (request.cf && request.cf.country) || '' };
+    await env.R2.put('bugs/' + id + '.json', JSON.stringify(bug));
+    if (env.TG_TOKEN && env.TG_CHAT) {
+      const msg = `🐞 Nová chyba v JD Phone Studio\n\n${text.slice(0, 1500)}\n\n${bug.contact ? 'Od: ' + bug.contact + '\n' : ''}Verzia: ${bug.info.version} · ${bug.info.platform}`;
+      try { await fetch(`https://api.telegram.org/bot${env.TG_TOKEN}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: env.TG_CHAT, text: msg }) }); } catch (_) {}
+    }
+    return json({ ok: true, id });
+  }
+  // správa hlásení – len autor
+  const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  const s = await session(env, token);
+  const admins = String(env.ADMIN_EMAIL || '').toLowerCase().split(/[\s,;]+/).filter(Boolean);
+  if (!s) return json({ error: 'Prihlás sa (Nastavenia → Účet a synchronizácia).' }, 401);
+  if (!admins.includes(String(s.email).toLowerCase())) return json({ error: 'Hlásenia vidí len autor aplikácie.' }, 403);
+  if (p === '/bugs' && m === 'GET') {
+    const list = []; let cursor;
+    do {
+      const r = await env.R2.list({ prefix: 'bugs/', cursor, limit: 1000 });
+      for (const o of r.objects) if (o.key.endsWith('.json')) list.push(o.key);
+      cursor = r.truncated ? r.cursor : null;
+    } while (cursor);
+    list.sort().reverse();
+    const out = [];
+    for (const k of list.slice(0, 200)) { const o = await env.R2.get(k); if (o) out.push(await o.json()); }
+    return json({ bugs: out, total: list.length });
+  }
+  const mm = p.match(/^\/bugs\/([0-9a-f-]{10,40})(\/img)?$/);
+  if (!mm) return json({ error: 'nenájdené' }, 404);
+  if (mm[2] && m === 'GET') { const o = await env.R2.get('bugs/' + mm[1] + '.img'); return o ? new Response(o.body, { headers: { 'content-type': (o.httpMetadata && o.httpMetadata.contentType) || 'image/jpeg' } }) : new Response(null, { status: 404 }); }
+  if (m === 'DELETE') { await env.R2.delete(['bugs/' + mm[1] + '.json', 'bugs/' + mm[1] + '.img']); return json({ ok: true }); }
+  if (m === 'PATCH') {
+    const o = await env.R2.get('bugs/' + mm[1] + '.json'); if (!o) return json({ error: 'nenájdené' }, 404);
+    const bug = await o.json(); let b = {}; try { b = await request.json(); } catch (_) {}
+    bug.done = !!b.done; await env.R2.put('bugs/' + mm[1] + '.json', JSON.stringify(bug)); return json({ ok: true });
+  }
+  return json({ error: 'nenájdené' }, 404);
+}
+
 // ---------- synchronizácia (účty JD Phone Studio) ----------
 // KV: u:<email> = { id, salt, hash }, s:<token> = { uid, email } (60 dní), f:<email> = počet zlých prihlásení (1 h)
 // R2: u/<uid>/state.json = { docs: { <meno>: { hash, at } } }, u/<uid>/doc/<meno>, u/<uid>/blob/<sha1>
@@ -113,6 +176,7 @@ export default {
       return cur ? json({ url: cur.url, at: cur.at }) : json({ error: 'neznámy odkaz' }, 404);
     }
     if (p.startsWith('/sync/')) return syncApi(request, env, url);
+    if (p === '/bugs' || p.startsWith('/bugs/')) return bugsApi(request, env, url);
     if (p === '/icon.png') { const r = await fetch(ICON_URL, { cf: { cacheTtl: 604800 } }); return new Response(r.body, { status: r.status, headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=604800' } }); }
     if (ID.test(p.slice(1))) return new Response(PAGE, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', 'x-frame-options': 'DENY' } });
     if (p === '/') return new Response('JD Phone Studio – rozcestník funguje ✓', { headers: { 'content-type': 'text/plain; charset=utf-8' } });

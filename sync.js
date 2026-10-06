@@ -218,4 +218,4 @@ function init(o) {
   setInterval(syncNow, 90 * 1000);
 }
 
-module.exports = { init, login, logout, skip, syncNow, touch, status, tombstone, mergeDoc };
+module.exports = { init, login, logout, skip, syncNow, touch, status, tombstone, mergeDoc, api, email: () => cfg().email || '' };

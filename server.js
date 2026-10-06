@@ -1219,6 +1219,45 @@ const server = http.createServer(async (req, res) => {
     } catch (e) { return json(res, 400, { error: e.message }); }
   }
 
+  // ---------- nahlásenie chyby (Report a bug) → rozcestník → autor aplikácie ----------
+  if (url.pathname === '/api/bug' && req.method === 'POST') {
+    const b = await readBody(req, 6e6);
+    const text = String(b.text || '').trim();
+    if (text.length < 5) return json(res, 400, { error: 'Napíš aspoň pár slov, čo sa stalo.' });
+    let log = '';
+    if (b.log !== false) {
+      for (const f of [path.join(__dirname, '..', 'logs', 'server.log'), path.join(__dirname, 'logs', 'server.log')]) {
+        try { const t = fs.readFileSync(f, 'utf8'); log = t.slice(-12000); break; } catch (_) {}
+      }
+      // kľúče a tokeny nikdy neposielame
+      log = log.replace(/sk-ant-[\w-]+/g, 'sk-ant-***').replace(/(token|key|secret|password|heslo)(["'=:\s]+)[^\s"',]+/gi, '$1$2***');
+    }
+    const info = { version: (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'version.json'), 'utf8')).version; } catch (_) { return ''; } })(),
+      platform: `${process.platform} ${require('os').release()}`, wda: WDA_MODE, phones: [...devices.values()].map((d) => `${d.label} (iOS ${(d.info && d.info.version) || d.version || '?'}${d.wdaOk ? ', WDA ✓' : ', bez WDA'})`) };
+    const shot = typeof b.shot === 'string' && /^data:image\/(png|jpe?g|webp);base64,/.test(b.shot) && b.shot.length < 5e6 ? b.shot : '';
+    try {
+      const r = await fetch(RELAY + '/bugs', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(30000),
+        body: JSON.stringify({ text: text.slice(0, 5000), contact: String(b.contact || sync.email() || '').slice(0, 200), where: String(b.where || '').slice(0, 100), info, log, shot }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) return json(res, 502, { error: j.error || `Rozcestník odpovedal ${r.status}` });
+      return json(res, 200, { ok: true, id: j.id });
+    } catch (e) { return json(res, 502, { error: 'Nepodarilo sa odoslať – skontroluj internet. (' + e.message + ')' }); }
+  }
+  // zoznam nahlásených chýb – len pre autora (účet, ktorý má rozcestník povolený ako admin)
+  if (parts[0] === 'api' && parts[1] === 'bugs') {
+    try {
+      if (req.method === 'GET' && !parts[2]) { const r = await sync.api('GET', '/bugs'); return json(res, r.status, await r.json().catch(() => ({}))); }
+      if (req.method === 'GET' && parts[3] === 'img') {
+        const r = await sync.api('GET', `/bugs/${encodeURIComponent(parts[2])}/img`);
+        if (!r.ok) { res.writeHead(r.status); return res.end(); }
+        res.writeHead(200, { 'content-type': r.headers.get('content-type') || 'image/jpeg', 'cache-control': 'private, max-age=86400' });
+        return res.end(Buffer.from(await r.arrayBuffer()));
+      }
+      if (req.method === 'POST' && parts[2]) { const b = await readBody(req); const r = await sync.api(b.delete ? 'DELETE' : 'PATCH', `/bugs/${encodeURIComponent(parts[2])}`, b.delete ? undefined : { done: !!b.done }); return json(res, r.status, await r.json().catch(() => ({}))); }
+    } catch (e) { return json(res, 502, { error: e.message }); }
+    return json(res, 404, { error: 'nenájdené' });
+  }
+
   // ---------- účet a synchronizácia ----------
   if (parts[0] === 'api' && parts[1] === 'sync') {
     if (req.method === 'GET' && parts[2] === 'status') return json(res, 200, sync.status());
