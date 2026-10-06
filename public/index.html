@@ -657,9 +657,11 @@
   .usbhow ol{padding-left:20px;margin:8px 0;display:grid;gap:6px}.usbhow ol ol{margin:6px 0 0}
   .schow { margin: 8px 0 12px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); font-size: 13px; }
   .schow h4 { margin: 4px 0 8px; font-size: 13.5px; } .schow h4 + p { margin-top: 0; }
-  .scrow { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: start; margin-bottom: 10px; }
-  .scrow ol { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
-  .scqr { width: 150px; padding: 8px; border-radius: 12px; margin: 0; }
+  .schow, .sgrid > .panel { min-width: 0; } .schow { overflow-wrap: anywhere; container-type: inline-size; }
+  .scrow { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 14px; align-items: start; margin-bottom: 10px; }
+  .scrow ol { margin: 0; padding-left: 18px; display: grid; gap: 6px; min-width: 0; }
+  @container (max-width: 380px) { .scrow { grid-template-columns: 1fr; } }
+  .scqr { width: 130px; padding: 8px; border-radius: 12px; margin: 0; }
   .schow .btn { display: inline-block; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line-2); text-decoration: none; color: var(--text); font-weight: 600; margin-bottom: 6px; }
   @media (max-width: 600px) { .scrow { grid-template-columns: 1fr; } .scqr { width: 170px; } }
   .addcard { cursor: pointer; border-style: dashed !important; border-color: rgba(255,255,255,.16) !important; background: rgba(255,255,255,.02) !important; min-height: 260px; display: grid !important; place-items: center; transition: border-color .2s, background .2s; box-shadow: none !important; }
@@ -1239,7 +1241,7 @@
             <ol>
               <li>Na iPhone otvor <b>Fotoaparát</b>, namier ho na QR kód a ťukni na odkaz → <b>Stiahnuť</b>.</li>
               <li>Otvor stiahnutý súbor (Safari → ⬇ <b>Stiahnuté</b>, alebo <b>Súbory → Stiahnuté</b>) → <b>Pridať skratku</b>. Ak už skratku <b>JD Save</b> máš, najprv starú zmaž.</li>
-              <li>Pri pridaní vyber priečinok <b>Na mojom iPhone → WebDriverAgentRunner-Runner</b>. Objaví sa, keď je iPhone pripojený k tejto stránke (pri Sideloadly musí byť v iPhone najnovší <b>WebDriverAgent.ipa</b>).</li>
+              <li>Pri pridaní vyber priečinok <b>Na mojom iPhone → WebDriverAgentRunner-Runner</b>. Appka ho pripraví sama, keď je iPhone pripojený káblom (pri Sideloadly musí byť v iPhone najnovší <b>WebDriverAgent.ipa</b>). Ak ho nevidíš, zavri výber a otvor ho znova.</li>
             </ol></div>
           <a class="btn ghost" href="/skratka" download="JD Save.shortcut">⬇ Stiahnuť skratku do počítača</a> <span class="sub">– na Macu ju potom pošli do iPhonu cez AirDrop.</span>
           <h4>Vypni potvrdzovanie mazania</h4>
