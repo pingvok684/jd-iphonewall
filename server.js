@@ -634,6 +634,9 @@ async function longPress(dev, fx, fy) {
 }
 
 // rýchlosť písania v znakoch za sekundu (Nastavenia → Písanie na klávesnici)
+// model pre AI ovládanie: prieskum reels (jednoduché) a ostatné úlohy (plánovanie…)
+const MODEL_FAMS = ['haiku', 'sonnet', 'opus'];
+const aiModel = (k) => (MODEL_FAMS.includes((config.aiModels || {})[k]) ? config.aiModels[k] : k === 'research' ? 'haiku' : 'sonnet');
 const typingSpeed = () => Math.max(1, Math.min(60, Number(config.typingSpeed) || 60));
 async function typeText(dev, text) {
   const chars = [...String(text)];
@@ -798,7 +801,7 @@ async function runAgentTask(dev, task, maxSteps) {
     swipe: async (sw) => { await wake(dev); return swipe(dev, sw); },
     type: async (t) => { await wake(dev); return typeText(dev, t); },
     home: async () => { await wake(dev); return wda(dev, 'POST', '/wda/homescreen'); },
-  }, { maxSteps });
+  }, { maxSteps, family: isResearch(task) ? aiModel('research') : aiModel('tasks') });
   watchAgent(dev, task);
 }
 
@@ -1219,7 +1222,7 @@ const server = http.createServer(async (req, res) => {
       hasMagnificKey: !!(process.env.MAGNIFIC_API_KEY || config.magnificKey),
       hasKieKey: !!config.kieKey,
       keyLooksWrong: !!(config.apiKey && !/^sk-ant-/.test(config.apiKey)),
-      typingSpeed: typingSpeed(),
+      typingSpeed: typingSpeed(), aiModels: { research: aiModel('research'), tasks: aiModel('tasks') },
       cleanupDays: config.cleanupDays || 0,
       mediaUsb: config.mediaUsb !== false,
       telegram: { bot: tgCfg().bot || '', linked: !!(tgCfg().token && tgCfg().chatId), chatName: tgCfg().chatName || '', events: { ...TG_EVENTS, ...(tgCfg().events || {}) } },
@@ -1572,6 +1575,7 @@ const server = http.createServer(async (req, res) => {
     if (b.magnificKey !== undefined) config.magnificKey = String(b.magnificKey || '').trim();
     if (b.mediaUsb !== undefined) { config.mediaUsb = !!b.mediaUsb; for (const d of devices.values()) { d.usbSkipUntil = 0; d.usbInfo = ''; } }
     if (b.cleanupDays !== undefined) config.cleanupDays = [0, 14, 30, 60, 90].includes(+b.cleanupDays) ? +b.cleanupDays : 0;
+    if (b.aiModels && typeof b.aiModels === 'object') { config.aiModels = config.aiModels || {}; for (const k of ['research', 'tasks']) if (MODEL_FAMS.includes(b.aiModels[k])) config.aiModels[k] = b.aiModels[k]; }
     if (b.typingSpeed !== undefined) config.typingSpeed = Math.max(1, Math.min(60, parseInt(b.typingSpeed, 10) || 60));
     fs.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2), () => {});
     return json(res, 200, { ok: true });

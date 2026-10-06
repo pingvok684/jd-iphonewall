@@ -293,6 +293,8 @@
   .keyspanel { grid-column: 1 / -1; } .keyrow { padding: 12px 14px; margin-top: 10px; border-radius: 14px; background: rgba(255,255,255,.035); border: 1px solid var(--line); }
   .keyrow .kh { display: flex; align-items: center; gap: 10px; } .keyrow .kh b { font-size: 15px; } .keyrow .kst { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--muted); }
   .keyrow .sub { margin: 4px 0 10px; } .kbtns { display: flex; gap: 8px; flex-wrap: wrap; } .kbtns a.btn { text-decoration: none; }
+  .kmodels { display: grid; gap: 8px; margin: 0 0 12px; } .kmodels .ctl { display: flex; align-items: center; gap: 10px; } .kmodels .ctl span { flex: 1; font-size: 13px; } .kmodels select { max-width: 60%; }
+  @media (max-width: 600px) { .kmodels .ctl { flex-direction: column; align-items: stretch; } .kmodels select { max-width: none; } }
   .keyadv { margin-top: 10px; font-size: 13px; } .keyadv summary { cursor: pointer; color: var(--muted); }
   .nitem .ntitle { font-size: 22px; font-weight: 800; letter-spacing: -.01em; margin-bottom: 2px; background: linear-gradient(90deg, #ff4f76, #ffb547); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .reshelp { margin-bottom: 12px; font-size: 13.5px; color: var(--muted); } .reshelp summary { cursor: pointer; color: var(--text); font-weight: 600; } .reshelp ol { margin: 10px 0 0; padding-left: 20px; line-height: 1.6; } .reshelp b { color: var(--text); }
@@ -1198,6 +1200,11 @@
         <div class="keyrow">
           <div class="kh"><b>Claude (Anthropic)</b><span class="kst" id="keyState">—</span></div>
           <p class="sub">Potrebný pre AI ovládanie telefónov a šablóny – AI vidí obrazovku a ťuká.</p>
+          <div class="kmodels">
+            <label class="ctl"><span>Model pre prieskum reels</span><select id="mdlResearch"><option value="haiku">Haiku – najlacnejší (odporúčané)</option><option value="sonnet">Sonnet – presnejší, drahší</option></select></label>
+            <label class="ctl"><span>Model pre ostatné úlohy (plánovanie, šablóny)</span><select id="mdlTasks"><option value="sonnet">Sonnet (odporúčané)</option><option value="haiku">Haiku – lacnejší, môže sa častejšie pomýliť</option><option value="opus">Opus – najpresnejší, najdrahší</option></select></label>
+            <small class="hint" id="mdlMsg"></small>
+          </div>
           <div class="kbtns"><button class="go" id="keybtn">Nastaviť kľúč</button><a class="btn" href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener">💳 Kúpiť kredit</a><a class="btn ghost" href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">🔑 Vytvoriť kľúč</a></div>
         </div>
         <div class="keyrow">
@@ -1649,6 +1656,7 @@ async function loadSettings() {
   const km = document.getElementById('kieModel'); if (d.kieModel && ![...km.options].some((o) => o.value === d.kieModel)) km.insertAdjacentHTML('beforeend', `<option value="${esc(d.kieModel)}">${esc(d.kieModel)}</option>`); km.value = d.kieModel || 'claude-sonnet-5';
   document.getElementById('aiUsing').innerHTML = d.aiUsing === 'kie' ? 'Popisy idú cez <b>KIE</b>.' + (d.hasClaudeKey ? ' AI klikanie ide cez Claude.' : ' <span style=\"color:var(--warn)\">AI klikanie a šablóny nepôjdu, kým nevložíš Claude kľúč.</span>') : d.aiUsing === 'anthropic' ? 'Popisy aj AI klikanie idú cez <b>Claude priamo</b>.' : '<span style="color:var(--bad)">AI nemá kľúč – nastav KIE alebo Claude kľúč.</span>';
   document.getElementById('kieKeyState').innerHTML = d.hasKieKey ? '<span style="color:var(--ok)">nastavený ✓</span>' : '<span style="color:var(--faint)">nenastavený</span>';
+  if (d.aiModels) { document.getElementById('mdlResearch').value = d.aiModels.research; document.getElementById('mdlTasks').value = d.aiModels.tasks; }
   const ts = document.getElementById('typeSpeed');
   if (d.typingSpeed && ![...ts.options].some((o) => +o.value === d.typingSpeed)) ts.insertAdjacentHTML('beforeend', `<option value="${d.typingSpeed}">${d.typingSpeed} znakov/s</option>`);
   ts.value = String(d.typingSpeed || 60);
@@ -1666,7 +1674,7 @@ async function loadSettings() {
   loadUsage(); loadCleanInfo();
   await loadTemplates();
 }
-const KIND_SK = { agent: 'AI ovládanie telefónov (šablóny, plánovanie)', popisy: 'Návrhy popisov' };
+const KIND_SK = { agent: 'AI ovládanie telefónov (šablóny, plánovanie)', prieskum: 'Prieskum reels', popisy: 'Návrhy popisov' };
 async function loadUsage() {
   let u; try { u = await (await fetch('/api/usage')).json(); } catch (_) { return; }
   document.getElementById('uToday').textContent = usd(u.today); document.getElementById('uMonth').textContent = usd(u.month); document.getElementById('uTotal').textContent = usd(u.total);
@@ -1808,6 +1816,10 @@ document.getElementById('restoreIn').onchange = async (e) => {
     m.textContent = `Obnovené (${j.files} súborov). Stránka sa reštartuje…`; setTimeout(() => location.reload(), 6000); }
   catch (err) { m.textContent = 'Chyba: ' + err.message; }
 };
+['mdlResearch', 'mdlTasks'].forEach((id) => (document.getElementById(id).onchange = async () => {
+  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aiModels: { research: document.getElementById('mdlResearch').value, tasks: document.getElementById('mdlTasks').value } }) });
+  const m = document.getElementById('mdlMsg'); m.textContent = 'Uložené ✓ – platí od ďalšej úlohy'; setTimeout(() => (m.textContent = ''), 2500);
+}));
 document.getElementById('typeSpeed').onchange = async (e) => {
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ typingSpeed: +e.target.value }) });
   const m = document.getElementById('typeSpeedMsg'); m.textContent = 'Uložené ✓'; setTimeout(() => (m.textContent = ''), 2000);

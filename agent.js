@@ -6,18 +6,27 @@ const store = require('./store');
 
 let MODEL = process.env.CLAUDE_MODEL || ''; // prázdne = vyberie sa automaticky najnovší dostupný
 
-// Zistí, aké modely má tvoj API kľúč k dispozícii, a vyberie najnovší Sonnet (rýchly a lacnejší)
-async function pickModel(apiKey) {
+// Zistí, aké modely má tvoj API kľúč k dispozícii (najnovšie prvé)
+let MODEL_IDS = null;
+async function listModels(apiKey, fresh) {
+  if (MODEL_IDS && !fresh) return MODEL_IDS;
   const r = await fetch('https://api.anthropic.com/v1/models?limit=100', {
     headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
   });
   const j = await r.json();
   if (!r.ok) throw new Error((j.error && j.error.message) || `Claude API ${r.status}`);
-  const ids = (j.data || []).map((m) => m.id); // API vracia najnovšie ako prvé
-  const pick = ids.find((id) => /sonnet/i.test(id)) || ids.find((id) => /opus/i.test(id)) || ids[0];
-  if (!pick) throw new Error('API kľúč nemá prístup k žiadnemu modelu');
-  return pick;
+  MODEL_IDS = (j.data || []).map((m) => m.id); // API vracia najnovšie ako prvé
+  if (!MODEL_IDS.length) throw new Error('API kľúč nemá prístup k žiadnemu modelu');
+  return MODEL_IDS;
 }
+// najnovší model danej rodiny: sonnet (presný), haiku (najlacnejší), opus (najdrahší)
+async function modelFor(apiKey, family = 'sonnet', fresh) {
+  if (process.env.CLAUDE_MODEL) return process.env.CLAUDE_MODEL;
+  const ids = await listModels(apiKey, fresh);
+  const fam = /^(haiku|sonnet|opus)$/.test(family) ? family : 'sonnet';
+  return ids.find((id) => id.includes(fam)) || ids.find((id) => /sonnet/i.test(id)) || ids[0];
+}
+const pickModel = (apiKey) => modelFor(apiKey, 'sonnet');
 const MAX_STEPS = parseInt(process.env.AGENT_MAX_STEPS || '90', 10);
 const KEEP_IMAGES = 3; // koľko posledných screenshotov posielať (šetrí peniaze)
 // Premýšľanie modelu vypíname: jeho bloky sú viazané na presnú históriu a tú pri skracovaní
@@ -47,6 +56,11 @@ const TOOLS = [
     properties: { profil: { type: 'string', description: 'profil, ktorého reel pozeráš (ako bol zadaný v úlohe; prázdne = Reels feed)' }, hook: { type: 'string', description: 'prvý text na obrazovke alebo prvá veta' }, format: { type: 'string', description: 'formát videa (napr. tanec, POV, lip-sync, vlog, trend…)' }, prostredie: { type: 'string', description: 'prostredie a outfit' }, hudba: { type: 'string', description: 'pesnička / zvuk, ak je vidieť' }, zhliadnutia: { type: 'string', description: 'počet zhliadnutí, ak je vidieť' } }, required: ['hook', 'format'] } },
   { name: 'done', description: 'Úloha hotová alebo nemožná. Pri prieskume reels daj do summary 3 opakujúce sa trendy, ktoré sa dajú použiť pre náš obsah.', input_schema: { type: 'object', properties: { summary: { type: 'string' } }, required: ['summary'] } },
 ];
+
+const NAV_TOOLS = [...TOOLS.filter((t) => !['reel_note', 'skip_ad'].includes(t.name)),
+  { name: 'reels_ready', description: 'Prvý reel sa prehráva na celú obrazovku – ďalej to preberie aplikácia.', input_schema: { type: 'object', properties: {} } }];
+const REEL_TOOLS = TOOLS.filter((t) => ['reel_note', 'skip_ad'].includes(t.name));
+const REEL_SYSTEM = 'Pozeráš screenshot reelu na Instagrame a zapisuješ si ho pre prieskum obsahu. Vždy zavolaj presne jeden nástroj: skip_ad pri reklame, inak reel_note. Píš po slovensky, stručne.';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -109,27 +123,43 @@ function track(kind, auth, res, phone) {
   try {
     const u = (res && res.usage) || {};
     store.addUsage({ kind, provider: isKie(auth) ? 'KIE' : 'Claude', model: isKie(auth) ? (auth.model || 'claude-sonnet-5') : (res.model || MODEL || ''),
-      input: (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0) * 0.1, output: u.output_tokens || 0, phone });
+      input: (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) * 1.25 + (u.cache_read_input_tokens || 0) * 0.1, output: u.output_tokens || 0, phone });
   } catch (_) {}
 }
-async function callClaude(auth, messages, retried) {
-  if (isKie(auth)) return kieSend(auth, { max_tokens: 1024, system: SYSTEM, tools: TOOLS, messages });
+// prompt caching: pravidlá + nástroje a ustálená časť histórie sa platia len ~10 % ceny pri ďalších krokoch
+const hasImage = (m) => Array.isArray(m.content) && m.content.some((p) => p.type === 'image' || (p.type === 'tool_result' && Array.isArray(p.content) && p.content.some((q) => q.type === 'image')));
+function withCache(messages) {
+  let idx = -1;
+  if (!thinkingOff) idx = messages.length - 1; // história sa nemení → cache až po koniec
+  else for (let i = 0; i < messages.length - 1; i++) { if (hasImage(messages[i])) break; idx = i; }
+  if (idx < 0) return messages;
+  return messages.map((m, i) => {
+    if (i !== idx) return m;
+    const c = typeof m.content === 'string' ? [{ type: 'text', text: m.content }] : m.content.slice();
+    c[c.length - 1] = { ...c[c.length - 1], cache_control: { type: 'ephemeral' } };
+    return { ...m, content: c };
+  });
+}
+async function callClaude(auth, messages, o = {}) {
+  const system = o.system || SYSTEM, tools = o.tools === undefined ? TOOLS : o.tools, maxTokens = o.maxTokens || 1024;
+  if (isKie(auth)) return kieSend(auth, Object.assign({ max_tokens: maxTokens, system, messages }, tools ? { tools } : {}));
   const apiKey = keyOf(auth);
-  if (!MODEL) MODEL = await pickModel(apiKey);
+  const model = o.model || await modelFor(apiKey, o.family || 'sonnet');
+  const body = { model, max_tokens: maxTokens, system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }], messages: withCache(messages) };
+  if (tools && tools.length) body.tools = tools;
+  if (o.toolChoice && tools && tools.length) body.tool_choice = o.toolChoice;
+  if (thinkingOff) body.thinking = { type: 'disabled' };
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify(Object.assign(
-      { model: MODEL, max_tokens: 1024, system: SYSTEM, tools: TOOLS, messages },
-      thinkingOff ? { thinking: { type: 'disabled' } } : {},
-    )),
+    body: JSON.stringify(body),
   });
   const j = await r.json();
   if (!r.ok) {
     const msg = (j.error && j.error.message) || `Claude API ${r.status}`;
+    if (!o.retried && thinkingOff && /thinking/i.test(msg) && !/signature|block_binding/i.test(msg)) { thinkingOff = false; return callClaude(auth, messages, { ...o, retried: true }); }
     // neplatný / starý názov modelu → vyber znova automaticky
-    if (!retried && thinkingOff && /thinking/i.test(msg) && !/signature|block_binding/i.test(msg)) { thinkingOff = false; return callClaude(auth, messages, true); }
-    if (!retried && (r.status === 404 || /model/i.test(msg))) { MODEL = await pickModel(apiKey); return callClaude(auth, messages, true); }
+    if (!o.retried && (r.status === 404 || /model/i.test(msg))) { const m2 = await modelFor(apiKey, o.family || 'sonnet', true); return callClaude(auth, messages, { ...o, model: m2, retried: true }); }
     throw new Error(msg);
   }
   return j;
@@ -152,26 +182,37 @@ function trimImages(messages) {
 const img = (jpeg) => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: jpeg.toString('base64') } });
 
 // actions: { tap(fx,fy), longPress(fx,fy), swipe({x1,y1,x2,y2,ms}), type(text), home() }  – súradnice 0..1
-async function runAgent(dev, task, apiKey, actions, opts = {}) {
-  const maxSteps = Math.max(10, Math.min(400, Number(opts.maxSteps) || MAX_STEPS));
-  const A = dev.agent;
-  const say = (t) => { A.log.push(t); if (A.log.length > 60) A.log.shift(); };
-  const f = (v) => Math.max(0, Math.min(1000, Number(v) || 0)) / 1000;
-
-  say(`▶ Úloha: ${task}`);
+const sayFor = (A) => (t) => { A.log.push(t); if (A.log.length > 60) A.log.shift(); };
+async function prepModel(apiKey, family, say, extra = '') {
   if (isKie(apiKey) && !process.env.KIE_AGENT) {
     // Claude cez KIE neprijíma obrázky → AI by ťukala naslepo (a mohla by napr. zverejniť namiesto naplánovania). To nedovolíme.
     throw new Error('Ovládanie telefónov cez KIE zatiaľ nejde – KIE neposiela AI obrázok obrazovky. Prepni v Nastaveniach „AI klikanie… cez“ na Claude priamo a vlož Claude kľúč.');
   }
-  if (isKie(apiKey)) say(`🧠 Model: ${apiKey.model || 'claude-sonnet-5'} (cez KIE)`);
-  else { if (!MODEL) MODEL = await pickModel(keyOf(apiKey)); say(`🧠 Model: ${MODEL}`); }
-  const messages = [{ role: 'user', content: [{ type: 'text', text: `Úloha: ${task}\nAktuálna obrazovka:` }, img(await grabFrame(dev.mjpegPort))] }];
+  if (isKie(apiKey)) { say(`🧠 Model: ${apiKey.model || 'claude-sonnet-5'} (cez KIE)`); return null; }
+  const model = await modelFor(keyOf(apiKey), family);
+  say(`🧠 Model: ${model}${extra}`);
+  return model;
+}
+
+async function runAgent(dev, task, apiKey, actions, opts = {}) {
+  const say = sayFor(dev.agent);
+  say(`▶ Úloha: ${task}`);
+  const model = await prepModel(apiKey, opts.family, say);
+  await agentLoop(dev, apiKey, actions, { task, model, maxSteps: opts.maxSteps });
+}
+
+// jedna AI úloha: screenshot → akcia → screenshot … (vráti { status: done|ready|stopped|limit|end, summary })
+async function agentLoop(dev, apiKey, actions, o) {
+  const maxSteps = Math.max(10, Math.min(400, Number(o.maxSteps) || MAX_STEPS));
+  const A = dev.agent, say = sayFor(A), tools = o.tools || TOOLS, kind = o.kind || 'agent';
+  const f = (v) => Math.max(0, Math.min(1000, Number(v) || 0)) / 1000;
+  const messages = [{ role: 'user', content: [{ type: 'text', text: `Úloha: ${o.task}\nAktuálna obrazovka:` }, img(await grabFrame(dev.mjpegPort))] }];
 
   for (let step = 1; step <= maxSteps; step++) {
-    if (A.stop) { say('■ Zastavené'); return; }
+    if (A.stop) { say('■ Zastavené'); return { status: 'stopped' }; }
     if (thinkingOff) trimImages(messages);
-    const res = await callClaude(apiKey, messages);
-    track('agent', apiKey, res, dev.label);
+    const res = await callClaude(apiKey, messages, { model: o.model, tools });
+    track(kind, apiKey, res, dev.label);
     // bloky premýšľania si necháme len vtedy, keď sa premýšľanie nedá vypnúť (vtedy históriu nemeníme)
     const content = thinkingOff ? res.content.filter((b) => b.type !== 'thinking' && b.type !== 'redacted_thinking') : res.content;
     messages.push({ role: 'assistant', content });
@@ -179,10 +220,10 @@ async function runAgent(dev, task, apiKey, actions, opts = {}) {
     const text = res.content.filter((c) => c.type === 'text').map((c) => c.text.trim()).filter(Boolean).join(' ');
     if (text) say(`💬 ${text}`);
     const uses = res.content.filter((c) => c.type === 'tool_use');
-    if (!uses.length) { say('✓ Koniec'); return; }
+    if (!uses.length) { say('✓ Koniec'); return { status: 'end', summary: text }; }
 
     const results = [];
-    let finished = false;
+    let finished = false, status = 'done', summary = '';
     for (const u of uses) {
       const i = u.input || {};
       let out = 'OK';
@@ -201,13 +242,14 @@ async function runAgent(dev, task, apiKey, actions, opts = {}) {
             try { n.jpg = await grabFrame(dev.mjpegPort); } catch (_) {}
             A.reelNotes.push(n); say(`📝 Reel ${A.reelNotes.length}: ${n.hook.slice(0, 80)}`); out = `Zapísané (reel ${A.reelNotes.length}).`; break;
           }
-          case 'done': say(`✓ Hotovo: ${i.summary || ''}`); A.summary = String(i.summary || ''); finished = true; break;
+          case 'done': summary = String(i.summary || ''); if (!o.quietDone) say(`✓ Hotovo: ${summary}`); A.summary = summary; finished = true; break;
+          case 'reels_ready': say('▶ reely sú otvorené – ďalej posúva appka'); status = 'ready'; finished = true; break;
           default: out = 'Neznámy nástroj';
         }
       } catch (e) { out = `Chyba: ${e.message}`; say(`⚠ ${e.message}`); }
       results.push({ type: 'tool_result', tool_use_id: u.id, content: [{ type: 'text', text: out }] });
     }
-    if (finished) return;
+    if (finished) return { status, summary };
 
     await sleep(1200); // nech sa obrazovka prekreslí
     const last = results[results.length - 1];
@@ -215,12 +257,70 @@ async function runAgent(dev, task, apiKey, actions, opts = {}) {
     messages.push({ role: 'user', content: results });
   }
   say(`■ Limit ${maxSteps} krokov – zastavujem`);
+  return { status: 'limit' };
+}
+
+
+// ---------- prieskum reels: AI otvorí profil, posúvanie robí appka a AI sa pozrie raz na každý reel ----------
+const isResearchTask = (t) => /Profil na prieskum:/.test(t || '') && /pozri\s+\d+\s+reel/i.test(t || '');
+async function runResearch(dev, task, apiKey, actions, opts = {}) {
+  const A = dev.agent, say = sayFor(A);
+  const profs = (((task.match(/Profil na prieskum:\s*„([^“”"]*)[“”"]/) || [])[1]) || '').split(/\s*[,;]\s*/).map((x) => x.trim()).filter(Boolean);
+  const want = Math.max(1, Math.min(50, parseInt((task.match(/pozri\s+(\d+)\s+reel/i) || [])[1], 10) || 5));
+  say(`▶ Úloha: ${task}`);
+  const model = await prepModel(apiKey, opts.family || 'haiku', say, ' · posúvanie robí appka, AI sa pozrie raz na každý reel');
+  A.reelNotes = []; A.ads = 0; A.swipes = 0;
+  const up = () => actions.swipe({ x1: 0.5, y1: 0.75, x2: 0.5, y2: 0.25, ms: 280 });
+  for (const [pi, p] of (profs.length ? profs : ['']).entries()) {
+    if (A.stop) { say('■ Zastavené'); return; }
+    if (pi) say(`→ ďalší profil: ${p}`);
+    const nav = (p
+      ? `Otvor Instagram. Ťukni na Hľadať (lupa), napíš „${p}“ a otvor správny účet (pri mene osobnosti vyber overený účet s modrou fajkou alebo ten s najviac sledovateľmi). Na jeho profile otvor záložku Reels a ťukni na prvý reel.`
+      : 'Otvor Instagram a prejdi do záložky Reels.')
+      + ' Keď sa reel prehráva na celú obrazovku, zavolaj reels_ready. Nič nelajkuj, nesleduj, nekomentuj ani nezdieľaj. Ak sa profil nedá nájsť, zavolaj done a napíš prečo.';
+    const r = await agentLoop(dev, apiKey, actions, { task: nav, model, maxSteps: 35, tools: NAV_TOOLS, kind: 'prieskum', quietDone: true });
+    if (r.status === 'stopped') return;
+    if (r.status !== 'ready') { say(`⚠ ${p || 'Reels'}: reely sa nepodarilo otvoriť${r.summary ? ' – ' + r.summary : ''}`); continue; }
+    let seen = 0, ads = 0;
+    while (seen < want && ads < 15) {
+      if (A.stop) { say('■ Zastavené'); return; }
+      await sleep(2500); // nech sa reel načíta a ukáže hook
+      const jpg = await grabFrame(dev.mjpegPort);
+      const res = await callClaude(apiKey, [{ role: 'user', content: [{ type: 'text', text: `Profil: ${p || 'Reels feed'} – reel ${seen + 1} z ${want}. Ak je to reklama (Sponsored / Sponzorované / Reklama / Ad, tlačidlo Shop now / Learn more / Install / Nakupovať), zavolaj skip_ad. Inak zavolaj reel_note (profil vyplň „${p || 'Reels feed'}“).` }, img(jpg)] }],
+        { model, system: REEL_SYSTEM, tools: REEL_TOOLS, toolChoice: { type: 'any' }, maxTokens: 400 });
+      track('prieskum', apiKey, res, dev.label);
+      const u = (res.content || []).find((c) => c.type === 'tool_use') || {};
+      const i = u.input || {};
+      if (u.name === 'skip_ad') { ads++; A.ads++; say('⏭ reklama – preskakujem'); }
+      else {
+        seen++;
+        const n = { profil: p || 'Reels feed', hook: String(i.hook || '').trim(), format: String(i.format || '').trim(), prostredie: String(i.prostredie || '').trim(), hudba: String(i.hudba || '').trim(), zhliadnutia: String(i.zhliadnutia || '').trim(), jpg };
+        A.reelNotes.push(n); say(`📝 Reel ${A.reelNotes.length}: ${(n.hook || '—').slice(0, 80)}`);
+      }
+      if (seen < want) { await up(); A.swipes++; }
+    }
+  }
+  // trendy zo všetkých poznámok – jedno krátke textové volanie
+  let summary = '';
+  if (A.reelNotes.length) {
+    const list = A.reelNotes.map((n, k) => `${k + 1}. [${n.profil}] ${n.hook} | ${n.format} | ${n.prostredie} | ${n.hudba} | ${n.zhliadnutia}`).join('\n');
+    try {
+      const res = await callClaude(apiKey, [{ role: 'user', content: `Poznámky z prezretých reelov:\n${list}\n\nNapíš 3 opakujúce sa trendy, ktoré by sa dali použiť pre náš obsah – očíslované, každý jednou vetou, po slovensky. Nič iné nepíš.` }],
+        { model, system: 'Si analytik obsahu na Instagrame. Odpovedáš stručne po slovensky.', tools: null, maxTokens: 500 });
+      track('prieskum', apiKey, res, dev.label);
+      summary = (res.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('\n').trim();
+    } catch (e) { say(`⚠ trendy: ${e.message}`); }
+  }
+  try { await actions.home(); say('⌂ domov'); } catch (_) {}
+  A.summary = summary;
+  if (!A.reelNotes.length) throw new Error('Nepodarilo sa pozrieť žiadny reel.');
+  say(`✓ Hotovo: prezreté reely ${A.reelNotes.length}${A.ads ? `, preskočené reklamy ${A.ads}` : ''}. ${summary}`);
 }
 
 function startAgent(dev, task, apiKey, actions, opts) {
   if (dev.agent && dev.agent.running) throw new Error('Agent už beží');
   dev.agent = { running: true, stop: false, log: [] };
-  runAgent(dev, task, apiKey, actions, opts)
+  (isResearchTask(task) && !isKie(apiKey) ? runResearch : runAgent)(dev, task, apiKey, actions, opts || {})
     .catch((e) => dev.agent.log.push(`⚠ ${e.message}`))
     .finally(() => { dev.agent.running = false; });
 }
@@ -233,11 +333,11 @@ async function askText(auth, system, content, maxTokens = 1200) {
     return (j.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('\n').trim();
   }
   const apiKey = keyOf(auth);
-  if (!MODEL) MODEL = await pickModel(apiKey);
+  const model = await pickModel(apiKey);
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content }] }),
+    body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content }] }),
   });
   const j = await r.json();
   if (!r.ok) throw new Error((j.error && j.error.message) || `Claude API ${r.status}`);
