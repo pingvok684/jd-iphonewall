@@ -285,10 +285,10 @@ const loadLib = async () => { try { LIB = await (await fetch('/api/library')).js
 const libItem = (id) => LIB.find((x) => x.id === id);
 const usedText = (it) => (it && it.used && it.used.length) ? 'Použité: ' + it.used.map((u) => `${phoneLabel(u.udid)} (${new Date(u.at).toLocaleDateString('sk-SK')})`).join(', ') : '';
 // upozornenie: rovnaké médium na rovnakom účte druhýkrát
-function dupCheck(rows) {
+function dupCheck(rows, skipCal) {
   const w = [];
   for (const r of rows) for (const f of r.files) { const it = libItem(f.id); if (!it) continue;
-    for (const u of r.phones) { const hit = (it.used || []).find((x) => x.udid === u); if (hit) w.push(`• ${f.name} → ${phoneLabel(u)} (už použité ${new Date(hit.at).toLocaleDateString('sk-SK')})`); } }
+    for (const u of r.phones) { const hit = (it.used || []).find((x) => x.udid === u && (!skipCal || x.calId !== skipCal)); if (hit) w.push(`• ${f.name} → ${phoneLabel(u)} (už použité ${new Date(hit.at).toLocaleDateString('sk-SK')})`); } }
   return !w.length || confirm('Tieto médiá už boli na danom účte použité:\n' + w.join('\n') + '\n\nNaozaj ich chceš použiť znova?');
 }
 // výber z knižnice – najprv súbory daného telefónu (každý telefón má vlastnú knižnicu)
@@ -400,7 +400,8 @@ const planFiles = (st) => st.files.filter((f) => f.id).map((f) => ({ id: f.id, n
 
 // ---------- výber telefónov (na ktorý telefón ide daný príspevok) ----------
 const phoneList = () => [...cards.values()].map((c) => c.d).filter(Boolean);
-const fullLabel = (d) => d ? d.label + (d.profile && d.profile.handle ? ` (@${d.profile.handle})` : '') : 'telefón';
+const igName = (h) => { h = String(h || '').trim(); const m = h.match(/instagram\.com\/([A-Za-z0-9._]+)/i); return m ? m[1] : h.replace(/^@+/, '').replace(/[/?#].*$/, ''); };
+const fullLabel = (d) => d ? d.label + (d.profile && d.profile.handle ? ` (@${igName(d.profile.handle)})` : '') : 'telefón';
 const phoneLabel = (u) => fullLabel(phoneList().find((p) => p.udid === u));
 function chipsHtml(sel, attr = 'data-ph') {
   const ph = phoneList();
@@ -569,7 +570,7 @@ function askVars(title, vars, kind, defUdid) {
         ? `<select data-i="${i}">${opts.map((o) => `<option>${esc(o)}</option>`).join('')}</select>`
         : /dátum a čas/i.test(label) ? dtPicker(i)
         : /popis/i.test(label) ? `<textarea data-i="${i}" rows="3"></textarea>${kind ? capHtml() : ''}`
-        : /pesnič/i.test(label) ? musicHtml(`data-i="${i}"`)
+        : /pesnič/i.test(label) ? musicHtml(`data-i="${i}"`, kind === 'reel' || kind === 'carousel' ? 'nie' : '')
         : /^profil/i.test(label) ? `<input data-i="${i}" data-prof placeholder="napr. @sophieraiin – viac profilov oddeľ čiarkou"><div class="rprofs" data-rp hidden><small>Naposledy použité – klikni a vyber aj viac:</small><div class="rpl"></div></div>`
         : /^odkaz v story/i.test(label) ? `<input data-i="${i}" data-recent="jd-story-links" type="url" placeholder="https://…"><div class="rprofs" data-rp hidden><small>Naposledy použité – klikni a vlož:</small><div class="rpl"></div></div>`
         : /^text na tlačidle/i.test(label) ? `<input data-i="${i}" data-recent="jd-story-linktexts" placeholder="napr. Klikni sem"><div class="rprofs" data-rp hidden><small>Naposledy použité – klikni a vlož:</small><div class="rpl"></div></div>`
@@ -645,6 +646,12 @@ async function applyTemplateByName(name, target) {
     const r = await askMulti(t, defUdid);
     if (!r) return false;
     target.value = r.text; delete target.dataset.plan; delete target.dataset.maxSteps;
+    if (r.steps && r.autoRun) {
+      // Publikovať z karty Kontrola → plán sa spustí hneď, netreba klikať Spustiť
+      runSteps(r.steps, defUdid);
+      target.value = ''; toast(`🚀 Spustené: ${r.steps.length} ${r.steps.length === 1 ? 'príspevok' : r.steps.length < 5 ? 'príspevky' : 'príspevkov'} – priebeh uvidíš pri telefónoch.`);
+      return true;
+    }
     if (r.steps) target.dataset.plan = JSON.stringify(r.steps); else target.dataset.maxSteps = r.maxSteps;
     target.focus();
     return true;
@@ -701,9 +708,10 @@ async function loadRecentMusic() {
   } catch (_) {}
 }
 loadRecentMusic();
-function musicHtml(extra = 'data-mus') {
+function musicHtml(extra = 'data-mus', def = '') {
+  const off = def === 'nie';
   return `<div class="mus" ${extra}><div class="muschips">
-    <button type="button" class="musc on" data-mv="">🔥 Prvá v ponuke</button><button type="button" class="musc" data-mv="nie">🔇 Bez hudby</button>
+    <button type="button" class="musc${off ? '' : ' on'}" data-mv="">🔥 Prvá v ponuke</button><button type="button" class="musc${off ? ' on' : ''}" data-mv="nie">🔇 Bez hudby</button>
     ${RECENT_MUSIC.map((m) => `<button type="button" class="musc" data-mv="${esc(m)}" title="Naposledy použitá">🎵 ${esc(m)}</button>`).join('')}
     <button type="button" class="musc" data-mv="__own">✏️ Iná pesnička…</button></div>
     <input class="musown" placeholder="Názov pesničky – interpret" hidden></div>`;
@@ -738,7 +746,7 @@ function askMulti(t, defUdid) {
       <div class="fld" data-allph><span>Telefón pre všetky (alebo vyber pri každom zvlášť nižšie)</span>${chipsHtml([], 'data-allbox')}</div>
       <small class="hint">Pri každom príspevku vyber, či je to <b>reel</b> alebo <b>carousel</b>, a pretiahni k nemu video / fotky – pred plánovaním sa pošlú do galérie iPhonu ako najnovšie, takže AI vyberie presne ich. Bez médií: použijú sa najnovšie videá / fotky, ktoré už sú v iPhone. Čas zadávaš slovenský, najskôr ~20 min dopredu.</small>
       <div class="mitems" data-items></div>
-      <div class="mact"><button data-x>Zrušiť</button><button class="go" data-ok>Vložiť príkaz</button></div></div>`;
+      <div class="mact"><button data-x>Zrušiť</button><button class="go" data-ok>Kontrola →</button></div></div>`;
     document.body.appendChild(bg);
     const stopClock = startClock(bg);
     const items = bg.querySelector('[data-items]');
@@ -750,16 +758,16 @@ function askMulti(t, defUdid) {
         d: el.querySelector('[data-d]').value, h: el.querySelector('[data-h]').value, m: el.querySelector('[data-m]').value }));
       for (let i = kinds.length; i < n; i++) kinds[i] = kinds[i - 1] || defKind; // nový príspevok = typ ako predchádzajúci
       kinds.length = n;
-      const base = new Date(Date.now() + 30 * 60000);
+      const base = new Date(Date.now() + 30 * 60000); // dnes – prvý príspevok o ~30 min, ďalšie vždy o hodinu neskôr (zmeň si podľa seba)
       items.innerHTML = [...Array(n)].map((_, i) => {
         const k = kinds[i], isReel = k === 'reel';
-        const def = new Date(base.getTime() + i * 24 * 3600000); // predvolene každý deň v rovnakom čase – uprav si podľa seba
+        const def = new Date(base.getTime() + i * 3600000);
         return `<div class="mitem2"><div class="mtit">${n > 1 ? `Príspevok ${i + 1}` : 'Príspevok'}</div>
           <div class="mkinds"><button type="button" class="mkind${isReel ? ' on' : ''}" data-kind="reel">🎬 Reel<small>1 video</small></button><button type="button" class="mkind${isReel ? '' : ' on'}" data-kind="carousel">🖼️ Carousel<small>1 až 20 fotiek</small></button></div>
           <div class="fld"><span>Telefón</span>${chipsHtml(defUdid ? [defUdid] : [])}</div>${dropHtml(k)}
           ${isReel ? '' : `<label><span>Počet fotiek</span><select data-cnt>${Array.from({ length: 20 }, (_, k) => k + 1).map((c) => `<option${c === 3 ? ' selected' : ''}>${c}</option>`).join('')}</select></label>`}
           <div class="fld" data-capwrap><span>Popis + #hashtagy</span><textarea data-cap rows="2"></textarea>${capHtml()}</div>
-          <div class="fld"><span>Hudba</span>${musicHtml()}</div>
+          <div class="fld"><span>Hudba</span>${musicHtml('data-mus', 'nie')}</div>
           <label><span>Dátum a čas</span>${dtPicker(i, def)}<small class="hint us-conv" data-conv></small></label></div>`;
       }).join('');
       old.forEach((o, i) => { const el = items.children[i]; if (!el) return;
@@ -836,7 +844,36 @@ function askMulti(t, defUdid) {
       const what = [nR ? `${nR} ${nR === 1 ? 'reel' : nR < 5 ? 'reely' : 'reelov'}` : '', nC ? `${nC} ${nC === 1 ? 'carousel' : nC < 5 ? 'carousely' : 'carouselov'}` : ''].filter(Boolean).join(' + ');
       const summary = `📦 Plán: ${what} v Meta Business Suite` + (withFiles ? '. Pred každým pošlem jeho médiá do galérie (budú na 1. mieste), potom ho AI naplánuje' : '') + ':\n' +
         list.map((x, i) => `${i + 1}. ${x.isReel ? '🎬' : '🖼️'} ${x.ph.map(phoneLabel).join(' + ')} · ${x.when}${x.files.length ? ' – ' + x.files.map((f) => f.name).join(', ') : ''}${x.cap ? ' – „' + x.cap.slice(0, 40) + (x.cap.length > 40 ? '…' : '') + '“' : ''}`).join('\n') + '\n(Tento text neupravuj – stlač Spustiť.)';
-      close({ text: summary, steps });
+      showReview(list, place, steps, summary);
+    };
+    // ---------- karta Kontrola: všetko ešte raz prehľadne, potom Publikovať = hneď sa spustí ----------
+    const showReview = (list, place, steps, summary) => {
+      const modal = bg.querySelector('.modal');
+      const form = [...modal.children].filter((x) => !x.classList.contains('mhead'));
+      const convs = [...items.children].map((el) => (el.querySelector('[data-conv]') || {}).textContent || '');
+      // náhľad médií príspevku (video sa dá prehrať)
+      const prevHtml = (i) => {
+        const fs = ((drops[i] && drops[i].files) || []).filter((f) => f.id && (f.url || f.id));
+        if (!fs.length) return '<div class="mrv-prev none">Bez náhľadu – AI použije najnovšie médiá, ktoré už sú v iPhone.</div>';
+        return `<div class="mrv-prev">${fs.map((f) => { const u = f.url || `/lib/${f.id}`; return f.video
+          ? `<video src="${esc(u)}#t=0.1" controls muted playsinline preload="metadata"></video>` : `<img src="${esc(u)}" alt="" loading="lazy">`; }).join('')}</div>`;
+      };
+      const musTxt = (m) => (!m ? '🔥 prvá pesnička v ponuke' : /^nie$/i.test(m) ? '🔇 bez hudby' : '🎵 ' + m);
+      const rv = document.createElement('div'); rv.className = 'mreview';
+      rv.innerHTML = `<div class="mrv-h"><b>Kontrola</b> – skontroluj časy a nastavenia. Po kliknutí na <b>Publikovať</b> sa plán hneď spustí na telefónoch.</div>
+        <div class="kv"><span>Kam zverejniť</span><b>${esc(place)}</b></div>
+        ${list.map((x, i) => `<div class="mrv-it"><div class="mrv-t">${x.isReel ? '🎬 Reel' : `🖼️ Carousel · ${x.cnt} ${x.cnt === 1 ? 'fotka' : x.cnt < 5 ? 'fotky' : 'fotiek'}`}${list.length > 1 ? ` <small>príspevok ${i + 1}</small>` : ''}</div>
+          <div class="kv"><span>📅 Čas (Slovensko)</span><b>${esc(x.when)}</b></div>${convs[i] ? `<div class="mrv-conv">${esc(convs[i])}</div>` : ''}
+          <div class="kv"><span>📱 Telefón</span><b>${x.ph.map((u) => esc(phoneLabel(u))).join(', ')}</b></div>
+          <div class="kv"><span>🎵 Hudba</span><b>${esc(musTxt(x.mus))}</b></div>
+          <div class="kv"><span>🎞️ Médiá</span><b>${x.files.length ? x.files.map((f) => esc(f.name)).join(', ') : 'najnovšie v galérii iPhonu'}</b></div>
+          ${prevHtml(i)}
+          <div class="mrv-cap">${x.cap ? esc(x.cap) : '<i>bez popisu</i>'}</div></div>`).join('')}
+        <div class="mact"><button data-back>← Upraviť</button><span class="sp"></span><button class="go" data-pub>🚀 Publikovať</button></div>`;
+      form.forEach((x) => (x.hidden = true));
+      modal.appendChild(rv); modal.scrollTop = 0;
+      rv.querySelector('[data-back]').onclick = () => { rv.remove(); form.forEach((x) => (x.hidden = false)); };
+      rv.querySelector('[data-pub]').onclick = () => close({ text: summary, steps, autoRun: true });
     };
   });
 }

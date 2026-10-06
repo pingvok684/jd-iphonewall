@@ -56,11 +56,11 @@ async function loadCalendar() {
   const days = [...Array(7)].map((_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
   document.getElementById('calRange').textContent = `${days[0].toLocaleDateString('sk-SK', { day: 'numeric', month: 'numeric' })} – ${days[6].toLocaleDateString('sk-SK', { day: 'numeric', month: 'numeric', year: 'numeric' })}`;
   // riadky = telefóny (pripojené + tie, ktoré majú v týždni príspevok)
-  const rows = devsAll().map((d) => ({ udid: d.udid, label: fullLabel(d) }));
-  for (const e of list) if (!rows.some((r) => r.udid === e.udid)) rows.push({ udid: e.udid, label: e.phone || 'telefón' });
+  const rows = devsAll().map((d) => ({ udid: d.udid, label: fullLabel(d), name: d.label, handle: igName(d.profile && d.profile.handle) }));
+  for (const e of list) if (!rows.some((r) => r.udid === e.udid)) rows.push({ udid: e.udid, label: e.phone || 'telefón', name: e.phone || 'telefón', handle: '' });
   const today = dayStart(new Date()).getTime();
   const head = `<div class="cg-h"></div>` + days.map((d) => `<div class="cg-h${d.getTime() === today ? ' today' : ''}"><b>${DOW[d.getDay()]}</b> ${d.getDate()}. ${d.getMonth() + 1}.</div>`).join('');
-  const body = rows.map((r, ri) => `<div class="cg-ph" style="--pc:${devColor(r.udid, ri)}"><i class="pcd"></i>${esc(r.label)}</div>` + days.map((d) => {
+  const body = rows.map((r, ri) => `<div class="cg-ph" style="--pc:${devColor(r.udid, ri)}" title="${esc(r.label)}"><i class="pcd"></i><span class="cgn"><b>${esc(r.name)}</b>${r.handle ? `<small>@${esc(r.handle)}</small>` : ''}</span></div>` + days.map((d) => {
     const items = list.filter((e) => e.udid === r.udid && dayStart(e.when).getTime() === d.getTime()).sort((a, b) => a.when.localeCompare(b.when));
     const past = d.getTime() < today;
     return `<div class="cg-c${items.length ? '' : ' cg-empty'}${past ? ' past' : ''}" data-u="${r.udid}" data-day="${d.getTime()}">${items.map((e) => `<button type="button" class="ce s-${STATUS[e.status] || 'off'}" data-ce="${e.id}" style="--pc:${devColor(r.udid, ri)}">
@@ -75,20 +75,27 @@ async function loadCalendar() {
   loadCalStrip();
   const free = rows.map((r) => ({ r, n: days.filter((d) => d.getTime() >= today && !list.some((e) => e.udid === r.udid && dayStart(e.when).getTime() === d.getTime())).length }));
   document.getElementById('calSum').innerHTML = `${list.length} ${list.length === 1 ? 'príspevok' : 'príspevkov'} v týždni` +
-    (free.some((f) => f.n) ? ' · voľné dni: ' + free.filter((f) => f.n).map((f) => `${esc(f.r.label)} ${f.n}`).join(', ') : '');
+    (free.some((f) => f.n) ? ' · voľné dni: ' + free.filter((f) => f.n).map((f) => `${esc(f.r.name)} ${f.n}`).join(', ') : '');
 }
 // deň z kalendára → čas: dnes o ~hodinu (aspoň 25 min dopredu), iné dni 19:00
 function calDate(dayMs) {
   const d = new Date(dayMs); d.setHours(19, 0, 0, 0);
-  const min = Date.now() + 25 * 60000;
-  if (d.getTime() < min) { const x = new Date(min + 35 * 60000); x.setMinutes(Math.ceil(x.getMinutes() / 5) * 5, 0, 0); return x; }
-  return d;
+  const min = Date.now() + 25 * 60000; // Meta dovolí naplánovať najskôr ~20 min dopredu
+  if (d.getTime() >= min) return d;
+  // dnes po 19:00 → najbližší možný čas (zaokrúhlený na 5 min), ale stále v ten istý deň
+  const x = new Date(min); x.setMinutes(Math.ceil(x.getMinutes() / 5) * 5, 0, 0);
+  if (dayStart(x).getTime() !== dayStart(new Date(dayMs)).getTime()) { toast('Na dnes sa už nedá naplánovať – Meta potrebuje aspoň 20 minút dopredu. Nastavím najbližší možný čas.'); }
+  return x;
 }
 // pás knižnice nad kalendárom: ťahaj médiá na deň
 async function loadCalStrip() {
   await loadLib();
   const f = document.getElementById('csFilter').value;
-  const items = LIB.filter((x) => f === 'all' || !(x.used || []).length).slice(0, 80);
+  const devs = devsAll(), sel = OB.calPh || '';
+  const owned = (u) => LIB.filter((x) => (x.owners || []).includes(u)).length;
+  document.getElementById('calPhTabs').innerHTML = [['', 'Všetky', LIB.length, ''], ...devs.map((d, i) => [d.udid, d.label, owned(d.udid), devColor(d.udid, i)]), ['none', 'Nepriradené', LIB.filter((x) => !(x.owners || []).length).length, '']]
+    .map(([u, n, c, col]) => `<button type="button" class="csph${sel === u ? ' on' : ''}" data-ph="${esc(u)}"${col ? ` style="--pc:${col}"` : ''}>${col ? '<i class="pcd"></i>' : ''}${esc(n)} <small>${c}</small></button>`).join('');
+  const items = LIB.filter((x) => (f === 'all' || !(x.used || []).length) && (!sel || (sel === 'none' ? !(x.owners || []).length : (x.owners || []).includes(sel)))).slice(0, 80);
   const box = document.getElementById('calStripList');
   box.innerHTML = items.map((it) => { const o = (it.owners || [])[0];
     return `<div class="cs-it" draggable="true" data-lid="${it.id}" title="${esc(it.name)}${(it.owners || []).length ? ' · ' + esc((it.owners || []).map(ownerLabel).join(', ')) : ''}">
@@ -99,6 +106,7 @@ async function loadCalStrip() {
 function initCalDrag() {
   const strip = document.getElementById('calStripList'), grid = document.getElementById('calGrid');
   document.getElementById('csFilter').onchange = loadCalStrip;
+  document.getElementById('calPhTabs').onclick = (e) => { const b = e.target.closest('[data-ph]'); if (!b) return; OB.calPh = b.dataset.ph; loadCalStrip(); };
   strip.addEventListener('dragstart', (e) => { const it = e.target.closest('[data-lid]'); if (!it) return; e.dataTransfer.setData('text/plain', 'jdlib:' + it.dataset.lid); e.dataTransfer.effectAllowed = 'copy'; });
   strip.addEventListener('click', (e) => { const it = e.target.closest('[data-lid]'); if (it) openWizard({ files: [it.dataset.lid] }); });
   const cell = (e) => { const c = e.target.closest('.cg-c'); return c && !c.classList.contains('past') ? c : null; };
@@ -123,12 +131,18 @@ function openCalEntry(e) {
     ${e.caption ? `<div class="capshow">${esc(e.caption)}</div>` : ''}
     ${e.proof ? `<div class="fld"><span>Snímka z iPhonu po ${e.status === 'chyba' ? 'chybe' : 'naplánovaní'}</span><a href="/proof/${e.id}" target="_blank"><img class="proofimg" src="/proof/${e.id}" alt="Snímka"></a></div>` : ''}
     <small class="hint">Kalendár je prehľad toho, čo naplánovala stránka. Ak príspevok zmažeš alebo presunieš v Meta Business Suite, uprav tu stav alebo ho zmaž.</small>
-    <div class="mact"><button data-del>${icon('trash')}Zmazať z kalendára</button><span class="sp"></span>${e.task && ['chyba', 'nespustené'].includes(e.status) ? '<button data-retry>Skúsiť znova</button>' : ''}<button class="go" data-x>Hotovo</button></div></div>`;
+    <div class="mact"><button data-del>${icon('trash')}Zmazať z kalendára</button><span class="sp"></span><button data-edit data-tip="Otvorí plánovanie s rovnakými nastaveniami – opravíš, čo treba, a naplánuje sa znova">✏️ Upraviť a naplánovať znova</button>${e.task && ['chyba', 'nespustené'].includes(e.status) ? '<button data-retry>Skúsiť znova</button>' : ''}<button class="go" data-x>Hotovo</button></div></div>`;
   document.body.appendChild(bg);
   const close = () => { bg.remove(); loadCalendar(); };
   bg.onclick = (ev) => { if (ev.target === bg) close(); };
   bg.querySelector('[data-x]').onclick = close;
   const rt = bg.querySelector('[data-retry]'); if (rt) rt.onclick = () => { bg.remove(); retryPost(e.id); };
+  bg.querySelector('[data-edit]').onclick = () => {
+    bg.remove();
+    const when = new Date(e.when);
+    openWizard({ udid: e.udid, files: (e.files || []).map((f) => f.id), kind: e.kind, caption: e.caption || '', music: e.music, place: e.place,
+      date: when.getTime() > minSched().getTime() ? when : undefined, replace: e });
+  };
   bg.querySelector('[data-st]').onchange = (ev) => jfetch('/api/calendar/status', { id: e.id, status: ev.target.value });
   bg.querySelector('[data-del]').onclick = async () => { if (confirm('Zmazať záznam z kalendára? (V Meta Business Suite ostane.)')) { await jfetch('/api/calendar/delete', { id: e.id }); close(); } };
 }
@@ -139,7 +153,7 @@ const shortU = (u) => String(u).slice(-4);
 let PNAMES = {};
 const libColor = (u, i) => (devsAll().some((d) => d.udid === u) ? '' : (PNAMES[u] || {}).color) || devColor(u, i);
 const ownerLabel = (u) => { const d = devsAll().find((p) => p.udid === u); if (d) return fullLabel(d);
-  const n = PNAMES[u] || {}; return n.label ? n.label + (n.handle ? ` (@${n.handle})` : '') : n.handle ? '@' + n.handle : `Telefón …${shortU(u)}`; };
+  const n = PNAMES[u] || {}, h = igName(n.handle); return n.label ? n.label + (h ? ` (@${h})` : '') : h ? '@' + h : `Telefón …${shortU(u)}`; };
 function libPhones() {
   const ids = devsAll().map((d) => d.udid);
   for (const it of LIB) for (const u of it.owners || []) if (!ids.includes(u)) ids.push(u);

@@ -240,9 +240,9 @@ footer kbd{font:500 10.5px/1 var(--f-mono);color:#cfc7bc;background:var(--raise)
 .seg button.on svg{color:var(--acc)}
 .pset{display:flex;flex-direction:column;gap:26px}
 /* zoznam videí */
-#vlist{display:grid;gap:6px}
+#vlist{display:grid;gap:6px;grid-template-columns:minmax(0,1fr);min-width:0;max-width:100%}
 #vlist:empty{display:none}
-.vit{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 10px;border-radius:11px;background:var(--raise);border:1px solid var(--line);cursor:pointer;transition:.18s}
+.vit{min-width:0;max-width:100%;box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:8px 8px 8px 10px;border-radius:11px;background:var(--raise);border:1px solid var(--line);cursor:pointer;transition:.18s}
 .vit:hover{border-color:var(--line2)}
 .vit.on{border-color:var(--acc);background:linear-gradient(90deg,var(--accbg),transparent),var(--raise)}
 .vit .vic{flex:none;width:28px;height:28px;display:grid;place-items:center;border-radius:8px;background:var(--raise2);color:var(--muted)}

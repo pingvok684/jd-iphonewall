@@ -16,7 +16,8 @@ const W_STEPS = ['Účet a typ', 'Médiá', 'Popis', 'Čas', 'Kontrola'];
 async function openWizard(opts = {}) {
   await Promise.all([loadLib(), loadRecentMusic()]);
   const pre = (opts.files || []).map(libItem).filter(Boolean);
-  let kind = pre.length ? (pre[0].kind === 'video' ? 'reel' : 'carousel') : (opts.kind || 'reel');
+  let kind = pre.length ? (pre[0].kind === 'video' ? 'reel' : 'carousel') : (opts.kind === 'carousel' ? 'carousel' : 'reel');
+  const rep = opts.replace || null; // úprava príspevku z kalendára
   const startFiles = pre.filter((x) => (kind === 'reel' ? x.kind === 'video' : x.kind === 'photo')).slice(0, kind === 'reel' ? 1 : 20)
     .map((it) => ({ id: it.id, name: it.name, url: `/lib/${it.id}`, video: it.kind === 'video', pct: 100 }));
   const all = phoneList();
@@ -24,7 +25,9 @@ async function openWizard(opts = {}) {
   let step = 0, libTab = 'mine', st = null, stopClock = () => {};
 
   const bg = document.createElement('div'); bg.className = 'modal-bg';
-  bg.innerHTML = `<div class="modal wiz"><div class="mhead"><h3>Nový príspevok</h3>${clockBox()}</div>${MBS_WARN}
+  bg.innerHTML = `<div class="modal wiz"><div class="mhead"><h3>${rep ? '✏️ Upraviť príspevok' : 'Nový príspevok'}</h3>${clockBox()}</div>${MBS_WARN}
+    ${rep ? `<div class="wrepl"><b>Upravuješ príspevok z ${esc(rep.whenText || new Date(rep.when).toLocaleString('sk-SK'))}</b> · ${esc(rep.phone || '')}
+      <label class="bcheck"><input type="checkbox" data-repdel${rep.status === 'naplánované' ? ' checked' : ''}><span>Najprv zmazať pôvodný príspevok v Meta Business Suite (aby nebol naplánovaný dvakrát)</span></label></div>` : ''}
     <div class="wsteps">${W_STEPS.map((s, i) => `<span data-n="${i + 1}">${i + 1}. ${s}</span>`).join('')}</div>
 
     <div class="wpane" data-p="0">
@@ -44,7 +47,7 @@ async function openWizard(opts = {}) {
     <div class="wpane" data-p="2">
       <div class="fld" data-capwrap><span>Popis + #hashtagy</span><textarea data-cap rows="4" placeholder="Napíš popis alebo pár slov a klikni ✨ Navrhni popis"></textarea>${capHtml()}</div>
       <small class="hint" data-hashtxt></small>
-      <div class="fld"><span>Hudba</span>${musicHtml()}</div>
+      <div class="fld"><span>Hudba</span>${musicHtml('data-mus', 'nie')}</div>
       <div class="fld"><span>Kam zverejniť</span>${placeHtml()}</div>
       <label data-cntrow hidden><span>Počet fotiek (berú sa najnovšie v iPhone)</span><select data-cnt>${Array.from({ length: 20 }, (_, k) => k + 1).map((k) => `<option${k === 3 ? ' selected' : ''}>${k}</option>`).join('')}</select></label>
     </div>
@@ -207,7 +210,7 @@ async function openWizard(opts = {}) {
     // naplánovať
     const ph = phones(), fl = planFiles(st), d = dtpValue($('.dtp'));
     if (d < minSched()) { alert(`Čas medzitým prešiel – najskorší možný je ${fmtSk(minSched())}.`); return go(3); }
-    if (!dupCheck([{ files: fl, phones: ph }])) return;
+    if (!dupCheck([{ files: fl, phones: ph }], rep && rep.id)) return;
     const cap = $('[data-cap]').value.trim(), cnt = kind === 'reel' ? 1 : (fl.length || +$('[data-cnt]').value);
     const btn = $('[data-next]'); btn.disabled = true; btn.textContent = 'Spúšťam…';
     const res = $('[data-res]'); res.innerHTML = '';
@@ -215,15 +218,25 @@ async function openWizard(opts = {}) {
     for (const u of ph) {
       const x = { files: fl, cap: hashFor(u, cap), mus: readMusic($('[data-mus]')), when: fmtSk(d), whenISO: d.toISOString(), cnt };
       const stp = postTask(kind === 'reel', readPlace($('[data-place]')), x, null, kind === 'reel' ? 'Reel' : 'Carousel');
+      if (rep && $('[data-repdel]') && $('[data-repdel]').checked && u === rep.udid) {
+        stp.task = `Najprv v aplikácii Meta Business Suite otvor plánovač (Planner / Content → Scheduled / Naplánované), nájdi príspevok naplánovaný na ${rep.whenText || new Date(rep.when).toLocaleString('sk-SK')}`
+          + (rep.caption ? ` s popisom začínajúcim „${rep.caption.slice(0, 40)}“` : '') + ' a zmaž ho (⋯ → Delete / Zmazať a potvrď). Ak ho nenájdeš, nič iné nemaž a pokračuj. Potom: ' + stp.task;
+        stp.maxSteps = (stp.maxSteps || 120) + 30;
+      }
       let r = {}; try { const rr = await fetch(`/api/${u}/plan`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ steps: [stp] }) }); r = await rr.json(); if (!rr.ok) throw new Error(r.error || 'Chyba'); ok++;
         res.insertAdjacentHTML('beforeend', `<div style="color:var(--ok)">✓ ${esc(phoneLabel(u))}: spustené – najprv pošlem médiá, potom to AI naplánuje.</div>`); }
       catch (e) { res.insertAdjacentHTML('beforeend', `<div style="color:var(--bad)">⚠ ${esc(phoneLabel(u))}: ${esc(e.message)}</div>`); }
     }
     setTimeout(() => poll(), 300);
+    if (ok === ph.length && rep) { try { await jfetch('/api/calendar/delete', { id: rep.id }); } catch (_) {} }
     if (ok === ph.length) { toast(`Spustené na ${ok === 1 ? '1 účte' : ok + ' účtoch'} – priebeh uvidíš v Prehľade (Dnes) a pri telefóne.`); close(); if (view === 'prehlad') loadOverview(); else if (view === 'kalendar') loadCalendar(); }
     else { btn.disabled = false; btn.textContent = 'Skúsiť znova'; }
   };
 
+  // úprava z kalendára: predvyplniť popis, hudbu a kam zverejniť
+  if (opts.caption) $('[data-cap]').value = opts.caption;
+  if (opts.music !== undefined && opts.music !== null) setMusic($('[data-mus]'), opts.music);
+  if (opts.place) $('[data-place]').querySelectorAll('.plcb').forEach((x) => x.classList.toggle('on', x.dataset.pv === opts.place));
   // štart
   bg.querySelectorAll('.wkind').forEach((b) => b.classList.toggle('on', b.dataset.kind === kind));
   buildDrop();

@@ -169,11 +169,18 @@ function removeResearch(id) {
 }
 
 // ---------- profily telefónov ----------
+// „https://www.instagram.com/amy.goth_/“ alebo „@amy.goth_“ → „amy.goth_“
+function cleanHandle(h) {
+  h = String(h || '').trim();
+  const m = h.match(/instagram\.com\/([A-Za-z0-9._]+)/i);
+  return (m ? m[1] : h.replace(/^@+/, '').replace(/[/?#].*$/, '')).slice(0, 40);
+}
+for (const u of Object.keys(profiles)) if (profiles[u] && profiles[u].handle && profiles[u].handle !== cleanHandle(profiles[u].handle)) { profiles[u].handle = cleanHandle(profiles[u].handle); store.writeJson('profiles.json', profiles); }
 const getProfile = (udid) => profiles[udid] || {};
 function setProfile(udid, p) {
   const cur = profiles[udid] || {};
   profiles[udid] = {
-    handle: String(p.handle ?? cur.handle ?? '').trim().replace(/^@?/, '').slice(0, 40),
+    handle: cleanHandle(p.handle ?? cur.handle ?? ''),
     color: /^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : (cur.color || ''),
     note: String(p.note ?? cur.note ?? '').slice(0, 500),
     // stále hashtagy účtu – AI ich pridá do každého návrhu popisu

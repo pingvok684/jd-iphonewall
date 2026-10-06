@@ -226,7 +226,10 @@
   .cg-h { min-height: 0 !important; font-size: 12.5px; color: var(--muted); background: var(--panel-2); position: sticky; top: 0; }
   .cg-h b { color: var(--text); text-transform: uppercase; font-size: 11px; letter-spacing: .05em; margin-right: 4px; }
   .cg-h.today { color: var(--accent-2); } .cg-h.today b { color: var(--accent-2); }
-  .cg-ph { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; background: var(--panel); position: sticky; left: 0; z-index: 1; }
+  .cg-ph { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; background: var(--panel); position: sticky; left: 0; z-index: 1; min-width: 0; overflow: hidden; }
+  .cg-ph .cgn { display: grid; min-width: 0; line-height: 1.25; } .cg-ph .cgn b, .cg-ph .cgn small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .cg-ph .cgn small { color: var(--muted); font-weight: 500; font-size: 11.5px; }
+  .csphs { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; } .csph { padding: 5px 11px; border-radius: 99px; font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.05); border: 1px solid var(--line-2); color: var(--muted); box-shadow: none; }
+  .csph small { opacity: .7; font-weight: 500; } .csph .pcd { width: 8px; height: 8px; border-radius: 50%; background: var(--pc); } .csph.on { background: linear-gradient(180deg, #ff4f76, #e8285a); border-color: #ff4f76; color: #fff; }
   .pcd { width: 9px; height: 9px; border-radius: 50%; background: var(--pc, var(--faint)); flex: none; display: inline-block; }
   .cg-c { display: flex; flex-direction: column; gap: 5px; }
   .cg-c.cg-empty:not(.past) { background: repeating-linear-gradient(135deg, transparent 0 8px, rgba(255,181,71,.035) 8px 16px); }
@@ -309,6 +312,12 @@
   .bcard details { margin-top: 8px; font-size: 12.5px; } .bcard pre { max-height: 260px; overflow: auto; background: #0a0b0f; padding: 10px; border-radius: 10px; font-size: 11.5px; white-space: pre-wrap; }
   .mbswarn { display: grid; gap: 4px; margin: 0 0 14px; padding: 12px 14px; border-radius: 14px; background: linear-gradient(180deg, rgba(255,181,71,.18), rgba(255,140,40,.10)); border: 1.5px solid #ffb547; box-shadow: 0 0 0 3px rgba(255,181,71,.08); font-size: 12.5px; line-height: 1.5; color: var(--text); }
   .mbswarn > b { color: #ffc56b; font-size: 14px; letter-spacing: .01em; }
+  .mreview { display: grid; gap: 10px; } .mrv-h { font-size: 13px; color: var(--muted); padding: 10px 12px; border-radius: 12px; background: rgba(61,220,151,.07); border: 1px solid rgba(61,220,151,.3); } .mrv-h b { color: var(--text); }
+  .mrv-it { padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--line); display: grid; gap: 4px; } .mrv-t { font-weight: 700; font-size: 14.5px; margin-bottom: 2px; } .mrv-t small { color: var(--muted); font-weight: 500; margin-left: 6px; }
+  .mrv-conv { font-size: 12px; color: #ff7a98; text-align: right; } .mrv-cap { margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.25); font-size: 13px; white-space: pre-wrap; max-height: 120px; overflow: auto; }
+  .wrepl { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; background: rgba(255,61,104,.08); border: 1px solid rgba(255,61,104,.35); font-size: 13px; display: grid; gap: 6px; }
+  .mrv-prev { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; } .mrv-prev video, .mrv-prev img { height: 220px; max-width: 100%; border-radius: 12px; background: #000; border: 1px solid var(--line); flex: none; object-fit: cover; } .mrv-prev img { height: 140px; width: 105px; }
+  .mrv-prev.none { font-size: 12px; color: var(--muted); }
   .mbsnote { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(66,133,244,.09); border: 1px solid rgba(66,133,244,.35); font-size: 12.5px; line-height: 1.5; color: var(--text); }
   .reshelp { margin-bottom: 12px; font-size: 13.5px; color: var(--muted); } .reshelp summary { cursor: pointer; color: var(--text); font-weight: 600; } .reshelp ol { margin: 10px 0 0; padding-left: 20px; line-height: 1.6; } .reshelp b { color: var(--text); }
   .rreels { display: grid; gap: 8px; margin-top: 12px; } .rreel { display: grid; grid-template-columns: 28px 1fr; gap: 2px 10px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
@@ -856,7 +865,7 @@
     <div class="vhead"><div><h2>Kalendár</h2><div class="sub" id="calSum">Príspevky naplánované cez stránku</div></div><div class="sp"></div><button class="btn-new" data-newpost><span data-icon="plus"></span>Nový príspevok</button>
       <button id="calPrev" title="Predošlý týždeň">‹</button><span class="chip" id="calRange">—</span><button id="calNext" title="Ďalší týždeň">›</button><button id="calToday">Tento týždeň</button></div>
     <div class="callegend"><span class="s-wait">čaká</span><span class="s-ok">naplánované</span><span class="s-bad">chyba</span><span class="s-off">nespustené</span><span class="sub">· „voľno“ = účet nemá v ten deň nič naplánované</span></div>
-    <div class="panel calstrip"><div class="cs-h"><b>Knižnica</b> · pretiahni video alebo fotku na deň a telefón – otvorí sa plánovanie. Klik na prázdny deň = nový príspevok.<span class="sp"></span><select id="csFilter"><option value="unused">Nepoužité</option><option value="all">Všetko</option></select></div><div class="cs-list" id="calStripList"></div></div>
+    <div class="panel calstrip"><div class="cs-h"><b>Knižnica</b> · pretiahni video alebo fotku na deň a telefón – otvorí sa plánovanie. Klik na prázdny deň = nový príspevok.<span class="sp"></span><select id="csFilter"><option value="unused">Nepoužité</option><option value="all">Všetko</option></select></div><div class="csphs" id="calPhTabs" data-tip="Vyber iPhone – ukážu sa len médiá priradené tomuto telefónu"></div><div class="cs-list" id="calStripList"></div></div>
     <div class="panel calwrap"><div id="calGrid"></div></div>
   </section>
 
