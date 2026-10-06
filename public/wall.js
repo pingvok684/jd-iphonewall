@@ -1,5 +1,29 @@
 // Stena telefónov: živý obraz, dotyky, text, AI úlohy, šablóny, fotky/videá do galérie.
 const grid = document.getElementById('grid');
+// dlaždica „+ Pridať telefón“ – vždy posledná v zozname telefónov
+const addCard = document.createElement('div');
+addCard.className = 'card addcard'; addCard.tabIndex = 0;
+addCard.innerHTML = '<div class="addin"><div class="addplus">+</div><b>Pridať telefón</b><small>nový iPhone, ktorý ešte nie je nastavený</small></div>';
+addCard.onclick = () => openAddPhone();
+addCard.onkeydown = (e) => { if (e.key === 'Enter') openAddPhone(); };
+function openAddPhone() {
+  if (window.jdApp && window.jdApp.setup) return window.jdApp.setup(); // aplikácia: sprievodca nastavením
+  const win = /Windows/i.test(navigator.userAgent);
+  const bg = document.createElement('div'); bg.className = 'modal-bg';
+  bg.innerHTML = `<div class="modal addph"><div class="mhead"><h3>Pridať telefón</h3></div>
+    <ol class="addsteps">
+      <li><b>Pripoj iPhone káblom</b> k počítaču, na ktorom beží JD Phone Studio. Odomkni ho a ťukni <b>Dôverovať</b> (Trust) + zadaj kód.</li>
+      ${win ? '<li><b>Windows:</b> musí byť nainštalované <b>Apple Devices</b> (Microsoft Store) alebo <b>iTunes</b> z apple.com.</li>' : ''}
+      <li><b>WebDriverAgent:</b> ${win ? 'nahraj do iPhonu <b>WebDriverAgent.ipa</b> cez <b>Sideloadly</b> (súbor nájdeš v priečinku aplikácie).' : 'v režime Xcode sa nainštaluje sám (pár minút). Pri Sideloadly nahraj <b>WebDriverAgent.ipa</b>.'}</li>
+      <li>Na iPhone: <b>Nastavenia → Súkromie a bezpečnosť → Režim pre vývojárov → Zapnúť</b> (iPhone sa reštartuje). Potom <b>Nastavenia → Vývojár → Enable UI Automation</b>.</li>
+      <li><b>Nastavenia → Všeobecné → VPN a správa zariadení</b> → ťukni na svoje Apple ID → <b>Dôverovať</b>.</li>
+      <li>Skratka <b>JD Save</b> (fotky cez kábel): <b>Nastavenia → Fotky a videá</b> → naskenuj QR kód.</li>
+    </ol>
+    <p class="hint">Telefón sa v zozname objaví sám do pár sekúnd po pripojení. Ak svieti chyba, prečítaj si hlášku hore na stránke Telefóny.</p>
+    <div class="mact"><a class="btn" href="#navod" data-x>Celý návod</a><button class="go" data-x>Rozumiem</button></div></div>`;
+  document.body.appendChild(bg);
+  bg.onclick = (e) => { if (e.target === bg || e.target.closest('[data-x]')) bg.remove(); };
+}
 const cards = new Map();
 let focused = null;
 let lastDevices = null;
@@ -870,11 +894,11 @@ async function poll() {
   }
   for (const [u, c] of cards) if (!seen.has(u)) { c.img.src = ''; c.el.remove(); cards.delete(u); }
   const list = [...cards.values()].sort((a, b) => a.d.label.localeCompare(b.d.label, 'sk', { numeric: true }));
-  if (!list.length) grid.innerHTML = '<div class="empty">Žiadny iPhone. Pripoj ho USB káblom, odomkni a potvrď „Dôverovať tomuto počítaču“.</div>';
+  if (!list.length) { if (!grid.querySelector('.empty')) { grid.innerHTML = '<div class="empty">Žiadny iPhone. Pripoj ho USB káblom, odomkni a potvrď „Dôverovať tomuto počítaču“.</div>'; } grid.appendChild(addCard); }
   else {
     grid.querySelector('.empty')?.remove();
-    const cur = [...grid.children];
-    if (cur.length !== list.length || list.some((c, i) => cur[i] !== c.el)) list.forEach((c) => grid.appendChild(c.el));
+    const want = [...list.map((c) => c.el), addCard], cur = [...grid.children];
+    if (cur.length !== want.length || want.some((el, i) => cur[i] !== el)) want.forEach((el) => grid.appendChild(el));
   }
   const cnt = plural(list.length, 'telefón', 'telefóny', 'telefónov');
   document.getElementById('count').textContent = cnt;

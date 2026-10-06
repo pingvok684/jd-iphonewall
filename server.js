@@ -232,7 +232,18 @@ function stopDevice(dev) {
 function listDevices() {
   return new Promise((resolve) => {
     execFile(IOS_BIN, ['list', '--details'], { timeout: 8000 }, (err, stdout) => {
-      if (err) { lastListError = err.code === 'ENOENT' ? 'go-ios nie je nainštalovaný – spusti inštaláciu (install)' : String(err.message).slice(0, 200); return resolve(null); }
+      if (err) {
+        if (err.code === 'ENOENT') { lastListError = 'go-ios nie je nainštalovaný – spusti inštaláciu (install)'; return resolve(null); }
+        // podrobnosti zlyhali (napr. iPhone ešte nedôveruje počítaču) → skúsime aspoň zoznam bez podrobností
+        const raw = String(err.message || '') + String(stdout || '');
+        return execFile(IOS_BIN, ['list'], { timeout: 8000 }, (e2, so2) => {
+          const ids = [];
+          for (const line of String(so2 || '').split('\n')) { try { for (const d of JSON.parse(line).deviceList || []) ids.push(typeof d === 'string' ? d : (d.Udid || d.udid)); } catch (_) {} }
+          lastListError = friendlyListError(raw, ids.length);
+          if (ids.length) askTrust(ids);
+          resolve(ids.length ? ids.filter(Boolean).map((u) => ({ udid: u })) : null);
+        });
+      }
       lastListError = null;
       const out = [];
       for (const line of stdout.split('\n')) {
@@ -253,6 +264,24 @@ function listDevices() {
   });
 }
 let lastListError = null;
+// zrozumiteľná hláška namiesto technickej chyby go-ios
+function friendlyListError(raw, found) {
+  const r = String(raw);
+  if (/usbmuxd|could not connect|connection refused|no such file|cannot find the file|pipe/i.test(r) && !found)
+    return 'Počítač nevidí iPhony – chýba ovládač Apple. Windows: nainštaluj „Apple Devices“ z Microsoft Store (alebo iTunes z apple.com), potom aplikáciu zavri a otvor znova. Návod: Telefóny → „+ Pridať telefón“.';
+  if (/failed getting values|pair|lockdown|trust|password|locked/i.test(r))
+    return `iPhone${found > 1 ? 'y' : ''} ešte nedôveruje tomuto počítaču – odomkni ho a ťukni „Dôverovať“ (Trust) a zadaj kód. Ak sa okno neukáže, odpoj a znova pripoj kábel. Návod: „+ Pridať telefón“.`;
+  return 'Telefóny sa nedajú načítať: ' + r.replace(/\s+/g, ' ').slice(0, 220);
+}
+// vyvolá na iPhone okno „Dôverovať tomuto počítaču?“ (max. raz za minútu na telefón)
+const trustAsked = new Map();
+function askTrust(ids) {
+  for (const u of ids) {
+    if (!u || Date.now() - (trustAsked.get(u) || 0) < 60000) continue;
+    trustAsked.set(u, Date.now());
+    execFile(IOS_BIN, ['pair', `--udid=${u}`], { timeout: 30000, windowsHide: true }, () => {});
+  }
+}
 
 async function refresh() {
   const list = await listDevices();

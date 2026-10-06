@@ -646,6 +646,13 @@
   .scqr { width: 150px; padding: 8px; border-radius: 12px; margin: 0; }
   .schow .btn { display: inline-block; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line-2); text-decoration: none; color: var(--text); font-weight: 600; margin-bottom: 6px; }
   @media (max-width: 600px) { .scrow { grid-template-columns: 1fr; } .scqr { width: 170px; } }
+  .addcard { cursor: pointer; border-style: dashed !important; border-color: rgba(255,255,255,.16) !important; background: rgba(255,255,255,.02) !important; min-height: 260px; display: grid !important; place-items: center; transition: border-color .2s, background .2s; box-shadow: none !important; }
+  .addcard:hover, .addcard:focus { border-color: #ff5b80 !important; background: rgba(255,61,104,.06) !important; outline: none; }
+  .addin { display: grid; justify-items: center; gap: 6px; text-align: center; padding: 30px 16px; }
+  .addplus { width: 64px; height: 64px; border-radius: 20px; display: grid; place-items: center; font-size: 40px; font-weight: 300; color: #fff; background: linear-gradient(180deg, #ff4f76, #e8285a); box-shadow: 0 10px 30px rgba(255,61,104,.35); margin-bottom: 6px; }
+  .addin b { font-size: 16px; } .addin small { color: var(--muted); font-size: 12.5px; }
+  .modal.addph { width: min(560px, 100%); }
+  .addsteps { margin: 6px 0 4px; padding-left: 20px; display: grid; gap: 10px; font-size: 14px; line-height: 1.45; }
 </style>
 </head>
 <body>

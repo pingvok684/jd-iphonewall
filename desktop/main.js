@@ -271,11 +271,17 @@ ipcMain.handle('jd:xcodeSetup', () => {
   execFile('open', ['-a', 'Terminal', dst]);
   return true;
 });
-ipcMain.handle('jd:done', () => { state.setupDone = true; saveState(); if (win) win.loadURL(URL); });
+ipcMain.handle('jd:done', () => { state.setupDone = true; state.setupBuild = buildId(); saveState(); if (win) win.loadURL(URL); });
+ipcMain.handle('jd:setup', () => { showWin(); win.loadFile(path.join(__dirname, 'setup.html')); });
 ipcMain.handle('jd:restart', () => restartServer());
 ipcMain.handle('jd:status', () => ({ ...status, log: tail(path.join(LOGS, 'server.log')), appLog: tail(path.join(LOGS, 'app.log'), 6), logs: LOGS }));
 ipcMain.handle('jd:openLogs', () => shell.openPath(LOGS));
 ipcMain.handle('jd:info', () => ({ platform: process.platform, version: ver(HOME), home: HOME, external }));
+
+// identita nainštalovanej verzie aplikácie – po každej novej inštalácii z GitHubu sa znova ukáže sprievodca nastavením
+function buildId() {
+  try { return `${app.getVersion()}-${Math.round(fs.statSync(path.join(process.resourcesPath, 'app.asar')).mtimeMs)}`; } catch (_) { return app.getVersion(); }
+}
 
 // ---------- štart ----------
 app.on('second-instance', showWin);
@@ -315,7 +321,7 @@ app.whenReady().then(async () => {
   while (!(await ping())) await new Promise((r) => setTimeout(r, 800));
   status.ready = true; status.error = ''; step('Hotovo');
   if (!win) return;
-  if (!state.setupDone && !external) win.loadFile(path.join(__dirname, 'setup.html'));
+  if ((!state.setupDone || (app.isPackaged && state.setupBuild !== buildId())) && !external) win.loadFile(path.join(__dirname, 'setup.html'));
   else win.loadURL(URL);
 });
 app.on('window-all-closed', () => {}); // aplikácia beží ďalej v lište
