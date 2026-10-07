@@ -142,6 +142,7 @@ function withCache(messages) {
     return { ...m, content: c };
   });
 }
+const noToolChoice = new Set();
 async function callClaude(auth, messages, o = {}) {
   const system = o.system || SYSTEM, tools = o.tools === undefined ? TOOLS : o.tools, maxTokens = o.maxTokens || 1024;
   if (isKie(auth)) return kieSend(auth, Object.assign({ max_tokens: maxTokens, system, messages }, tools ? { tools } : {}));
@@ -149,7 +150,7 @@ async function callClaude(auth, messages, o = {}) {
   const model = o.model || await modelFor(apiKey, o.family || 'sonnet');
   const body = { model, max_tokens: maxTokens, system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }], messages: withCache(messages) };
   if (tools && tools.length) body.tools = tools;
-  if (o.toolChoice && tools && tools.length) body.tool_choice = o.toolChoice;
+  if (o.toolChoice && tools && tools.length && !noToolChoice.has(model)) body.tool_choice = o.toolChoice;
   if (thinkingOff) body.thinking = { type: 'disabled' };
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -159,6 +160,7 @@ async function callClaude(auth, messages, o = {}) {
   const j = await r.json();
   if (!r.ok) {
     const msg = (j.error && j.error.message) || `Claude API ${r.status}`;
+    if (/tool_choice/i.test(msg) && body.tool_choice) { noToolChoice.add(model); return callClaude(auth, messages, { ...o, model }); } // niektoré modely tool_choice nepodporujú
     if (!o.retried && thinkingOff && /thinking/i.test(msg) && !/signature|block_binding/i.test(msg)) { thinkingOff = false; return callClaude(auth, messages, { ...o, retried: true }); }
     // neplatný / starý názov modelu → vyber znova automaticky
     if (!o.retried && (r.status === 404 || /model/i.test(msg))) { const m2 = await modelFor(apiKey, o.family || 'sonnet', true); return callClaude(auth, messages, { ...o, model: m2, retried: true }); }
@@ -392,7 +394,13 @@ async function runResearch(dev, task, apiKey, actions, opts = {}) {
       const res = await callClaude(apiKey, [{ role: 'user', content: [{ type: 'text', text: `Profil: ${p || 'Reels feed'} – reel ${seen + 1} z ${want}.${prev} Ak je to reklama (Sponsored / Sponzorované / Reklama / Ad, tlačidlo Shop now / Learn more / Install / Nakupovať), zavolaj skip_ad. Inak zavolaj reel_note (profil vyplň „${p || 'Reels feed'}“).` }, img(jpg)] }],
         { model, system: REEL_SYSTEM, tools: auto && last ? [...REEL_TOOLS, SAME_TOOL] : REEL_TOOLS, toolChoice: { type: 'any' }, maxTokens: 400 });
       track('prieskum', apiKey, res, dev.label);
-      const u = (res.content || []).find((c) => c.type === 'tool_use') || {};
+      let u = (res.content || []).find((c) => c.type === 'tool_use') || {};
+      if (!u.name) { // model odpovedal len textom → ešte raz, tentoraz výslovne nástrojom
+        const r2 = await callClaude(apiKey, [{ role: 'user', content: [{ type: 'text', text: `Profil: ${p || 'Reels feed'}. Odpovedz IBA zavolaním jedného nástroja (reel_note, skip_ad${auto && last ? ' alebo same_reel' : ''}), bez textu.` }, img(jpg)] }],
+          { model, system: REEL_SYSTEM, tools: auto && last ? [...REEL_TOOLS, SAME_TOOL] : REEL_TOOLS, toolChoice: { type: 'any' }, maxTokens: 400 });
+        track('prieskum', apiKey, r2, dev.label);
+        u = (r2.content || []).find((c) => c.type === 'tool_use') || {};
+      }
       const i = u.input || {};
       if (u.name === 'same_reel') {
         // Auto scroll neposúva (napr. sa vypol) → po 75 s posunieme sami

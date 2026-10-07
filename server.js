@@ -854,6 +854,31 @@ function runningApps(dev) {
     ok([...ids]);
   }));
 }
+// prepínač aplikácií: otvoriť (2× Domov alebo potiahnutie zdola) a kartičky odsunúť nahor, kým sa neukáže plocha
+async function clearSwitcher(dev) {
+  if (!dev.size) await withSession(dev, () => null).catch(() => {});
+  const H = (dev.size && dev.size.height) || 800, homeBtn = H <= 740; // iPhone 8 / 8 Plus / SE majú tlačidlo Domov
+  const frame = async () => { try { return (await grabFrame(dev.mjpegPort)).length; } catch (_) { return 0; } };
+  const home = await frame();
+  if (homeBtn) {
+    await withSession(dev, async (sid) => { await wda(dev, 'POST', `/session/${sid}/wda/pressButton`, { name: 'home' }, 5000); await wda(dev, 'POST', `/session/${sid}/wda/pressButton`, { name: 'home' }, 5000); });
+  } else {
+    await withSession(dev, (sid) => { const W = dev.size.width; return wda(dev, 'POST', `/session/${sid}/actions`, pointer([
+      { type: 'pointerMove', duration: 0, x: Math.round(W / 2), y: Math.round(H - 2) }, { type: 'pointerDown', button: 0 },
+      { type: 'pointerMove', duration: 350, x: Math.round(W / 2), y: Math.round(H * 0.6) }, { type: 'pause', duration: 700 }, { type: 'pointerUp', button: 0 }])); });
+  }
+  await pause(900);
+  let n = 0;
+  for (let k = 0; k < 15; k++) {
+    const sz = await frame();
+    if (home && sz && Math.abs(sz - home) / home < 0.04) break; // plocha = prepínač je prázdny
+    await swipe(dev, { x1: 0.5, y1: 0.55, x2: 0.5, y2: 0.05, ms: 180 });
+    n++; await pause(600);
+  }
+  await wda(dev, 'POST', '/wda/homescreen').catch(() => {});
+  return n;
+}
+
 async function closeBgApps(dev) {
   if (!dev || dev.gone || !dev.wdaOk) return;
   try {
@@ -864,7 +889,9 @@ async function closeBgApps(dev) {
       if (r && r.value === true) n++;
     }
     await wda(dev, 'POST', '/wda/homescreen').catch(() => {});
-    if (dev.agent && dev.agent.log) { dev.agent.log.push(`🧹 Zavreté aplikácie na pozadí${n ? ` (${n})` : ''}`); if (dev.agent.log.length > 60) dev.agent.log.shift(); }
+    await pause(800);
+    const cards = await clearSwitcher(dev).catch(() => 0);
+    if (dev.agent && dev.agent.log) { dev.agent.log.push(`🧹 Zavreté aplikácie na pozadí${n ? ` (${n})` : ''}${cards ? ` · prepínač vyčistený (${cards})` : ''}`); if (dev.agent.log.length > 60) dev.agent.log.shift(); }
   } catch (_) {}
 }
 
