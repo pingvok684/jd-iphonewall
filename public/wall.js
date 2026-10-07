@@ -453,6 +453,25 @@ let PLACE_DEF = 'Len Instagram';
 try { PLACE_DEF = localStorage.getItem('jd-place') || PLACE_DEF; } catch (_) {}
 const placeHtml = (extra = 'data-place') => `<div class="plc" ${extra}>${PLACES.map(([v, ic, t, s]) => `<button type="button" class="plcb${v === PLACE_DEF ? ' on' : ''}" data-pv="${v}"><span class="pic">${ic}</span><span><b>${t}</b><small>${s}</small></span></button>`).join('')}</div>`;
 const readPlace = (box) => { const b = box && box.querySelector('.plcb.on'); return b ? b.dataset.pv : PLACE_DEF; };
+// X (Twitter): voliteľne aj na X – samostatný post v aplikácii X (naplánovaný na rovnaký čas)
+let X_DEF = false; try { X_DEF = localStorage.getItem('jd-x') === '1'; } catch (_) {}
+const xToggleHtml = () => `<label class="xtog" data-xtog><input type="checkbox"${X_DEF ? ' checked' : ''}><span class="xlogo">𝕏</span><span><b>Aj na X (Twitter)</b><small>rovnaký post naplánuje aj v aplikácii X v iPhone</small></span></label>`;
+const readX = (root) => { const c = root && root.querySelector('[data-xtog] input'); const v = !!(c && c.checked); X_DEF = v; try { localStorage.setItem('jd-x', v ? '1' : '0'); } catch (_) {} return v; };
+const X_MAX = 280;
+// úloha: naplánovať post v aplikácii X (médiá sú už v galérii ako najnovšie)
+function postTaskX(isReel, x, pick, title) {
+  const text = String(x.cap || '').slice(0, X_MAX);
+  const which = isReel
+    ? (pick && pick.k > 1 ? `vyber ${pick.k}. najnovšie VIDEO (počítaj od prvej položky vľavo hore, fotky preskakuj)` : 'vyber NAJNOVŠIE VIDEO (prvé video vľavo hore; video má v rohu dĺžku)')
+    : (pick && pick.from > 1 ? `vyber fotky č. ${pick.from} až ${pick.from + Math.min(4, x.cnt) - 1} (od najnovšej vľavo hore, videá preskakuj)` : `vyber ${Math.min(4, x.cnt)} ${Math.min(4, x.cnt) === 1 ? 'NAJNOVŠIU fotku' : 'najnovšie fotky'} (od prvej vľavo hore, videá preskakuj)`);
+  return { title: title + ' · X', files: [], maxSteps: 90,
+    meta: { kind: isReel ? 'reel' : 'carousel', platform: 'x', when: x.whenISO, whenText: x.when, caption: text, music: '', place: 'X (Twitter)' }, task:
+    `Otvor aplikáciu X (Twitter). Naplánuj post na X s ${isReel ? 'VIDEOM' : 'FOTKAMI'}: ťukni na tlačidlo nového postu (+ / pierko vpravo dole) a vyber Post. Napíš presne tento text postu: „${text}“. ` +
+    `Ťukni na ikonu obrázka / galérie, v galérii nechaj Recents / Nedávne (iný album NEPOUŽÍVAJ) a ${which}; potvrď (Add / Pridať). ` +
+    'Ak je pri médiu možnosť označiť ho ako citlivý obsah (Flag / Sensitive content / citlivý obsah), zapni ju. ' +
+    `Potom ťukni na ikonu kalendára / Schedule (naplánovať) v okne postu a nastav dátum a čas: ${x.when} – stačí odchýlka do ±10 minút, minúty nedolaďuj presne. Potvrď (Confirm / Potvrdiť) a ťukni Schedule / Naplánovať. ` +
+    'NIKDY neťukaj „Post“ bez naplánovaného času – post sa nesmie zverejniť hneď. Ak v aplikácii X plánovanie nie je (chýba ikona kalendára), nič nezverejňuj, zmaž koncept a skonči so správou „X: plánovanie nie je dostupné“.' };
+}
 document.addEventListener('click', (e) => {
   const b = e.target.closest('.plcb'); if (!b) return;
   b.closest('.plc').querySelectorAll('.plcb').forEach((x) => x.classList.toggle('on', x === b));
@@ -745,7 +764,7 @@ function askMulti(t, defUdid) {
     const bg = document.createElement('div'); bg.className = 'modal-bg';
     bg.innerHTML = `<div class="modal multi"><div class="mhead"><h3>${esc(t.name)}</h3>${clockBox()}</div>${MBS_WARN}
       <div class="mrow2"><label><span>Koľko príspevkov</span><select data-n>${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<option>${n}</option>`).join('')}</select></label>
-        </div><div class="fld"><span>Kam zverejniť</span>${placeHtml()}</div>
+        </div><div class="fld"><span>Kam zverejniť</span>${placeHtml()}${xToggleHtml()}</div>
       <div class="fld" data-allph><span>Telefón pre všetky (alebo vyber pri každom zvlášť nižšie)</span>${chipsHtml([], 'data-allbox')}</div>
       <small class="tolnote">⏱️ Čas sa nastaví s odchýlkou do ±10 minút – AI nedolaďuje minúty presne, aby plánovanie bolo rýchlejšie a lacnejšie.</small>
       <small class="hint">Pri každom príspevku vyber, či je to <b>reel</b> alebo <b>carousel</b>, a pretiahni k nemu video / fotky – pred plánovaním sa pošlú do galérie iPhonu ako najnovšie, takže AI vyberie presne ich. Bez médií: použijú sa najnovšie videá / fotky, ktoré už sú v iPhone. Čas zadávaš slovenský, najskôr ~20 min dopredu.</small>
@@ -816,7 +835,7 @@ function askMulti(t, defUdid) {
     bg.onclick = (e) => { if (e.target === bg) close(null); };
     bg.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(null); });
     bg.querySelector('[data-ok]').onclick = () => {
-      const place = readPlace(bg.querySelector('[data-place]')), list = [];
+      const place = readPlace(bg.querySelector('[data-place]')), wantX = readX(bg), list = [];
       const lbl = (i) => (items.children.length > 1 ? `Príspevok ${i + 1} (${nounOf(kinds[i]).toLowerCase()})` : nounOf(kinds[i]));
       for (const [i] of [...items.children].entries()) if (!planReady(drops[i], lbl(i))) return;
       const withFiles = drops.filter((st) => planFiles(st).length).length;
@@ -843,12 +862,13 @@ function askMulti(t, defUdid) {
         seen.set(u, x.isReel ? { v: o.v + 1, from: o.from } : { v: o.v, from: o.from + x.cnt });
         const title = list.length > 1 ? `${nounOf(x.isReel ? 'reel' : 'carousel')} ${i + 1}` : nounOf(x.isReel ? 'reel' : 'carousel');
         steps.push({ udid: u, ...postTask(x.isReel, place, x, pick, title) });
+        if (wantX) steps.push({ udid: u, ...postTaskX(x.isReel, x, pick, title) });
       }));
       const nR = list.filter((x) => x.isReel).length, nC = list.length - nR;
       const what = [nR ? `${nR} ${nR === 1 ? 'reel' : nR < 5 ? 'reely' : 'reelov'}` : '', nC ? `${nC} ${nC === 1 ? 'carousel' : nC < 5 ? 'carousely' : 'carouselov'}` : ''].filter(Boolean).join(' + ');
       const summary = `📦 Plán: ${what} v Meta Business Suite` + (withFiles ? '. Pred každým pošlem jeho médiá do galérie (budú na 1. mieste), potom ho AI naplánuje' : '') + ':\n' +
         list.map((x, i) => `${i + 1}. ${x.isReel ? '🎬' : '🖼️'} ${x.ph.map(phoneLabel).join(' + ')} · ${x.when}${x.files.length ? ' – ' + x.files.map((f) => f.name).join(', ') : ''}${x.cap ? ' – „' + x.cap.slice(0, 40) + (x.cap.length > 40 ? '…' : '') + '“' : ''}`).join('\n') + '\n(Tento text neupravuj – stlač Spustiť.)';
-      showReview(list, place, steps, summary);
+      showReview(list, place + (wantX ? ' + 𝕏 X (Twitter)' : ''), steps, summary);
     };
     // ---------- karta Kontrola: všetko ešte raz prehľadne, potom Publikovať = hneď sa spustí ----------
     const showReview = (list, place, steps, summary) => {
@@ -872,7 +892,7 @@ function askMulti(t, defUdid) {
           <div class="kv"><span>🎵 Hudba</span><b>${esc(musTxt(x.mus))}</b></div>
           <div class="kv"><span>🎞️ Médiá</span><b>${x.files.length ? x.files.map((f) => esc(f.name)).join(', ') : 'najnovšie v galérii iPhonu'}</b></div>
           ${prevHtml(i)}
-          <div class="mrv-cap">${x.cap ? esc(x.cap) : '<i>bez popisu</i>'}</div></div>`).join('')}
+          <div class="mrv-cap">${x.cap ? esc(x.cap) : '<i>bez popisu</i>'}</div>${/𝕏/.test(place) && (x.cap || '').length > X_MAX ? `<div class="mrv-conv" style="text-align:left">𝕏 Na X sa popis skráti na ${X_MAX} znakov.</div>` : ''}</div>`).join('')}
         <div class="mact"><button data-back>← Upraviť</button><span class="sp"></span><button class="go" data-pub>🚀 Publikovať</button></div>`;
       form.forEach((x) => (x.hidden = true));
       modal.appendChild(rv); modal.scrollTop = 0;

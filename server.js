@@ -977,7 +977,7 @@ async function runPlan(dev, steps) {
   const doneList = [];
   // kalendár: každý príspevok s dátumom sa zapíše hneď (stav „čaká“) a po naplánovaní sa aktualizuje
   for (const st of steps) if (st.meta && st.meta.when) st.calId = content.addCalendar({
-    udid: dev.udid, phone: dev.label, kind: st.meta.kind || '', when: st.meta.when, whenText: st.meta.whenText || '',
+    udid: dev.udid, phone: dev.label, kind: st.meta.kind || '', platform: st.meta.platform || 'ig', when: st.meta.when, whenText: st.meta.whenText || '',
     caption: st.meta.caption || '', music: st.meta.music || '', place: st.meta.place || '', title: st.title || '',
     task: st.task, maxSteps: st.maxSteps || null,
     files: st.files.map((f) => ({ id: f.id, name: f.name })) }).id;
@@ -1003,7 +1003,7 @@ async function runPlan(dev, steps) {
       const prev = dev.agent.log.slice(-6);
       dev.agent.running = false;
       await runAgentTask(dev, st.task, st.maxSteps);
-      dev.agent.log.unshift(...prev, `🗓️ ${head}: plánujem v Meta Business Suite…`);
+      dev.agent.log.unshift(...prev, `🗓️ ${head}: plánujem ${st.meta && st.meta.platform === 'x' ? 'na X (Twitter)' : 'v Meta Business Suite'}…`);
       while (dev.agent && dev.agent.running) { if (plan.stop) dev.agent.stop = true; await pause(1500); }
       await pause(2600); // nech si watchAgent stihne zapísať výsledok do Aktivity
       const last = (dev.agent && dev.agent.log[dev.agent.log.length - 1]) || '';

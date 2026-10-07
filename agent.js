@@ -252,16 +252,18 @@ async function runAgent(dev, task, apiKey, actions, opts = {}) {
 const OPEN_APPS = [
   [/^Otvor aplikáciu Meta Business Suite/i, ['com.facebook.PagesManager', 'com.facebook.Pages'], 'Meta Business Suite'],
   [/^Otvor Instagram/i, ['com.burbn.instagram'], 'Instagram'],
+  [/^Otvor aplikáciu X\b/i, ['com.atebits.Tweetie2'], 'X (Twitter)'],
 ];
 function routineKey(t) {
   if (/Naplánuj 1 reel/.test(t)) return 'mbs-reel' + (/Instagram aj Facebook/.test(t) ? '-fb' : '');
   if (/Naplánuj 1 carousel/.test(t)) return 'mbs-carousel' + (/Instagram aj Facebook/.test(t) ? '-fb' : '');
   if (/pridať do Story/i.test(t)) return 'story';
+  if (/Naplánuj post na X/.test(t)) return /VIDEO/.test(t) ? 'x-video' : 'x-photo';
   return null;
 }
 function taskVars(t) {
   const g = (re) => ((t.match(re) || [])[1] || '');
-  return { caption: g(/Napíš presne tento popis: „([\s\S]*?)“/), music: g(/Hudba: „([^“]*)“/), link: g(/Odkaz: „([^“]*)“/), linktext: g(/text na tlačidle: „([^“]*)“/) };
+  return { caption: g(/Napíš presne tento (?:popis|text postu): „([\s\S]*?)“/), music: g(/Hudba: „([^“]*)“/), link: g(/Odkaz: „([^“]*)“/), linktext: g(/text na tlačidle: „([^“]*)“/) };
 }
 const fillVars = (text, v) => String(text).replace(/\{\{(\w+)\}\}/g, (_, k) => v[k] || '');
 // nahrávanie: ťuknutia podľa popisu tlačidla (nie súradníc), písanie s premennými; pri prvom kroku, ktorý sa nedá bezpečne zopakovať, nahrávanie končí

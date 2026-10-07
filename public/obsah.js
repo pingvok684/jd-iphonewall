@@ -63,8 +63,8 @@ async function loadCalendar() {
   const body = rows.map((r, ri) => `<div class="cg-ph" style="--pc:${devColor(r.udid, ri)}" title="${esc(r.label)}"><i class="pcd"></i><span class="cgn"><b>${esc(r.name)}</b>${r.handle ? `<small>@${esc(r.handle)}</small>` : ''}</span></div>` + days.map((d) => {
     const items = list.filter((e) => e.udid === r.udid && dayStart(e.when).getTime() === d.getTime()).sort((a, b) => a.when.localeCompare(b.when));
     const past = d.getTime() < today;
-    return `<div class="cg-c${items.length ? '' : ' cg-empty'}${past ? ' past' : ''}" data-u="${r.udid}" data-day="${d.getTime()}">${items.map((e) => `<button type="button" class="ce s-${STATUS[e.status] || 'off'}" data-ce="${e.id}" style="--pc:${devColor(r.udid, ri)}">
-      <b>${hm(new Date(e.when))}</b> ${e.kind === 'carousel' ? '🖼️' : '🎬'} <span>${esc(e.caption ? e.caption.slice(0, 40) : (e.kind || 'príspevok'))}</span>${e.proof ? ' 📸' : ''}</button>`).join('') || (past ? '' : '<span class="cg-free">voľno</span>')}${past ? '' : '<button type="button" class="cg-add" data-cadd>+ pridať</button>'}</div>`;
+    return `<div class="cg-c${items.length ? '' : ' cg-empty'}${past ? ' past' : ''}" data-u="${r.udid}" data-day="${d.getTime()}">${items.map((e) => `<button type="button" class="ce s-${STATUS[e.status] || 'off'}${e.platform === 'x' ? ' px' : ''}" data-ce="${e.id}" style="--pc:${devColor(r.udid, ri)}"${e.platform === 'x' ? ' data-tip="Post na X (Twitter)"' : ''}>
+      <b>${hm(new Date(e.when))}</b> ${e.platform === 'x' ? '<i class="xbadge">𝕏</i> ' : ''}${e.kind === 'carousel' ? '🖼️' : '🎬'} <span>${esc(e.caption ? e.caption.slice(0, 40) : (e.kind || 'príspevok'))}</span>${e.proof ? ' 📸' : ''}</button>`).join('') || (past ? '' : '<span class="cg-free">voľno</span>')}${past ? '' : '<button type="button" class="cg-add" data-cadd>+ pridať</button>'}</div>`;
   }).join('')).join('');
   const grid = document.getElementById('calGrid');
   grid.innerHTML = rows.length ? `<div class="cg">${head}${body}</div>` : '<div class="empty">Žiadny telefón ani naplánovaný príspevok v tomto týždni.</div>';
@@ -122,7 +122,7 @@ function openCalEntry(e) {
   if (!e) return;
   const bg = document.createElement('div'); bg.className = 'modal-bg';
   const d = new Date(e.when);
-  bg.innerHTML = `<div class="modal"><div class="mhead"><h3>${e.kind === 'carousel' ? '🖼️ Carousel' : '🎬 Reel'} · ${esc(e.phone || '')}</h3></div>
+  bg.innerHTML = `<div class="modal"><div class="mhead"><h3>${e.platform === 'x' ? '<i class="xbadge">𝕏</i> Post na X · ' : ''}${e.kind === 'carousel' ? '🖼️ Carousel' : '🎬 Reel'} · ${esc(e.phone || '')}</h3></div>
     <div class="kv"><span>Čas</span><b>${d.toLocaleString('sk-SK', { weekday: 'long', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}</b></div>
     <div class="kv"><span>Stav</span><b><select data-st>${Object.keys(STATUS).map((s) => `<option${s === e.status ? ' selected' : ''}>${s}</option>`).join('')}</select></b></div>
     ${e.place ? `<div class="kv"><span>Kam</span><b>${esc(e.place)}</b></div>` : ''}

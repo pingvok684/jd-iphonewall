@@ -48,7 +48,7 @@ async function openWizard(opts = {}) {
       <div class="fld" data-capwrap><span>Popis + #hashtagy</span><textarea data-cap rows="4" placeholder="Napíš popis alebo pár slov a klikni ✨ Navrhni popis"></textarea>${capHtml()}</div>
       <small class="hint" data-hashtxt></small>
       <div class="fld"><span>Hudba</span>${musicHtml('data-mus', 'nie')}</div>
-      <div class="fld"><span>Kam zverejniť</span>${placeHtml()}</div>
+      <div class="fld"><span>Kam zverejniť</span>${placeHtml()}${xToggleHtml()}</div>
       <label data-cntrow hidden><span>Počet fotiek (berú sa najnovšie v iPhone)</span><select data-cnt>${Array.from({ length: 20 }, (_, k) => k + 1).map((k) => `<option${k === 3 ? ' selected' : ''}>${k}</option>`).join('')}</select></label>
     </div>
 
@@ -218,12 +218,13 @@ async function openWizard(opts = {}) {
     for (const u of ph) {
       const x = { files: fl, cap: hashFor(u, cap), mus: readMusic($('[data-mus]')), when: fmtSk(d), whenISO: d.toISOString(), cnt };
       const stp = postTask(kind === 'reel', readPlace($('[data-place]')), x, null, kind === 'reel' ? 'Reel' : 'Carousel');
+      const xstp = readX(bg) ? postTaskX(kind === 'reel', x, null, kind === 'reel' ? 'Reel' : 'Carousel') : null;
       if (rep && $('[data-repdel]') && $('[data-repdel]').checked && u === rep.udid) {
         stp.task = `Najprv v aplikácii Meta Business Suite otvor plánovač (Planner / Content → Scheduled / Naplánované), nájdi príspevok naplánovaný na ${rep.whenText || new Date(rep.when).toLocaleString('sk-SK')}`
           + (rep.caption ? ` s popisom začínajúcim „${rep.caption.slice(0, 40)}“` : '') + ' a zmaž ho (⋯ → Delete / Zmazať a potvrď). Ak ho nenájdeš, nič iné nemaž a pokračuj. Potom: ' + stp.task;
         stp.maxSteps = (stp.maxSteps || 120) + 30;
       }
-      let r = {}; try { const rr = await fetch(`/api/${u}/plan`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ steps: [stp] }) }); r = await rr.json(); if (!rr.ok) throw new Error(r.error || 'Chyba'); ok++;
+      let r = {}; try { const rr = await fetch(`/api/${u}/plan`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ steps: xstp ? [stp, xstp] : [stp] }) }); r = await rr.json(); if (!rr.ok) throw new Error(r.error || 'Chyba'); ok++;
         res.insertAdjacentHTML('beforeend', `<div style="color:var(--ok)">✓ ${esc(phoneLabel(u))}: spustené – najprv pošlem médiá, potom to AI naplánuje.</div>`); }
       catch (e) { res.insertAdjacentHTML('beforeend', `<div style="color:var(--bad)">⚠ ${esc(phoneLabel(u))}: ${esc(e.message)}</div>`); }
     }

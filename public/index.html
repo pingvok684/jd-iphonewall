@@ -323,7 +323,20 @@
   .tolx { color: #ffb547; font-weight: 600; margin-left: 4px; font-size: 11.5px; }
   .modal .mact.calact { flex-wrap: wrap; justify-content: flex-end; gap: 8px; } .modal .mact.calact > button { flex: 0 1 auto; white-space: nowrap; } .modal .mact.calact [data-del] { margin-right: auto; }
   @media (max-width: 560px) { .modal .mact.calact > button { flex: 1 1 100%; } }
+  .xtog { display: flex !important; flex-direction: row !important; align-items: center; gap: 10px; margin-top: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); cursor: pointer; }
+  .xtog input { width: auto !important; flex: none; } .xtog .xlogo { width: 30px; height: 30px; border-radius: 8px; background: #000; color: #fff; display: grid; place-items: center; font-size: 17px; font-weight: 800; border: 1px solid rgba(255,255,255,.25); flex: none; }
+  .xtog b { display: block; font-size: 13.5px; color: var(--text); } .xtog small { color: var(--muted); font-size: 11.5px; } .xtog:has(input:checked) { border-color: #fff; background: rgba(255,255,255,.09); }
+  .xbadge { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 5px; background: #000; color: #fff; font-style: normal; font-weight: 800; font-size: 11px; border: 1px solid rgba(255,255,255,.35); vertical-align: -3px; }
+  .ce.px { background: linear-gradient(90deg, rgba(255,255,255,.10), rgba(255,255,255,.03)) !important; border-left-color: #fff !important; }
   .mbsnote { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(66,133,244,.09); border: 1px solid rgba(66,133,244,.35); font-size: 12.5px; line-height: 1.5; color: var(--text); }
+  .navhelp { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding: 11px 12px; border-radius: 14px; text-decoration: none; color: #fff; background: linear-gradient(135deg, #ff4f76, #b83cff); box-shadow: 0 8px 24px rgba(255,61,104,.35); border: 1px solid rgba(255,255,255,.18); transition: transform .15s, box-shadow .15s; }
+  .navhelp:hover { transform: translateY(-1px); box-shadow: 0 12px 30px rgba(255,61,104,.45); } .navhelp.on { outline: 2px solid #fff; outline-offset: 2px; }
+  .navhelp .nh-ic { font-size: 22px; line-height: 1; } .navhelp .nh-t { display: grid; line-height: 1.2; } .navhelp b { font-size: 14px; } .navhelp small { font-size: 11.5px; opacity: .9; }
+  .fstart { margin-bottom: 14px; font-size: 13.5px; line-height: 1.6; background: rgba(61,220,151,.07); border-color: rgba(61,220,151,.3); }
+  .fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; } .fcard p { margin: 6px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+  .fcard .fh { display: flex; align-items: center; gap: 10px; } .fcard .fh h3 { margin: 0; font-size: 16px; } .fcard .fic { font-size: 22px; } .fcard .fgo { padding: 5px 10px; font-size: 12px; text-decoration: none; }
+  .fcard ul { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; line-height: 1.5; } .fcard b { color: var(--text); }
+  @media (max-width: 600px) { .fgrid { grid-template-columns: 1fr; } }
   .reshelp { margin-bottom: 12px; font-size: 13.5px; color: var(--muted); } .reshelp summary { cursor: pointer; color: var(--text); font-weight: 600; } .reshelp ol { margin: 10px 0 0; padding-left: 20px; line-height: 1.6; } .reshelp b { color: var(--text); }
   .rreels { display: grid; gap: 8px; margin-top: 12px; } .rreel { display: grid; grid-template-columns: 28px 1fr; gap: 2px 10px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
   .rreel .n { grid-row: span 2; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: rgba(255,61,104,.16); color: #ff7a98; font-weight: 700; font-size: 12.5px; }
@@ -776,6 +789,7 @@
     </div>
   </nav>
   <div class="grow"></div>
+  <a href="#funkcie" data-v="funkcie" class="navhelp" data-tip="Prehľad všetkých funkcií – čo na čo slúži a kde to nájdeš"><span class="nh-ic">💡</span><span class="nh-t"><b>Čo appka vie?</b><small>Všetky funkcie vysvetlené</small></span></a>
   <div class="sbox"><b><span class="dot" id="sDot"></span><span id="sTitle">Načítavam…</span></b><span id="sSub"></span></div>
   <nav class="nav"><a href="#bug" id="bugBtn" role="button"><span data-icon="alert"></span><span class="t">Nahlásiť chybu</span></a><a href="#bugy" data-v="bugy" id="navBugs" hidden><span data-icon="list"></span><span class="t">Nahlásené chyby</span><span class="badge" id="navBugsN" hidden></span></a><a href="#novinky" data-v="novinky"><span data-icon="spark"></span><span class="t">Novinky</span><span class="badge upd" id="navNews" hidden>nové</span></a><a href="#aktualizacie" data-v="aktualizacie"><span data-icon="refresh"></span><span class="t">Aktualizácie</span><span class="badge upd" id="navUpd" hidden>1</span></a><a href="#navod" data-v="navod"><span data-icon="book"></span><span class="t">Návod</span></a><a href="#nastavenia" data-v="nastavenia"><span data-icon="gear"></span><span class="t">Nastavenia</span></a></nav>
 </aside>
@@ -869,7 +883,7 @@
   <section class="view" id="v-kalendar">
     <div class="vhead"><div><h2>Kalendár</h2><div class="sub" id="calSum">Príspevky naplánované cez stránku</div></div><div class="sp"></div><button class="btn-new" data-newpost><span data-icon="plus"></span>Nový príspevok</button>
       <button id="calPrev" title="Predošlý týždeň">‹</button><span class="chip" id="calRange">—</span><button id="calNext" title="Ďalší týždeň">›</button><button id="calToday">Tento týždeň</button></div>
-    <div class="callegend"><span class="s-wait">čaká</span><span class="s-ok">naplánované</span><span class="s-bad">chyba</span><span class="s-off">nespustené</span><span class="sub">· „voľno“ = účet nemá v ten deň nič naplánované</span></div>
+    <div class="callegend"><span class="s-wait">čaká</span><span class="s-ok">naplánované</span><span class="s-bad">chyba</span><span class="s-off">nespustené</span><span><i class="xbadge">𝕏</i> post na X</span><span class="sub">· „voľno“ = účet nemá v ten deň nič naplánované</span></div>
     <div class="panel calstrip"><div class="cs-h"><b>Knižnica</b> · pretiahni video alebo fotku na deň a telefón – otvorí sa plánovanie. Klik na prázdny deň = nový príspevok.<span class="sp"></span><select id="csFilter"><option value="unused">Nepoužité</option><option value="all">Všetko</option></select></div><div class="csphs" id="calPhTabs" data-tip="Vyber iPhone – ukážu sa len médiá priradené tomuto telefónu"></div><div class="cs-list" id="calStripList"></div></div>
     <div class="panel calwrap"><div id="calGrid"></div></div>
   </section>
@@ -926,6 +940,27 @@
   </section>
 
   <!-- AKTIVITA -->
+  <section class="view" id="v-funkcie">
+    <div class="vhead"><div><h2>💡 Čo appka vie</h2><div class="sub">Každá časť appky jednoducho vysvetlená – na čo slúži a kde ju nájdeš. Podrž myš nad ľubovoľným tlačidlom a ukáže sa vysvetlivka.</div></div><div class="sp"></div>
+      <input id="fQ" class="resq" placeholder="Hľadať (napr. story, kalendár, kábel…)"></div>
+    <div class="fstart panel"><b>Začínaš?</b> 1) pripoj iPhony káblom a prejdi <b>Sprievodcu nastavením</b> · 2) v <b>Nastaveniach</b> vlož Claude API kľúč · 3) v <b>Telefónoch</b> vyber šablónu a spusti ju · 4) príspevky plánuj cez <b>Nový príspevok</b> alebo <b>Kalendár</b>.</div>
+    <div class="fgrid" id="fList">
+      <div class="panel fcard"><div class="fh"><span class="fic">📊</span><h3>Prehľad</h3><span class="sp"></span><a class="btn ghost fgo" href="#prehlad">Otvoriť →</a></div><p>Domovská obrazovka dňa.</p><ul><li>Čo sa dnes urobilo (AI úlohy, naplánované príspevky, chyby).</li><li>Čo dnes čaká v kalendári a ktoré účty majú voľno.</li><li>Stav telefónov a míňanie na AI.</li></ul></div>
+      <div class="panel fcard"><div class="fh"><span class="fic">📱</span><h3>Telefóny</h3><span class="sp"></span><a class="btn ghost fgo" href="#telefony">Otvoriť →</a></div><p>Všetky pripojené iPhony naživo – tu ich ovládaš.</p><ul><li><b>Obraz telefónu</b>: klik = ťuknutie, potiahnutie myšou = potiahnutie prstom.</li><li><b>🔓 / 🔒</b> zobudí alebo uspí telefón, <b>⤢</b> ho zväčší.</li><li><b>Text…</b> napíše text do iPhonu, <b>⌂</b> = tlačidlo Domov, <b>↻</b> obnoví spojenie.</li><li><b>Úloha pre AI</b>: napíš po slovensky, čo má AI urobiť, a klikni Spustiť.</li><li><b>Šablóny</b> pri telefóne = hotové úlohy len pre TENTO iPhone.</li><li><b>Fotky / videá do galérie</b>: pretiahni súbor a pošle sa cez kábel do galérie iPhonu.</li><li>Hore: <b>Šablóny · všetky iPhony</b> a <b>Spustiť na všetkých</b> = úloha naraz na každom telefóne.</li></ul></div>
+      <div class="panel fcard"><div class="fh"><span class="fic">🧩</span><h3>Šablóny (hotové úlohy pre AI)</h3><span class="sp"></span><a class="btn ghost fgo" href="#telefony">Otvoriť →</a></div><p>Klikneš, vyplníš pár políčok a AI to v telefóne urobí sama.</p><ul><li><b>🗓️ Naplánuj príspevky</b> – naplánuje 1 až 10 reelov / carouselov cez Meta Business Suite. Pred spustením je karta <b>Kontrola</b> a potom <b>Publikovať</b>.</li><li><b>🎬 Postni reel / 🖼️ Postni carousel</b> – zverejní príspevok hneď v Instagrame.</li><li><b>⭕ Pridaj story</b> – story s fotkou / videom, hudbou a voliteľným odkazom (nálepka LINK).</li><li><b>🔎 Prieskum reels</b> – AI pozrie reely profilu (alebo feedu) a zapíše hooky, hudbu, zhliadnutia a 3 trendy → Archív prieskumov.</li><li><b>📊 Skontroluj posledný post</b> – zistí zhliadnutia posledného príspevku → Štatistiky.</li><li>Po každej šablóne sa v iPhone zavrú aplikácie na pozadí.</li></ul></div>
+      <div class="panel fcard"><div class="fh"><span class="fic">➕</span><h3>Nový príspevok</h3><span class="sp"></span><a class="btn ghost fgo" href="#kalendar">Otvoriť →</a></div><p>Plánovanie jedného príspevku krok za krokom: účet a typ → médiá → popis (aj ✨ návrh od AI) → čas → kontrola.</p><ul><li>Plánuje sa cez <b>Meta Business Suite</b> – samotný Instagram nestačí.</li><li>Čas sa nastaví s odchýlkou ±10 minút (rýchlejšie a lacnejšie).</li><li>Voliteľne <b>𝕏 Aj na X (Twitter)</b> – rovnaký post naplánuje aj v aplikácii X v iPhone; v kalendári je označený čiernym 𝕏.</li></ul></div>
+      <div class="panel fcard"><div class="fh"><span class="fic">🗓️</span><h3>Kalendár</h3><span class="sp"></span><a class="btn ghost fgo" href="#kalendar">Otvoriť →</a></div><p>Týždenný prehľad naplánovaných príspevkov pre každý iPhone.</p><ul><li>Pretiahni video alebo fotku z pásu knižnice na deň a telefón → otvorí sa plánovanie.</li><li>Záložky nad knižnicou ukážu médiá len vybraného iPhonu.</li><li>Klik na príspevok: zmeníš stav, zmažeš ho, alebo <b>✏️ Upraviť a naplánovať znova</b>.</li><li>„voľno“ = účet nemá v ten deň nič naplánované.</li></ul></div>
+      <div class="panel fcard"><div class="fh"><span class="fic">🗂️</span><h3>Knižnica</h3><span class="sp"></span><a class="btn ghost fgo" href="#kniznica">Otvoriť →</a></div><p>Všetky tvoje fotky a videá na jednom mieste.</p><ul><li>Každý iPhone má vlastnú knižnicu – súbor môže patriť aj viacerým.</li><li>Odtiaľ ich posielaš do telefónov, plánuješ alebo ťaháš do kalendára.</li><li>Upratovanie (Nastavenia) maže staré použité súbory.</li></ul></div>
+      <div class="panel fcard"><div class="fh"><span class="fic">✨</span><h3>Nástroje</h3><span class="sp"></span><a class="btn ghost fgo" href="#realism">Otvoriť →</a></div><p>Úpravy médií priamo v appke.</p><ul><li><b>Tait – Realism filter</b>: AI fotka alebo video bude vyzerať ako natočené iPhonom; výsledok ide rovno do Knižnice.</li><li><b>Tait – Video Upscaler</b>: zväčší rozlíšenie a zvýši plynulosť (FPS) videa.</li><li><b>Magnific</b>: generovanie videí – pripravujeme.</li></ul></div>
+      <div class="panel fcard"><div class="fh"><span class="fic">📈</span><h3>Štatistiky</h3><span class="sp"></span><a class="btn ghost fgo" href="#statistiky">Otvoriť →</a></div><p>Zhliadnutia účtov z úloh „Skontroluj posledný post“ – vidíš, ktorý účet rastie.</p></div>
+      <div class="panel fcard"><div class="fh"><span class="fic">🔎</span><h3>Prieskumy</h3><span class="sp"></span><a class="btn ghost fgo" href="#prieskumy">Otvoriť →</a></div><p>Archív výsledkov šablóny Prieskum reels.</p><ul><li>Pri každom reeli hook, formát, prostredie, hudba, zhliadnutia, screenshot a odkaz <b>↗ Reel</b>.</li><li><b>☆</b> uloží reel do <b>★ Na recreate</b> – zoznam nápadov na vlastné videá.</li><li>Vyhľadávanie (napr. podľa pesničky alebo slova v hooku).</li></ul></div>
+      <div class="panel fcard"><div class="fh"><span class="fic">🕘</span><h3>Aktivita</h3><span class="sp"></span><a class="btn ghost fgo" href="#aktivita">Otvoriť →</a></div><p>Záznam všetkého, čo sa udialo – AI úlohy, plány, posielanie médií, chyby. Nájdeš ju v menu pod <b>Viac</b>.</p></div>
+      <div class="panel fcard"><div class="fh"><span class="fic">⚙️</span><h3>Nastavenia</h3><span class="sp"></span><a class="btn ghost fgo" href="#nastavenia">Otvoriť →</a></div><p>Všetko nastavenie appky.</p><ul><li><b>API kľúče</b>: Claude (AI ovládanie) a KIE (lacnejšie popisy) + tlačidlá na kúpu kreditu; výber modelov a zapamätané postupy.</li><li><b>Účet a synchronizácia</b>: knižnica, kalendár, šablóny a prieskumy na viacerých počítačoch.</li><li><b>Prístup z mobilu</b>: ovládaj appku z mobilu odkiaľkoľvek (QR kód).</li><li><b>Fotky a videá do galérie</b>: skratka JD Save do iPhonu (posielanie cez kábel).</li><li><b>Telegram</b>: upozornenia na mobil (hotový plán, chyba, slabá batéria…).</li><li><b>Písanie, Míňanie na AI, Upratovanie, Záloha</b>.</li></ul></div>
+      <div class="panel fcard"><div class="fh"><span class="fic">🐞</span><h3>Nahlásiť chybu</h3><span class="sp"></span><a class="btn ghost fgo" href="#bug" onclick="event.preventDefault();openBug()">Nahlásiť →</a></div><p>Niečo nefunguje? Popíš to, pridaj screenshot a hlásenie príde priamo autorovi.</p></div>
+      <div class="panel fcard"><div class="fh"><span class="fic">🔄</span><h3>Novinky a Aktualizácie</h3><span class="sp"></span><a class="btn ghost fgo" href="#aktualizacie">Otvoriť →</a></div><p>Novinky = čo pribudlo v appke. Aktualizácie = nová verzia jedným klikom (nastavenia aj dáta ostanú).</p></div>
+    </div>
+  </section>
+
   <section class="view" id="v-bugy">
     <div class="vhead"><div><h2>Nahlásené chyby</h2><div class="sub">Hlásenia od používateľov aplikácie – vidíš ich len ty</div></div><div class="sp"></div>
       <div class="filters" id="bugF"><button data-f="open" class="on">Otvorené</button><button data-f="done">Vyriešené</button><button data-f="">Všetky</button></div></div>
@@ -1531,6 +1566,7 @@ function route() {
   view = document.getElementById('v-' + v) ? v : 'prehlad';
   document.querySelectorAll('.view').forEach((s) => s.classList.toggle('on', s.id === 'v-' + view));
   document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.v === view));
+  { const nh = document.querySelector('.navhelp'); if (nh) nh.classList.toggle('on', view === 'funkcie'); }
   const grp = document.querySelector(`.navsub a[data-v="${view}"]`); if (grp) setNavGroup(document.querySelector(`.navmore[data-sub="${grp.parentElement.id}"]`), true);
   if (view === 'prehlad') loadOverview();
   if (view === 'aktivita') loadActivity();
@@ -1978,6 +2014,8 @@ document.getElementById('bugList').onclick = async (e) => {
 };
 setTimeout(checkBugsAdmin, 5000); setInterval(checkBugsAdmin, 10 * 60000);
 
+
+document.getElementById('fQ').oninput = (e) => { const q = e.target.value.toLowerCase().trim(); document.querySelectorAll('#fList .fcard').forEach((c) => (c.hidden = !!q && !c.textContent.toLowerCase().includes(q))); };
 // ---------- vysvetlivky: podrž myš nad tlačidlom → bublina s popisom ----------
 (() => {
   const NAV = {
