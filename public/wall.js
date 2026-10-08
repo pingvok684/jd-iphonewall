@@ -451,7 +451,8 @@ async function previewsFor(files, kind) {
 const PLATS = [['ig', '📸', 'Instagram', 'cez Meta Business Suite'], ['fb', '📘', 'Facebook', 'stránka cez Meta Business Suite'], ['x', '𝕏', 'X (Twitter)', 'cez aplikáciu X']];
 let PLAT_DEF = ['ig'];
 try { const v = localStorage.getItem('jd-plat'); if (v) PLAT_DEF = v.split(',').filter(Boolean); else if (localStorage.getItem('jd-place') === 'Instagram aj Facebook') PLAT_DEF = ['ig', 'fb']; } catch (_) {}
-const placeHtml = (extra = 'data-place', withX = true) => `<div class="plc plc3" ${extra}>${PLATS.filter(([v]) => withX || v !== 'x').map(([v, ic, t, s]) => `<button type="button" class="plcb${PLAT_DEF.includes(v) ? ' on' : ''}${v === 'x' ? ' isx' : ''}" data-pv="${v}"><span class="pic">${ic}</span><span><b>${t}</b><small>${s}</small></span><i class="plck">✓</i></button>`).join('')}</div>`;
+const PLAT_NOW = { ig: 'cez aplikáciu Instagram', fb: 'zdieľanie z Instagramu' };
+const placeHtml = (extra = 'data-place', withX = true, nowMode = false) => `<div class="plc plc3" ${extra}>${PLATS.filter(([v]) => withX || v !== 'x').map(([v, ic, t, s0]) => [v, ic, t, (nowMode && PLAT_NOW[v]) || s0]).map(([v, ic, t, s]) => `<button type="button" class="plcb${PLAT_DEF.includes(v) ? ' on' : ''}${v === 'x' ? ' isx' : ''}" data-pv="${v}"><span class="pic">${ic}</span><span><b>${t}</b><small>${s}</small></span><i class="plck">✓</i></button>`).join('')}</div>`;
 const platsOf = (box) => (box ? [...box.querySelectorAll('.plcb.on')].map((b) => b.dataset.pv) : PLAT_DEF);
 // text pre Meta Business Suite ('' = ani Instagram, ani Facebook)
 const readPlace = (box) => { const p = platsOf(box); return p.includes('ig') && p.includes('fb') ? 'Instagram aj Facebook' : p.includes('ig') ? 'Len Instagram' : p.includes('fb') ? 'Len Facebook' : ''; };
@@ -469,6 +470,29 @@ function syncMbsWarn(modal) {
   if (w && box) w.hidden = !/ig|fb/.test(platsOf(box).join(','));
 }
 const X_MAX = 280;
+// ---------- okamžité zverejnenie (bez plánovania) ----------
+function postNowTask(isReel, x, pick, title, withFb) {
+  const REC = 'v galérii nechaj album Recents / Nedávne (iný album ani priečinok NEPOUŽÍVAJ); ';
+  const which = isReel
+    ? REC + (pick && pick.k > 1 ? `vyber ${pick.k}. najnovšie VIDEO (počítaj od prvej položky vľavo hore, fotky preskakuj; video má v rohu dĺžku)` : 'vyber NAJNOVŠIE VIDEO – prvé video vľavo hore (video má v rohu dĺžku, napr. 0:12; fotku nevyberaj)')
+    : 'ťukni na výber viacerých (dva prekrývajúce sa štvorčeky); ' + REC + (pick && pick.from > 1 ? `vyber fotky č. ${pick.from} až ${pick.from + x.cnt - 1} (od najnovšej vľavo hore, videá preskakuj) v tomto poradí` : `vyber ${x.cnt} ${x.cnt === 1 ? 'NAJNOVŠIU fotku' : 'najnovšie fotky'} v poradí – začni prvou fotkou vľavo hore, videá preskakuj`);
+  return { title, files: x.files, maxSteps: isReel ? 90 : 100,
+    meta: { kind: isReel ? 'reel' : 'carousel', caption: x.cap, music: x.mus, place: withFb ? 'Instagram aj Facebook (hneď)' : 'Instagram (hneď)' }, task:
+    `Otvor Instagram. Zverejni HNEĎ 1 ${isReel ? 'reel' : 'príspevok (carousel)'}: ťukni na + (nový príspevok) a vyber ${isReel ? 'REEL' : 'POST / Príspevok'}; ${which}; ťukni Next. ` +
+    `${MUSIC_RULE} Hudba: „${x.mus}“. Potom ťukni Next. Do popisu napíš presne tento text: „${x.cap}“. Ak je v nastaveniach príspevku možnosť „AI label“ / „Pridať označenie AI“, zapni ju. ` +
+    (withFb ? 'Ak je na obrazovke zdieľania prepínač „Share to Facebook“ / „Zdieľať aj na Facebooku“, zapni ho. ' : 'Ak je zapnutý prepínač „Share to Facebook“ / „Zdieľať aj na Facebooku“, vypni ho. ') +
+    `Ťukni Share / Zdieľať, počkaj, kým sa ${isReel ? 'reel' : 'príspevok'} nahrá, a skontroluj, že sa objavil na profile. Potom skonči.` };
+}
+function postNowTaskX(isReel, x, pick, title) {
+  const text = String(x.cap || '').slice(0, X_MAX);
+  const which = isReel ? (pick && pick.k > 1 ? `vyber ${pick.k}. najnovšie VIDEO (fotky preskakuj)` : 'vyber NAJNOVŠIE VIDEO (prvé video vľavo hore)')
+    : `vyber ${Math.min(4, x.cnt)} ${Math.min(4, x.cnt) === 1 ? 'NAJNOVŠIU fotku' : 'najnovšie fotky'} (od prvej vľavo hore, videá preskakuj)`;
+  return { title: title + ' · X', files: [], maxSteps: 70,
+    meta: { kind: isReel ? 'reel' : 'carousel', platform: 'x', caption: text, place: 'X (hneď)' }, task:
+    `Otvor aplikáciu X (Twitter). Zverejni HNEĎ post s ${isReel ? 'VIDEOM' : 'FOTKAMI'}: ťukni na tlačidlo nového postu (+ / pierko vpravo dole) a vyber Post. Napíš presne tento text postu: „${text}“. ` +
+    `Ťukni na ikonu obrázka / galérie, v galérii nechaj Recents / Nedávne (iný album NEPOUŽÍVAJ) a ${which}; potvrď. Ak je pri médiu možnosť označiť ho ako citlivý obsah (Flag / Sensitive content), zapni ju. ` +
+    'Ťukni Post / Uverejniť, počkaj, kým sa nahrá, a skonči.' };
+}
 // úloha: naplánovať post v aplikácii X (médiá sú už v galérii ako najnovšie)
 function postTaskX(isReel, x, pick, title) {
   const text = String(x.cap || '').slice(0, X_MAX);
@@ -667,8 +691,9 @@ async function applyTemplateByName(name, target) {
   const t = TEMPLATES.find((x) => x.name === name);
   if (!t) return false;
   const defUdid = ([...cards.values()].find((x) => x.task === target) || {}).d?.udid || null;
-  if (t.multi) {
-    const r = await askMulti(t, defUdid);
+  const postNow = /Postni (reel|carousel)/i.test(t.name);
+  if (t.multi || postNow) {
+    const r = await askMulti(postNow ? { ...t, multi: /carousel/i.test(t.name) ? 'carousel' : 'reel' } : t, defUdid, { now: postNow });
     if (!r) return false;
     target.value = r.text; delete target.dataset.plan; delete target.dataset.maxSteps;
     if (r.steps && r.autoRun) {
@@ -739,7 +764,7 @@ loadRecentMusic();
 function musicHtml(extra = 'data-mus', def = '') {
   const off = def === 'nie';
   return `<div class="mus" ${extra}><div class="muschips">
-    <button type="button" class="musc${off ? '' : ' on'}" data-mv="">🔥 Prvá v ponuke</button><button type="button" class="musc${off ? ' on' : ''}" data-mv="nie">🔇 Bez hudby</button>
+    <button type="button" class="musc${off ? '' : ' on'}" data-mv="" title="Náhodná z prvých 6 v ponuke – na tom istom účte sa neopakuje">🎲 Náhodná z ponuky</button><button type="button" class="musc${off ? ' on' : ''}" data-mv="nie">🔇 Bez hudby</button>
     ${RECENT_MUSIC.map((m) => `<button type="button" class="musc" data-mv="${esc(m)}" title="Naposledy použitá">🎵 ${esc(m)}</button>`).join('')}
     <button type="button" class="musc" data-mv="__own">✏️ Iná pesnička…</button></div>
     <input class="musown" placeholder="Názov pesničky – interpret" hidden></div>`;
@@ -752,7 +777,7 @@ function setMusic(box, val) {
   box.querySelectorAll('.musc').forEach((x) => x.classList.toggle('on', x === b));
   box.querySelector('.musown').hidden = b.dataset.mv !== '__own';
 }
-const musicLabel = (v) => !v ? 'prvá v ponuke' : /^nie$/i.test(v) ? 'bez hudby' : v;
+const musicLabel = (v) => !v ? 'náhodná z ponuky' : /^nie$/i.test(v) ? 'bez hudby' : v;
 document.addEventListener('click', (e) => {
   const b = e.target.closest('.musc'); if (!b) return;
   const box = b.closest('.mus');
@@ -761,23 +786,24 @@ document.addEventListener('click', (e) => {
 });
 
 // ---------- plánovač: 1 až 10 reelov / carouselov v jednom kroku (Meta Business Suite) ----------
-const MUSIC_RULE = 'Ak editor ponúka hudbu (Audio / Music): pri hudbe „nie“ hudbu nepridávaj; pri prázdnej nič nevyhľadávaj a vyber úplne prvú pesničku v ponuke (For you / Trending); inak napíš názov pesničky do vyhľadávania a vyber výsledok so správnym interpretom (ak sa nedá nájsť, prvú v ponuke); ponechaj predvolený úsek a ťukni Done. Ak hudbu neponúka, pokračuj bez nej.';
-function askMulti(t, defUdid) {
+const MUSIC_RULE = 'Ak editor ponúka hudbu (Audio / Music): pri hudbe „nie“ hudbu nepridávaj; pri prázdnej nič nevyhľadávaj a vyber {{MUSIC_PICK}}. pesničku v ponuke (For you / Trending, počítané zhora) – ak je to niektorá z nedávno použitých ({{AVOID_MUSIC}}), vezmi najbližšiu ďalšiu; inak napíš názov pesničky do vyhľadávania a vyber výsledok so správnym interpretom (ak sa nedá nájsť, vyber {{MUSIC_PICK}}. v ponuke); ponechaj predvolený úsek a ťukni Done. Keď pesničku pridáš, zavolaj music_note s jej názvom a interpretom. Ak hudbu neponúka, pokračuj bez nej.';
+function askMulti(t, defUdid, mode = {}) {
+  const now = !!mode.now; // okamžité zverejnenie – bez dátumu a času
   // každý príspevok má vlastný typ: 🎬 reel alebo 🖼️ carousel (1 až 10 príspevkov naraz)
   const defKind = t.multi === 'carousel' ? 'carousel' : 'reel';
   const nounOf = (k) => (k === 'reel' ? 'Reel' : 'Carousel');
   return new Promise((resolve) => {
     const bg = document.createElement('div'); bg.className = 'modal-bg';
-    bg.innerHTML = `<div class="modal multi"><div class="mhead"><h3>${esc(t.name)}</h3>${clockBox()}</div>${MBS_WARN}
+    bg.innerHTML = `<div class="modal multi"><div class="mhead"><h3>${esc(t.name)}</h3>${now ? '' : clockBox()}</div>${now ? '<div class="nownote">⚡ <b>Zverejní sa hneď</b> – bez plánovania. Instagram cez aplikáciu Instagram, X cez aplikáciu X.</div>' : MBS_WARN}
       <div class="mrow2"><label><span>Koľko príspevkov</span><select data-n>${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `<option>${n}</option>`).join('')}</select></label>
-        </div><div class="fld"><span>Kam zverejniť – vyber jedno alebo viac</span>${placeHtml()}</div>
+        </div><div class="fld"><span>Kam zverejniť – vyber jedno alebo viac</span>${placeHtml('data-place', true, now)}</div>
       <div class="fld" data-allph><span>Telefón pre všetky (alebo vyber pri každom zvlášť nižšie)</span>${chipsHtml([], 'data-allbox')}</div>
-      <small class="tolnote">⏱️ Čas sa nastaví s odchýlkou do ±10 minút – AI nedolaďuje minúty presne, aby plánovanie bolo rýchlejšie a lacnejšie.</small>
-      <small class="hint">Pri každom príspevku vyber, či je to <b>reel</b> alebo <b>carousel</b>, a pretiahni k nemu video / fotky – pred plánovaním sa pošlú do galérie iPhonu ako najnovšie, takže AI vyberie presne ich. Bez médií: použijú sa najnovšie videá / fotky, ktoré už sú v iPhone. Čas zadávaš slovenský, najskôr ~20 min dopredu.</small>
+      ${now ? '' : '<small class="tolnote">⏱️ Čas sa nastaví s odchýlkou do ±10 minút – AI nedolaďuje minúty presne, aby plánovanie bolo rýchlejšie a lacnejšie.</small>'}
+      <small class="hint">Pri každom príspevku vyber, či je to <b>reel</b> alebo <b>carousel</b>, a pretiahni k nemu video / fotky – pred spustením sa pošlú do galérie iPhonu ako najnovšie, takže AI vyberie presne ich. Bez médií: použijú sa najnovšie videá / fotky, ktoré už sú v iPhone.${now ? '' : ' Čas zadávaš slovenský, najskôr ~20 min dopredu.'}</small>
       <div class="mitems" data-items></div>
       <div class="mact"><button data-x>Zrušiť</button><button class="go" data-ok>Kontrola →</button></div></div>`;
     document.body.appendChild(bg);
-    const stopClock = startClock(bg);
+    const stopClock = now ? () => {} : startClock(bg);
     const items = bg.querySelector('[data-items]');
     syncMbsWarn(bg.querySelector('.modal'));
     const kinds = [], drops = [];
@@ -785,7 +811,7 @@ function askMulti(t, defUdid) {
       const n = +bg.querySelector('[data-n]').value, old = [...items.querySelectorAll('.mitem2')].map((el) => ({
         ph: readChips(el.querySelector('[data-ph]')),
         cap: el.querySelector('[data-cap]').value, tags: readTags(el.querySelector('[data-capwrap]')), mus: readMusic(el.querySelector('[data-mus]')), cnt: el.querySelector('[data-cnt]')?.value,
-        d: el.querySelector('[data-d]').value, h: el.querySelector('[data-h]').value, m: el.querySelector('[data-m]').value }));
+        d: el.querySelector('[data-d]')?.value, h: el.querySelector('[data-h]')?.value, m: el.querySelector('[data-m]')?.value }));
       for (let i = kinds.length; i < n; i++) kinds[i] = kinds[i - 1] || defKind; // nový príspevok = typ ako predchádzajúci
       kinds.length = n;
       const base = new Date(Date.now() + 30 * 60000); // dnes – prvý príspevok o ~30 min, ďalšie vždy o hodinu neskôr (zmeň si podľa seba)
@@ -798,13 +824,13 @@ function askMulti(t, defUdid) {
           ${isReel ? '' : `<label><span>Počet fotiek</span><select data-cnt>${Array.from({ length: 20 }, (_, k) => k + 1).map((c) => `<option${c === 3 ? ' selected' : ''}>${c}</option>`).join('')}</select></label>`}
           <div class="fld" data-capwrap><span>Popis + #hashtagy</span><textarea data-cap rows="2"></textarea>${capHtml()}</div>
           <div class="fld"><span>Hudba</span>${musicHtml('data-mus', 'nie')}</div>
-          <label><span>Dátum a čas</span>${dtPicker(i, def)}<small class="hint us-conv" data-conv></small></label></div>`;
+          ${now ? '' : `<label><span>Dátum a čas</span>${dtPicker(i, def)}<small class="hint us-conv" data-conv></small></label>`}</div>`;
       }).join('');
       old.forEach((o, i) => { const el = items.children[i]; if (!el) return;
         el.querySelectorAll('[data-ph] .phc').forEach((b) => b.classList.toggle('on', o.ph.includes(b.dataset.u)));
         el.querySelector('[data-cap]').value = o.cap; setMusic(el.querySelector('[data-mus]'), o.mus); setTags(el.querySelector('[data-tags]'), o.tags);
         if (o.cnt && el.querySelector('[data-cnt]')) el.querySelector('[data-cnt]').value = o.cnt;
-        el.querySelector('[data-d]').value = o.d; el.querySelector('[data-h]').value = o.h; el.querySelector('[data-m]').value = o.m; });
+        if (!now) { el.querySelector('[data-d]').value = o.d; el.querySelector('[data-h]').value = o.h; el.querySelector('[data-m]').value = o.m; } });
       paintIcons(items);
       // štvorčeky na médiá (súbory ostanú aj po zmene počtu)
       [...items.children].forEach((el, i) => {
@@ -844,21 +870,22 @@ function askMulti(t, defUdid) {
     bg.querySelector('[data-ok]').onclick = () => {
       const place = readPlace(bg.querySelector('[data-place]')), wantX = readX(bg), list = [];
       if (!place && !wantX) return alert('Vyber, kam zverejniť: Instagram, Facebook alebo X.');
+      if (now && place === 'Len Facebook') return alert('Hneď sa dá zverejniť cez Instagram (aj so zdieľaním na Facebook) alebo na X. Samotný Facebook naplánuj cez Naplánuj príspevky.');
       const lbl = (i) => (items.children.length > 1 ? `Príspevok ${i + 1} (${nounOf(kinds[i]).toLowerCase()})` : nounOf(kinds[i]));
       for (const [i] of [...items.children].entries()) if (!planReady(drops[i], lbl(i))) return;
       const withFiles = drops.filter((st) => planFiles(st).length).length;
       if (withFiles && withFiles < drops.length) return alert('Pretiahni video / fotky ku každému príspevku – alebo ku žiadnemu (vtedy sa použijú médiá, ktoré už sú v iPhone).');
       for (const [i, el] of [...items.children].entries()) {
         const isReel = kinds[i] === 'reel';
-        const d = dtpValue(el.querySelector('.dtp'));
-        if (isNaN(d)) return alert(`${lbl(i)}: vyber dátum.`);
-        if (d < minSched()) return alert(`${lbl(i)}: čas je príliš skoro. Najskorší možný čas je ${fmtSk(minSched())}.`);
+        const d = now ? new Date() : dtpValue(el.querySelector('.dtp'));
+        if (!now && isNaN(d)) return alert(`${lbl(i)}: vyber dátum.`);
+        if (!now && d < minSched()) return alert(`${lbl(i)}: čas je príliš skoro. Najskorší možný čas je ${fmtSk(minSched())}.`);
         const fl = planFiles(drops[i]);
         if (!isReel && fl.length > 20) return alert(`${lbl(i)}: carousel môže mať najviac 20 fotiek.`);
         const cnt = isReel ? 1 : (fl.length || +el.querySelector('[data-cnt]').value);
         const ph = readChips(el.querySelector('[data-ph]'));
         if (!ph.length) return alert(`${lbl(i)}: vyber telefón.`);
-        list.push({ isReel, whenISO: d.toISOString(), ph, files: fl, cap: applyTags(el.querySelector('[data-cap]').value, readTags(el.querySelector('[data-capwrap]')), fixedTagsOf(ph[0])), mus: readMusic(el.querySelector('[data-mus]')), when: fmtSk(d), cnt });
+        list.push({ isReel, whenISO: now ? null : d.toISOString(), ph, files: fl, cap: applyTags(el.querySelector('[data-cap]').value, readTags(el.querySelector('[data-capwrap]')), fixedTagsOf(ph[0])), mus: readMusic(el.querySelector('[data-mus]')), when: now ? 'hneď' : fmtSk(d), cnt });
       }
       if (!dupCheck(list.map((x) => ({ files: x.files, phones: x.ph })))) return;
       // plán: každý príspevok zvlášť (na svojom telefóne) – najprv jeho médiá do galérie, potom ho AI naplánuje.
@@ -869,12 +896,17 @@ function askMulti(t, defUdid) {
         const pick = x.files.length ? null : (x.isReel ? { k: o.v + 1 } : { from: o.from });
         seen.set(u, x.isReel ? { v: o.v + 1, from: o.from } : { v: o.v, from: o.from + x.cnt });
         const title = list.length > 1 ? `${nounOf(x.isReel ? 'reel' : 'carousel')} ${i + 1}` : nounOf(x.isReel ? 'reel' : 'carousel');
+        if (now) {
+          if (place) steps.push({ udid: u, ...postNowTask(x.isReel, x, pick, title, /Facebook/.test(place)) });
+          if (wantX) steps.push({ udid: u, ...postNowTaskX(x.isReel, x, pick, title) });
+          return;
+        }
         if (place) steps.push({ udid: u, ...postTask(x.isReel, place, x, pick, title) });
         if (wantX) steps.push({ udid: u, ...postTaskX(x.isReel, x, pick, title) });
       }));
       const nR = list.filter((x) => x.isReel).length, nC = list.length - nR;
       const what = [nR ? `${nR} ${nR === 1 ? 'reel' : nR < 5 ? 'reely' : 'reelov'}` : '', nC ? `${nC} ${nC === 1 ? 'carousel' : nC < 5 ? 'carousely' : 'carouselov'}` : ''].filter(Boolean).join(' + ');
-      const summary = `📦 Plán: ${what} v Meta Business Suite` + (withFiles ? '. Pred každým pošlem jeho médiá do galérie (budú na 1. mieste), potom ho AI naplánuje' : '') + ':\n' +
+      const summary = `📦 ${now ? 'Zverejniť hneď' : 'Plán'}: ${what}${now ? '' : ' v Meta Business Suite'}` + (withFiles ? '. Pred každým pošlem jeho médiá do galérie (budú na 1. mieste), potom ho AI naplánuje' : '') + ':\n' +
         list.map((x, i) => `${i + 1}. ${x.isReel ? '🎬' : '🖼️'} ${x.ph.map(phoneLabel).join(' + ')} · ${x.when}${x.files.length ? ' – ' + x.files.map((f) => f.name).join(', ') : ''}${x.cap ? ' – „' + x.cap.slice(0, 40) + (x.cap.length > 40 ? '…' : '') + '“' : ''}`).join('\n') + '\n(Tento text neupravuj – stlač Spustiť.)';
       showReview(list, placeLabel(bg.querySelector('[data-place]')), steps, summary);
     };
@@ -890,12 +922,12 @@ function askMulti(t, defUdid) {
         return `<div class="mrv-prev">${fs.map((f) => { const u = f.url || `/lib/${f.id}`; return f.video
           ? `<video src="${esc(u)}#t=0.1" controls muted playsinline preload="metadata"></video>` : `<img src="${esc(u)}" alt="" loading="lazy">`; }).join('')}</div>`;
       };
-      const musTxt = (m) => (!m ? '🔥 prvá pesnička v ponuke' : /^nie$/i.test(m) ? '🔇 bez hudby' : '🎵 ' + m);
+      const musTxt = (m) => (!m ? '🎲 náhodná z ponuky (na účte sa neopakuje)' : /^nie$/i.test(m) ? '🔇 bez hudby' : '🎵 ' + m);
       const rv = document.createElement('div'); rv.className = 'mreview';
-      rv.innerHTML = `<div class="mrv-h"><b>Kontrola</b> – skontroluj časy a nastavenia. Po kliknutí na <b>Publikovať</b> sa plán hneď spustí na telefónoch. Časy sa nastavia s odchýlkou do ±10 minút.</div>
+      rv.innerHTML = `<div class="mrv-h"><b>Kontrola</b> – ${now ? 'skontroluj nastavenia. Po kliknutí na <b>Publikovať</b> sa príspevky hneď zverejnia.' : 'skontroluj časy a nastavenia. Po kliknutí na <b>Publikovať</b> sa plán hneď spustí na telefónoch. Časy sa nastavia s odchýlkou do ±10 minút.'}</div>
         <div class="kv"><span>Kam zverejniť</span><b>${esc(place)}</b></div>
         ${list.map((x, i) => `<div class="mrv-it"><div class="mrv-t">${x.isReel ? '🎬 Reel' : `🖼️ Carousel · ${x.cnt} ${x.cnt === 1 ? 'fotka' : x.cnt < 5 ? 'fotky' : 'fotiek'}`}${list.length > 1 ? ` <small>príspevok ${i + 1}</small>` : ''}</div>
-          <div class="kv"><span>📅 Čas (Slovensko)</span><b>${esc(x.when)} <small class="tolx">±10 min</small></b></div>${convs[i] ? `<div class="mrv-conv">${esc(convs[i])}</div>` : ''}
+          ${now ? '<div class="kv"><span>⚡ Kedy</span><b>hneď po spustení</b></div>' : `<div class="kv"><span>📅 Čas (Slovensko)</span><b>${esc(x.when)} <small class="tolx">±10 min</small></b></div>${convs[i] ? `<div class="mrv-conv">${esc(convs[i])}</div>` : ''}`}
           <div class="kv"><span>📱 Telefón</span><b>${x.ph.map((u) => esc(phoneLabel(u))).join(', ')}</b></div>
           <div class="kv"><span>🎵 Hudba</span><b>${esc(musTxt(x.mus))}</b></div>
           <div class="kv"><span>🎞️ Médiá</span><b>${x.files.length ? x.files.map((f) => esc(f.name)).join(', ') : 'najnovšie v galérii iPhonu'}</b></div>

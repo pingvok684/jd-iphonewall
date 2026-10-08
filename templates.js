@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const FILE = path.join(__dirname, 'templates.json');
 
-const MUSIC = 'Hudba: „[Pesnička (prázdne = prvá v ponuke, nie = bez hudby)]“. Ak je v úvodzovkách pri Hudba slovo nie, hudbu nepridávaj. Inak v editore ťukni na ikonu hudby (♫ / Add audio / Pridať hudbu / Music). Ak sú úvodzovky prázdne, nič nevyhľadávaj a vyber úplne PRVÚ pesničku v zozname, ktorý sa otvorí (záložka For you / Pre teba alebo Trending). Ak je tam názov pesničky, napíš ho do vyhľadávania a vyber výsledok so správnym interpretom; ak sa nedá nájsť, vyber prvú pesničku v ponuke. Ponechaj predvolený úsek a ťukni Done / Hotovo.';
+const MUSIC = 'Hudba: „[Pesnička (prázdne = náhodná z ponuky, nie = bez hudby)]“. Ak je v úvodzovkách pri Hudba slovo nie, hudbu nepridávaj. Inak v editore ťukni na ikonu hudby (♫ / Add audio / Pridať hudbu / Music). Ak sú úvodzovky prázdne, nič nevyhľadávaj a vyber {{MUSIC_PICK}}. pesničku v zozname, ktorý sa otvorí (záložka For you / Pre teba alebo Trending, počítané zhora) – ak je to niektorá z nedávno použitých ({{AVOID_MUSIC}}), vezmi najbližšiu ďalšiu. Ak je tam názov pesničky, napíš ho do vyhľadávania a vyber výsledok so správnym interpretom; ak sa nedá nájsť, vyber {{MUSIC_PICK}}. pesničku v ponuke. Ponechaj predvolený úsek a ťukni Done / Hotovo. Keď pesničku pridáš, zavolaj music_note s jej názvom a interpretom.';
 
 const DEFAULTS = [
   { name: '🎬 Postni reel', text: 'Otvor Instagram. Ťukni na + (nový príspevok) a vyber REEL. V galérii nechaj album Recents / Nedávne (iný album ani priečinok nepoužívaj) a vyber prvé (najnovšie) VIDEO vľavo hore – video spoznáš podľa dĺžky v rohu náhľadu (napr. 0:12), fotky preskakuj. Nekonči, kým video nenájdeš – fotku namiesto videa nevyberaj. Ťukni Next. ' + MUSIC + ' Potom ťukni Next. Do popisu napíš presne tento text: [Popis + #hashtagy]. Ak je v nastaveniach príspevku možnosť „AI label“ / „Pridať označenie AI“, zapni ju. Potom ťukni Share. Počkaj, kým sa reel nahrá, a skontroluj, že sa objavil na profile. Potom skonči.' },
@@ -33,6 +33,10 @@ function load() {
       // story: staré verzie bez výberu hudby → nahradíme novou (s hudbou)
       const st = t.find((x) => x.name === '⭕ Pridaj story'), def = DEFAULTS.find((x) => x.name === '⭕ Pridaj story');
       if (st && def && (!/\[Pesnička/.test(st.text) || !/\[Odkaz v story/.test(st.text))) { st.text = def.text; try { save(t); } catch (_) {} }
+      // hudba: staré verzie brali vždy prvú pesničku → teraz náhodná bez opakovania
+      let ch = false;
+      for (const x of t) { const d = DEFAULTS.find((y) => y.name === x.name); if (d && /MUSIC_PICK/.test(d.text) && !/MUSIC_PICK/.test(x.text)) { x.text = d.text; ch = true; } }
+      if (ch) { try { save(t); } catch (_) {} }
       // reel: staré verzie prepínali album na Videos → teraz vždy Recents
       const pr = t.find((x) => x.name === '🎬 Postni reel'), pdef = DEFAULTS.find((x) => x.name === '🎬 Postni reel');
       if (pr && pdef && /album Videos/.test(pr.text)) { pr.text = pdef.text; try { save(t); } catch (_) {} }

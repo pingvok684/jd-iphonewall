@@ -53,12 +53,13 @@ const TOOLS = [
   { name: 'skip_ad', description: 'Reklama v Reels (Sponsored / Sponzorované / Reklama) – okamžite prejde na ďalší reel. Nepočíta sa medzi prezreté reely.', input_schema: { type: 'object', properties: {} } },
   { name: 'home', description: 'Tlačidlo Domov (návrat na plochu).', input_schema: { type: 'object', properties: {} } },
   { name: 'wait', description: 'Počká N sekúnd (načítavanie).', input_schema: { type: 'object', properties: { seconds: { type: 'number' } }, required: ['seconds'] } },
+  { name: 'music_note', description: 'Zapíše pesničku, ktorú si práve pridal k príspevku (aby sa na účte neopakovala).', input_schema: { type: 'object', properties: { title: { type: 'string', description: 'názov – interpret' } }, required: ['title'] } },
   { name: 'reel_note', description: 'Pri prieskume reels: zapíše poznámku o PRÁVE pozeranom reeli (volaj raz pri každom reeli, pred potiahnutím na ďalší). Píš po slovensky, stručne.', input_schema: { type: 'object',
     properties: { profil: { type: 'string', description: 'profil, ktorého reel pozeráš (ako bol zadaný v úlohe; prázdne = Reels feed)' }, hook: { type: 'string', description: 'prvý text na obrazovke alebo prvá veta' }, format: { type: 'string', description: 'formát videa (napr. tanec, POV, lip-sync, vlog, trend…)' }, prostredie: { type: 'string', description: 'prostredie a outfit' }, hudba: { type: 'string', description: 'pesnička / zvuk, ak je vidieť' }, zhliadnutia: { type: 'string', description: 'počet zhliadnutí, ak je vidieť' } }, required: ['hook', 'format'] } },
   { name: 'done', description: 'Úloha hotová alebo nemožná. Pri prieskume reels daj do summary 3 opakujúce sa trendy, ktoré sa dajú použiť pre náš obsah.', input_schema: { type: 'object', properties: { summary: { type: 'string' } }, required: ['summary'] } },
 ];
 
-const NAV_TOOLS = [...TOOLS.filter((t) => !['reel_note', 'skip_ad'].includes(t.name)),
+const NAV_TOOLS = [...TOOLS.filter((t) => !['reel_note', 'skip_ad', 'music_note'].includes(t.name)),
   { name: 'reels_ready', description: 'Prvý reel sa prehráva na celú obrazovku – ďalej to preberie aplikácia.', input_schema: { type: 'object', properties: {} } }];
 const REEL_TOOLS = TOOLS.filter((t) => ['reel_note', 'skip_ad'].includes(t.name));
 const SAME_TOOL = { name: 'same_reel', description: 'Na screenshote je stále ten istý reel ako naposledy zapísaný (nový sa ešte nezačal).', input_schema: { type: 'object', properties: {} } };
@@ -329,6 +330,7 @@ async function agentLoop(dev, apiKey, actions, o) {
             A.reelNotes.push(n); say(`📝 Reel ${A.reelNotes.length}: ${n.hook.slice(0, 80)}`); out = `Zapísané (reel ${A.reelNotes.length}).`; break;
           }
           case 'done': summary = String(i.summary || ''); if (!o.quietDone) say(`✓ Hotovo: ${summary}`); A.summary = summary; finished = true; break;
+          case 'music_note': A.music = String(i.title || '').trim().slice(0, 120); say(`🎵 ${A.music}`); break;
           case 'reels_ready': say('▶ reely sú otvorené – ďalej ich už len čítam'); status = 'ready'; finished = true; break;
           default: out = 'Neznámy nástroj';
         }

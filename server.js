@@ -906,6 +906,7 @@ function watchAgent(dev, task) {
     const last = dev.agent.log[dev.agent.log.length - 1] || '';
     const ok = last.startsWith('✓');
     if (!(dev.plan && dev.plan.running) && !/^■/.test(last)) setTimeout(() => closeBgApps(dev), 3000);
+    if (ok && dev.agent && dev.agent.music) { const all = store.readJson('music-used.json', {}); all[dev.udid] = [dev.agent.music, ...(all[dev.udid] || []).filter((m) => m.toLowerCase() !== dev.agent.music.toLowerCase())].slice(0, 15); store.writeJson('music-used.json', all); }
     const extra = { phone: dev.label };
     const reels = reelsViewed(dev, task);
     const ads = (dev.agent && dev.agent.ads) || 0;
@@ -949,7 +950,15 @@ function watchAgent(dev, task) {
 }
 
 // spustí AI úlohu na telefóne
+// hudba: náhodná pozícia v ponuke a pesničky, ktoré účet nedávno použil (neopakovať)
+function musicUsed(udid) { return (store.readJson('music-used.json', {})[udid] || []); }
+function prepTask(dev, task) {
+  if (!/\{\{(MUSIC_PICK|AVOID_MUSIC)\}\}/.test(task)) return task;
+  const pick = 1 + Math.floor(Math.random() * 6), used = musicUsed(dev.udid).slice(0, 10);
+  return task.split('{{MUSIC_PICK}}').join(String(pick)).split('{{AVOID_MUSIC}}').join(used.length ? used.map((m) => `„${m}“`).join(', ') : 'žiadne');
+}
 async function runAgentTask(dev, task, maxSteps) {
+  task = prepTask(dev, task);
   await wake(dev);
   await pause(800); // nech je na obrazovke už odomknutý telefón
   startAgent(dev, task, agentAuth(), {
