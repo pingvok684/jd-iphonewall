@@ -9,10 +9,17 @@ fs.mkdirSync(DATA, { recursive: true });
 function readJson(name, def) {
   try { return JSON.parse(fs.readFileSync(path.join(DATA, name), 'utf8')); } catch (_) { return def; }
 }
+// Windows: premenovanie zlyhá (EPERM/EBUSY), keď súbor práve číta antivírus alebo iný proces → skúsiť znova, inak prepísať priamo
+function replaceFile(tmp, dst) {
+  for (let i = 0; i < 6; i++) {
+    try { fs.renameSync(tmp, dst); return; } catch (e) { if (i === 5) break; const t = Date.now() + 150 * (i + 1); while (Date.now() < t); }
+  }
+  fs.copyFileSync(tmp, dst); try { fs.unlinkSync(tmp); } catch (_) {}
+}
 function writeJson(name, val) {
   const f = path.join(DATA, name);
   fs.writeFileSync(f + '.tmp', JSON.stringify(val, null, 2));
-  fs.renameSync(f + '.tmp', f);
+  replaceFile(f + '.tmp', f);
 }
 const newId = () => crypto.randomBytes(6).toString('hex');
 
@@ -110,4 +117,4 @@ function usageSummary(days = 30) {
   return out;
 }
 
-module.exports = { addUsage, usageSummary, DATA, INSP_DIR, readJson, writeJson, newId, addActivity, listActivity, activityStats, addInspiration, removeInspiration, listInspiration };
+module.exports = { replaceFile, addUsage, usageSummary, DATA, INSP_DIR, readJson, writeJson, newId, addActivity, listActivity, activityStats, addInspiration, removeInspiration, listInspiration };

@@ -1884,5 +1884,8 @@ server.listen(PORT, '0.0.0.0', () => {
   setTimeout(tidy, 60000); setInterval(tidy, 6 * 3600000);
 });
 
+// jedna chyba (napr. zamknutý súbor na Windowse) nesmie zhodiť celú stránku – len ju zapíšeme do záznamu
+process.on('uncaughtException', (e) => { if (e && e.code === 'EADDRINUSE') { console.error('Port je obsadený'); process.exit(1); } console.error('[chyba]', e && e.stack || e); try { store.addActivity('error', 'Vnútorná chyba: ' + String(e && e.message || e).slice(0, 160)); } catch (_) {} });
+process.on('unhandledRejection', (e) => { console.error('[chyba async]', e && e.stack || e); });
 process.on('SIGINT', () => { devices.forEach(stopDevice); process.exit(0); });
 process.on('SIGTERM', () => { devices.forEach(stopDevice); process.exit(0); });

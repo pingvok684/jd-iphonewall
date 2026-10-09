@@ -119,7 +119,7 @@ async function syncOnce() {
       if (lj != null) out = JSON.stringify(mergeDoc(d.merge, lj, rj, name), null, 2);
     }
     fs.mkdirSync(path.dirname(d.file), { recursive: true });
-    fs.writeFileSync(d.file + '.sync', out); fs.renameSync(d.file + '.sync', d.file);
+    fs.writeFileSync(d.file + '.sync', out); require('./store').replaceFile(d.file + '.sync', d.file);
     changed = true;
     if (out !== rtext) { const j = await apiJson('PUT', `/sync/doc/${name}`, out); s.base[name] = j.hash; }
     else s.base[name] = sha1(rtext);
@@ -181,7 +181,7 @@ async function syncMedia(s) {
     const buf = Buffer.from(await r.arrayBuffer());
     if (crypto.createHash('sha1').update(buf).digest('hex') !== x.hash) throw new Error(`${x.name} sa stiahol poškodený`);
     const f = x.f;
-    fs.writeFileSync(f + '.part', buf); fs.renameSync(f + '.part', f);
+    fs.writeFileSync(f + '.part', buf); require('./store').replaceFile(f + '.part', f);
     s.uploaded[x.hash] = 1; st.down++; st.pendingDown--;
   }
 }

@@ -55,7 +55,7 @@ function addToLibrary(req, name, owner) {
       const hash = h.digest('hex');
       const dup = lib.find((x) => x.hash === hash);
       if (dup) { fs.unlink(tmp, () => {}); if (owner && !(dup.owners || []).includes(owner)) { dup.owners = [...(dup.owners || []), owner]; saveLib(); } return resolve(view(dup)); }
-      fs.renameSync(tmp, path.join(LIB_DIR, id));
+      require('./store').replaceFile(tmp, path.join(LIB_DIR, id));
       const it = { id, name, ext, size, hash, kind: isVideo(ext) ? 'video' : 'photo', addedAt: new Date().toISOString(), used: [], owners: owner ? [owner] : [] };
       lib.unshift(it); saveLib();
       resolve(view(it));

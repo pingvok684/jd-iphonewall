@@ -24,7 +24,7 @@ const LOGS = path.join(USER, 'logs');
 const STATE_FILE = path.join(USER, 'desktop.json');
 const IOS = path.join(BIN, IS_WIN ? 'ios.exe' : 'ios');
 
-let win = null, tray = null, server = null, tunnel = null, quitting = false, restarting = false, external = false, restarts = 0, okTimer = null;
+let win = null, tray = null, server = null, tunnel = null, quitting = false, restarting = false, external = false, restarts = 0, okTimer = null, crashes = [];
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (_) { return d; } };
 let state = readJson(STATE_FILE, {});
 const saveState = () => { try { fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2)); } catch (_) {} };
@@ -124,6 +124,9 @@ function startServer() {
     if (quitting || restarting) return;
     if (code === 75) { log('aktualizácia → reštart'); syncApp(); setTimeout(startServer, 1000); showWhenReady(); return; }
     restarts++;
+    // ochrana pred nekonečným reštartovaním: veľa pádov za 10 minút → zastav a ukáž záznam
+    crashes = crashes.filter((t) => Date.now() - t < 600000); crashes.push(Date.now());
+    if (crashes.length >= 6) restarts = 99;
     log('server skončil', code, 'pokus', restarts);
     status.error = `Stránka sa zastavila (kód ${code}) – skúšam znova (${restarts}/5)`;
     if (restarts <= 5) return setTimeout(startServer, 2000 * restarts);
