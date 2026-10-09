@@ -268,8 +268,34 @@ function dtPicker(i, defDate) {
   const hours = [...Array(24)].map((_, h) => `<option${h === def.getHours() ? ' selected' : ''}>${pad(h)}</option>`).join('');
   const mins = [...Array(12)].map((_, k) => `<option${k * 5 === def.getMinutes() ? ' selected' : ''}>${pad(k * 5)}</option>`).join('');
   return `<div class="dtp" data-i="${i}" data-dt><input type="date" data-d min="${ymd(min)}" value="${ymd(def)}">
-    <select data-h aria-label="Hodina">${hours}</select><b>:</b><select data-m aria-label="Minúty">${mins}</select></div>`;
+    <select data-h aria-label="Hodina">${hours}</select><b>:</b><select data-m aria-label="Minúty">${mins}</select></div>${dtRecentHtml()}`;
 }
+// naposledy použité časy – jedným kliknutím nastavíš napr. 18:00
+const DT_KEY = 'recent-times';
+const dtRecent = () => { try { return JSON.parse(localStorage.getItem(DT_KEY) || '[]').filter((t) => /^\d\d:\d\d$/.test(t)); } catch (_) { return []; } };
+function dtRecentHtml() {
+  const r = dtRecent();
+  return `<div class="dtrec" data-dtrec>${r.length ? '<small>Naposledy:</small>' + r.map((t) => `<button type="button" class="dtchip" data-t="${t}" data-tip="Nastaví čas ${t}">🕒 ${t}<i data-dtdel title="Odstrániť">×</i></button>`).join('') : ''}</div>`;
+}
+function rememberTimes(root) {
+  const ts = [...root.querySelectorAll('.dtp')].filter((b) => b.offsetParent).map((b) => `${b.querySelector('[data-h]').value}:${b.querySelector('[data-m]').value}`);
+  if (!ts.length) return;
+  let r = dtRecent(); for (const t of ts.reverse()) r = [t, ...r.filter((x) => x !== t)];
+  try { localStorage.setItem(DT_KEY, JSON.stringify(r.slice(0, 8))); } catch (_) {}
+}
+document.addEventListener('click', (e) => {
+  const del = e.target.closest('[data-dtdel]');
+  if (del) { e.preventDefault(); e.stopPropagation(); const t = del.parentElement.dataset.t;
+    try { localStorage.setItem(DT_KEY, JSON.stringify(dtRecent().filter((x) => x !== t))); } catch (_) {}
+    document.querySelectorAll(`.dtchip[data-t="${t}"]`).forEach((c) => c.remove()); return; }
+  const c = e.target.closest('.dtchip');
+  if (c) { const box = c.closest('[data-dtrec]').previousElementSibling; if (!box || !box.classList.contains('dtp')) return;
+    const [h, m] = c.dataset.t.split(':'); box.querySelector('[data-h]').value = h; box.querySelector('[data-m]').value = m;
+    box.querySelector('[data-m]').dispatchEvent(new Event('change', { bubbles: true }));
+    c.parentElement.querySelectorAll('.dtchip').forEach((x) => x.classList.toggle('on', x === c)); return; }
+  const go = e.target.closest('.modal .go');
+  if (go) rememberTimes(go.closest('.modal'));
+}, true);
 
 // ---------- štvorček na médiá: video / fotky sa pred plánovaním pošlú do galérie ako najnovšie ----------
 function dropHtml(kind) {

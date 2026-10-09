@@ -1,5 +1,10 @@
 [
   {
+    "version": "2026.10.09-0202",
+    "date": "2026-10-09",
+    "notes": "Vylepšenia a opravy."
+  },
+  {
     "version": "2026.10.08-2126",
     "date": "2026-10-08",
     "notes": "Hudba sa vyberá náhodne a neopakuje sa; okamžité postovanie vyzerá ako plánovač."
